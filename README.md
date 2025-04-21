@@ -32,18 +32,10 @@ A cross-platform mobile personal assistant application built with React Native a
    ```
    npm install
    ```
-   or
-   ```
-   yarn
-   ```
 
 3. Start the development server:
    ```
    npm run dev
-   ```
-   or
-   ```
-   yarn dev
    ```
 
 ## Running on Devices
