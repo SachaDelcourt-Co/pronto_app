@@ -10,51 +10,51 @@ export default function TabLayout() {
           backgroundColor: '#1a1a1a',
           borderTopColor: '#2a1a2a',
           height: 60,
-          paddingBottom: 8,
-          paddingTop: 8,
         },
         tabBarActiveTintColor: '#9333ea',
         tabBarInactiveTintColor: '#666666',
+        tabBarItemStyle: {
+          paddingVertical: 5,
+        },
+        tabBarLabelStyle: { 
+          fontSize: 10,
+          marginBottom: 0,
+        },
       }}
     >
       <Tabs.Screen
         name="home"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
-          tabBarLabel: 'Home',
+          tabBarLabel: "Home",
+          tabBarIcon: ({ color }) => <Home size={20} color={color} />,
         }}
       />
       <Tabs.Screen
         name="tasks"
         options={{
-          title: 'Tasks',
-          tabBarIcon: ({ color, size }) => <CheckSquare size={size} color={color} />,
-          tabBarLabel: 'Tasks',
+          tabBarLabel: "Tasks",
+          tabBarIcon: ({ color }) => <CheckSquare size={20} color={color} />,
         }}
       />
       <Tabs.Screen
         name="appointments"
         options={{
-          title: 'Appointments',
-          tabBarIcon: ({ color, size }) => <Calendar size={size} color={color} />,
-          tabBarLabel: 'Appointments',
+          tabBarLabel: "Appt",
+          tabBarIcon: ({ color }) => <Calendar size={20} color={color} />,
         }}
       />
       <Tabs.Screen
         name="reminders"
         options={{
-          title: 'Reminders',
-          tabBarIcon: ({ color, size }) => <Bell size={size} color={color} />,
-          tabBarLabel: 'Reminders',
+          tabBarLabel: "Remind",
+          tabBarIcon: ({ color }) => <Bell size={20} color={color} />,
         }}
       />
       <Tabs.Screen
         name="notes"
         options={{
-          title: 'Notes',
-          tabBarIcon: ({ color, size }) => <FileText size={size} color={color} />,
-          tabBarLabel: 'Notes',
+          tabBarLabel: "Notes",
+          tabBarIcon: ({ color }) => <FileText size={20} color={color} />,
         }}
       />
     </Tabs>
