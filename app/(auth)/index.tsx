@@ -51,7 +51,8 @@ export default function Login() {
       setIsLoading(true);
       const auth = getAuth();
       await signInWithEmailAndPassword(auth, email, password);
-      router.replace('/blank');
+      // Navigate directly to the home tab
+      router.replace("/(tabs)/home");
     } catch (err) {
       setError(t('login.invalidCredentials'));
     } finally {

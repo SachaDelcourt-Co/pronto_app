@@ -10,10 +10,14 @@ export interface User {
 
 export interface Task {
   userID: string;
+  taskID?: string;
   taskName: string;
-  description?: string;
-  daysSelected: number[];
-  status: boolean;
+  description?: string | null;
+  daysSelected: number;
+  daysDone: number;
+  status: 'active' | 'completed' | 'archived';
+  lastCompletedDate?: string;
+  createdAt: Date;
   timestamp: Date;
 }
 

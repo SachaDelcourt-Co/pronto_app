@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Platform, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Platform, Modal, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { Menu, Calendar, Bell, FileText, SquareCheck as CheckSquare, X } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { getAuth } from 'firebase/auth';
 import { DatabaseService } from '@/services/database';
-import type { User, Appointment, Reminder } from '@/types/database';
+import type { User, Appointment, Reminder, Task } from '@/types/database';
+import { useAuth } from '@/utils/AuthContext';
+import { useFocusEffect } from 'expo-router';
 
 export default function HomePage() {
+  const { user: authUser, authInitialized } = useAuth();
   const { t } = useTranslation();
   const [showMenu, setShowMenu] = useState(false);
   const [showAppointments, setShowAppointments] = useState(false);
@@ -17,24 +20,109 @@ export default function HomePage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [motivationalPhrase, setMotivationalPhrase] = useState<string>('');
+  const [dailyTasks, setDailyTasks] = useState<Task[]>([]);
+  const [loadingTaskId, setLoadingTaskId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Refresh data when the tab is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('Home tab focused, refreshing data');
+      if (authInitialized && authUser) {
+        loadDailyTasks();
+      }
+      return () => {
+        // Cleanup function when component unfocuses
+      };
+    }, [authInitialized, authUser])
+  );
 
   useEffect(() => {
-    const loadUserData = async () => {
-      const auth = getAuth();
-      if (!auth.currentUser) return;
+    let isMounted = true;
+    
+    const loadAllData = async () => {
+      if (!authInitialized) return;
 
-      const userData = await DatabaseService.getUser(auth.currentUser.uid);
-      if (userData) {
-        setUser(userData);
-        const userAppointments = await DatabaseService.getUserAppointments(auth.currentUser.uid);
-        const userReminders = await DatabaseService.getUserReminders(auth.currentUser.uid);
-        setAppointments(userAppointments);
-        setReminders(userReminders);
+      try {
+        setIsLoading(true);
+        
+        if (!authUser) {
+          console.log('No authenticated user from AuthContext');
+          if (isMounted) setIsLoading(false);
+          return;
+        }
+
+        const userId = authUser.uid;
+        console.log('Loading data for user:', userId);
+        
+        // Load user data
+        try {
+          const userData = await DatabaseService.getUser(userId);
+          if (isMounted && userData) setUser(userData);
+        } catch (error) {
+          console.error('Error loading user data:', error);
+        }
+        
+        // Load appointments
+        try {
+          const userAppointments = await DatabaseService.getUserAppointments(userId);
+          if (isMounted) setAppointments(userAppointments || []);
+        } catch (error) {
+          console.error('Error loading appointments:', error);
+          if (isMounted) setAppointments([]);
+        }
+        
+        // Load reminders
+        try {
+          const userReminders = await DatabaseService.getUserReminders(userId);
+          if (isMounted) setReminders(userReminders || []);
+        } catch (error) {
+          console.error('Error loading reminders:', error);
+          if (isMounted) setReminders([]);
+        }
+        
+        // Load daily tasks
+        try {
+          console.log('Loading daily tasks for user:', userId);
+          const activeTasks = await DatabaseService.getActiveDailyTasks(userId);
+          console.log('Daily tasks loaded:', activeTasks.length);
+          if (isMounted) setDailyTasks(activeTasks || []);
+        } catch (error) {
+          console.error('Error loading tasks:', error);
+          if (isMounted) setDailyTasks([]);
+        }
+      } catch (error) {
+        console.error('Error in loadAllData:', error);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
-    loadUserData();
-  }, []);
+    loadAllData();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [authInitialized, authUser]);
+
+  const handleCompleteTask = async (taskId: string) => {
+    if (!taskId || !authUser) return;
+    
+    try {
+      setLoadingTaskId(taskId);
+      await DatabaseService.markTaskCompletedForToday(taskId);
+      
+      // Update the UI by refetching tasks or updating locally
+      const activeTasks = await DatabaseService.getActiveDailyTasks(authUser.uid);
+      setDailyTasks(activeTasks || []);
+    } catch (error) {
+      console.error('Error completing task:', error);
+    } finally {
+      setLoadingTaskId(null);
+    }
+  };
 
   const renderHeader = () => (
     <View style={styles.header}>
@@ -191,11 +279,83 @@ export default function HomePage() {
     </Modal>
   );
 
-  const renderContent = () => (
-    <View style={styles.tabContent}>
-      <Text style={styles.comingSoonText}>Tasks coming soon</Text>
-    </View>
-  );
+  const renderDailyTasks = () => {
+    console.log('Rendering daily tasks, count:', dailyTasks.length);
+    
+    if (dailyTasks.length === 0) {
+      return (
+        <View style={styles.emptyStateContainer}>
+          <Text style={styles.emptyStateText}>No tasks for today</Text>
+        </View>
+      );
+    }
+
+    return dailyTasks.map((task) => {
+      // Skip rendering invalid tasks
+      if (!task || !task.taskID) {
+        console.log('Skipping invalid task');
+        return null;
+      }
+      
+      // Check if task is completed today
+      const today = new Date().toISOString().split('T')[0];
+      const isCompletedToday = task.lastCompletedDate === today;
+      
+      const handleTaskCompletion = async () => {
+        try {
+          if (task.taskID && authUser) {
+            await DatabaseService.markTaskCompletedForToday(task.taskID);
+            // Reload daily tasks
+            const activeTasks = await DatabaseService.getActiveDailyTasks(authUser.uid);
+            setDailyTasks(activeTasks);
+          }
+        } catch (error) {
+          console.error('Error completing task:', error);
+        }
+      };
+      
+      // Ensure progress calculation doesn't cause errors
+      const progress = task.daysDone !== undefined && task.daysSelected 
+        ? (task.daysDone / task.daysSelected) * 100
+        : 0;
+        
+      return (
+        <View key={task.taskID} style={[
+          styles.dailyTaskCard,
+          isCompletedToday && styles.completedTaskCard
+        ]}>
+          <View style={styles.taskHeader}>
+            <View style={styles.taskTitleContainer}>
+              <Text style={styles.taskIcon}>{isCompletedToday ? '✅' : '📌'}</Text>
+              <Text style={[
+                styles.dailyTaskName,
+                isCompletedToday && styles.completedTaskText
+              ]}>
+                {task.taskName || 'Unnamed Task'}
+              </Text>
+            </View>
+            {!isCompletedToday && (
+              <TouchableOpacity style={styles.completeButton} onPress={handleTaskCompletion}>
+                <Text style={styles.completeButtonText}>Done</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          <View style={styles.taskProgressContainer}>
+            <Text style={[
+              styles.taskProgressText,
+              isCompletedToday && styles.completedTaskText
+            ]}>
+              {`${task.daysDone || 0} / ${task.daysSelected || 1} days`}
+            </Text>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: `${progress}%` }]} />
+            </View>
+          </View>
+        </View>
+      );
+    });
+  };
 
   const renderMenu = () => {
     if (!showMenu) return null;
@@ -225,6 +385,21 @@ export default function HomePage() {
     );
   };
 
+  // Add a dedicated function to load just daily tasks
+  const loadDailyTasks = async () => {
+    if (!authUser) return;
+    
+    try {
+      console.log('Loading daily tasks for user:', authUser.uid);
+      const activeTasks = await DatabaseService.getActiveDailyTasks(authUser.uid);
+      console.log('Daily tasks loaded:', activeTasks.length);
+      setDailyTasks(activeTasks || []);
+    } catch (error) {
+      console.error('Error loading tasks:', error);
+      setDailyTasks([]);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -233,13 +408,32 @@ export default function HomePage() {
       >
         <View style={styles.upperContent}>
           {renderHeader()}
-          {renderMotivationalBanner()}
-          {renderSchedule()}
         </View>
 
-        <View style={styles.lowerContent}>
-          {renderContent()}
-        </View>
+        <ScrollView 
+          style={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContentContainer}
+        >
+          {renderMotivationalBanner()}
+          {renderSchedule()}
+          
+          <View style={styles.lowerContent}>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Daily Tasks</Text>
+              <View style={styles.taskContainer}>
+                {isLoading ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#9333ea" />
+                    <Text style={styles.loadingText}>Loading tasks...</Text>
+                  </View>
+                ) : (
+                  renderDailyTasks()
+                )}
+              </View>
+            </View>
+          </View>
+        </ScrollView>
 
         {showAppointments && renderExpandedList(
           'Appointments',
@@ -269,19 +463,25 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   upperContent: {
+    paddingTop: Platform.OS === 'web' ? 16 : 40,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  scrollContent: {
     flex: 1,
-    maxHeight: '45%',
+  },
+  scrollContentContainer: {
+    paddingBottom: 24,
   },
   lowerContent: {
-    flex: 1,
-    justifyContent: 'flex-start',
+    paddingBottom: 20,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'web' ? 16 : 40,
     paddingBottom: 8,
   },
   headerTitle: {
@@ -306,6 +506,7 @@ const styles = StyleSheet.create({
   },
   motivationalBanner: {
     marginHorizontal: 16,
+    marginTop: 16,
     padding: 12,
     borderRadius: 12,
     marginBottom: 12,
@@ -319,8 +520,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   scheduleSection: {
-    flex: 1,
-    marginBottom: 12,
+    marginBottom: 20,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -334,6 +534,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-SemiBold',
     color: '#ffffff',
     letterSpacing: 0.3,
+    marginBottom: 16,
   },
   weekViewButton: {
     width: 32,
@@ -354,6 +555,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 16,
     padding: 12,
+    height: 180,
   },
   bannerHeader: {
     flexDirection: 'row',
@@ -380,7 +582,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   eventList: {
-    flex: 1,
+    maxHeight: 120,
   },
   eventItem: {
     flexDirection: 'row',
@@ -402,6 +604,58 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     flex: 1,
     marginLeft: 8,
+  },
+  dailyTasksSection: {
+    flex: 1,
+    marginTop: 8,
+    paddingHorizontal: 16,
+  },
+  tasksList: {
+    flex: 1,
+  },
+  emptyTasksContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+  },
+  emptyTasksText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#9ca3af',
+    marginTop: 8,
+  },
+  taskItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    marginBottom: 8,
+    padding: 12,
+  },
+  taskCheckCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(147, 51, 234, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  taskContent: {
+    flex: 1,
+  },
+  taskName: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: '#ffffff',
+    marginBottom: 4,
+  },
+  taskProgress: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: '#9ca3af',
   },
   tabContent: {
     flex: 1,
@@ -521,5 +775,99 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     color: '#9ca3af',
     lineHeight: 18,
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+  },
+  emptyStateContainer: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#ffffff',
+  },
+  taskTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  taskIcon: {
+    fontSize: 18,
+    marginRight: 8,
+  },
+  dailyTaskCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
+  },
+  taskHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  dailyTaskName: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: '#ffffff',
+  },
+  completeButton: {
+    backgroundColor: '#9333ea',
+    borderRadius: 12,
+    padding: 8,
+  },
+  completeButtonText: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: '#ffffff',
+  },
+  taskProgressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  taskProgressText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: '#9ca3af',
+  },
+  progressBar: {
+    backgroundColor: 'rgba(147, 51, 234, 0.1)',
+    borderRadius: 10,
+    height: 12,
+    flex: 1,
+    marginHorizontal: 8,
+  },
+  progressFill: {
+    backgroundColor: '#9333ea',
+    borderRadius: 10,
+    height: '100%',
+  },
+  section: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  taskContainer: {
+    marginBottom: 16,
+  },
+  completedTaskCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
+  },
+  completedTaskText: {
+    textDecorationLine: 'line-through',
   },
 }); 
