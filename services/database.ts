@@ -1,7 +1,7 @@
 import { db } from '@/utils/firebase';
 import { collection, doc, setDoc, getDoc, query, where, getDocs, updateDoc, deleteDoc, orderBy, limit, addDoc, Timestamp } from 'firebase/firestore';
 import { auth } from '@/utils/firebase';
-import type { User, Task, Appointment, Reminder, Note, SupportChat, ChatMessage } from '@/types/database';
+import type { User, Task, Appointment, Reminder, Note, SupportChat, ChatMessage, Folder } from '@/types/database';
 
 export const DatabaseService = {
   // User operations
@@ -247,12 +247,103 @@ export const DatabaseService = {
   },
 
   // Note operations
-  async createNote(noteData: Omit<Note, 'createdAt'>): Promise<void> {
-    const noteRef = doc(collection(db, 'notes'));
-    await setDoc(noteRef, {
-      ...noteData,
-      createdAt: new Date()
-    });
+  async createNote(noteData: Omit<Note, 'noteID' | 'updatedAt'>): Promise<string> {
+    try {
+      const noteRef = collection(db, 'notes');
+      const now = new Date();
+      
+      const newNote = {
+        ...noteData,
+        updatedAt: now,
+      };
+      
+      const docRef = await addDoc(noteRef, newNote);
+      await updateDoc(docRef, { noteID: docRef.id });
+      return docRef.id;
+    } catch (error) {
+      console.error("Error creating note:", error);
+      throw error;
+    }
+  },
+
+  async getUserNotes(userId: string, folderID: string | null = null): Promise<Note[]> {
+    try {
+      // Query to get notes, filtered by folder if provided
+      let q;
+      if (folderID === null) {
+        // Get notes at root level (no folder)
+        q = query(
+          collection(db, 'notes'),
+          where('userID', '==', userId),
+          where('folderID', '==', null),
+          orderBy('updatedAt', 'desc')
+        );
+      } else {
+        // Get notes in a specific folder
+        q = query(
+          collection(db, 'notes'),
+          where('userID', '==', userId),
+          where('folderID', '==', folderID),
+          orderBy('updatedAt', 'desc')
+        );
+      }
+      
+      const querySnapshot = await getDocs(q);
+      console.log(`Found ${querySnapshot.size} notes for user`);
+      
+      return querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        
+        // Safely convert timestamps
+        let createdAt = data.createdAt;
+        let updatedAt = data.updatedAt;
+        
+        if (createdAt) {
+          createdAt = createdAt instanceof Timestamp ? createdAt.toDate() : createdAt;
+        } else {
+          createdAt = new Date();
+        }
+        
+        if (updatedAt) {
+          updatedAt = updatedAt instanceof Timestamp ? updatedAt.toDate() : updatedAt;
+        } else {
+          updatedAt = new Date();
+        }
+        
+        return {
+          ...data,
+          noteID: doc.id,
+          createdAt: createdAt,
+          updatedAt: updatedAt,
+        } as Note;
+      });
+    } catch (error) {
+      console.error("Error fetching user notes:", error);
+      return [];
+    }
+  },
+  
+  async deleteNote(noteId: string): Promise<void> {
+    try {
+      await deleteDoc(doc(db, 'notes', noteId));
+    } catch (error) {
+      console.error("Error deleting note:", error);
+      throw error;
+    }
+  },
+  
+  async updateNote(noteId: string, noteData: Partial<Omit<Note, 'noteID' | 'createdAt'>>): Promise<void> {
+    try {
+      const updateData = {
+        ...noteData,
+        updatedAt: new Date()
+      };
+      
+      await updateDoc(doc(db, 'notes', noteId), updateData);
+    } catch (error) {
+      console.error("Error updating note:", error);
+      throw error;
+    }
   },
 
   // Support chat operations
@@ -272,5 +363,96 @@ export const DatabaseService = {
       ...messageData,
       timestamp: new Date()
     });
-  }
+  },
+
+  // Folder operations
+  async createFolder(folderData: Omit<Folder, 'folderID' | 'updatedAt'>): Promise<string> {
+    try {
+      const folderRef = collection(db, 'folders');
+      const now = new Date();
+      
+      const newFolder = {
+        ...folderData,
+        updatedAt: now,
+      };
+      
+      const docRef = await addDoc(folderRef, newFolder);
+      await updateDoc(docRef, { folderID: docRef.id });
+      return docRef.id;
+    } catch (error) {
+      console.error("Error creating folder:", error);
+      throw error;
+    }
+  },
+  
+  async getUserFolders(userId: string): Promise<Folder[]> {
+    try {
+      const q = query(
+        collection(db, 'folders'),
+        where('userID', '==', userId),
+        orderBy('folderName', 'asc')
+      );
+      
+      const querySnapshot = await getDocs(q);
+      console.log(`Found ${querySnapshot.size} folders for user`);
+      
+      return querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        
+        // Safely convert timestamps
+        let createdAt = data.createdAt;
+        let updatedAt = data.updatedAt;
+        
+        if (createdAt) {
+          createdAt = createdAt instanceof Timestamp ? createdAt.toDate() : createdAt;
+        } else {
+          createdAt = new Date();
+        }
+        
+        if (updatedAt) {
+          updatedAt = updatedAt instanceof Timestamp ? updatedAt.toDate() : updatedAt;
+        } else {
+          updatedAt = new Date();
+        }
+        
+        return {
+          ...data,
+          folderID: doc.id,
+          createdAt: createdAt,
+          updatedAt: updatedAt,
+        } as Folder;
+      });
+    } catch (error) {
+      console.error("Error fetching user folders:", error);
+      return [];
+    }
+  },
+  
+  async deleteFolder(folderId: string): Promise<void> {
+    try {
+      // First, update all notes in this folder to have no folder (move to root)
+      const notesQuery = query(
+        collection(db, 'notes'),
+        where('folderID', '==', folderId)
+      );
+      
+      const querySnapshot = await getDocs(notesQuery);
+      
+      // Update all notes in this folder to have folderID = null
+      const updatePromises = querySnapshot.docs.map(doc => {
+        return updateDoc(doc.ref, { 
+          folderID: null,
+          updatedAt: new Date()
+        });
+      });
+      
+      await Promise.all(updatePromises);
+      
+      // Now delete the folder
+      await deleteDoc(doc(db, 'folders', folderId));
+    } catch (error) {
+      console.error("Error deleting folder:", error);
+      throw error;
+    }
+  },
 };

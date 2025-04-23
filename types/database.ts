@@ -44,9 +44,20 @@ export interface Reminder {
 
 export interface Note {
   userID: string;
+  noteID?: string;
   title: string;
   content: string;
+  folderID?: string | null;
   createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Folder {
+  userID: string;
+  folderID?: string;
+  folderName: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface SundayReport {
