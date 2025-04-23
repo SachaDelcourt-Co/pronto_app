@@ -43,12 +43,12 @@ export const DatabaseService = {
   async getUserTasks(userId: string): Promise<Task[]> {
     try {
       console.log('Fetching tasks for user:', userId);
-      const q = query(
-        collection(db, 'tasks'),
-        where('userID', '==', userId),
-        orderBy('timestamp', 'desc')
-      );
-      const querySnapshot = await getDocs(q);
+    const q = query(
+      collection(db, 'tasks'),
+      where('userID', '==', userId),
+      orderBy('timestamp', 'desc')
+    );
+    const querySnapshot = await getDocs(q);
       console.log('Found tasks:', querySnapshot.size);
       
       const tasks = querySnapshot.docs.map(doc => {
@@ -212,20 +212,376 @@ export const DatabaseService = {
   },
 
   // Appointment operations
-  async createAppointment(appointmentData: Appointment): Promise<void> {
-    const appointmentRef = doc(collection(db, 'appointments'));
-    await setDoc(appointmentRef, appointmentData);
+  async createAppointment(appointmentData: Omit<Appointment, 'appointmentID' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    try {
+      const appointmentRef = collection(db, 'appointments');
+      const now = new Date();
+      
+      const newAppointment = {
+        ...appointmentData,
+        createdAt: now,
+        updatedAt: now
+      };
+      
+      const docRef = await addDoc(appointmentRef, newAppointment);
+      await updateDoc(docRef, { appointmentID: docRef.id });
+      return docRef.id;
+    } catch (error) {
+      console.error("Error creating appointment:", error);
+      throw error;
+    }
   },
 
-  async getUserAppointments(userId: string): Promise<Appointment[]> {
-    const q = query(
+  async getUserAppointments(userId: string, options?: { 
+    limit?: number, 
+    startDate?: Date, 
+    endDate?: Date, 
+    includeRecurring?: boolean 
+  }): Promise<Appointment[]> {
+    try {
+      // Start building the query
+      let appointmentsQuery = query(
+        collection(db, 'appointments'),
+        where('userID', '==', userId)
+      );
+      
+      // Add date range filter if provided
+      if (options?.startDate) {
+        appointmentsQuery = query(
+          appointmentsQuery,
+          where('date', '>=', options.startDate)
+        );
+      }
+      
+      // Always order by date
+      appointmentsQuery = query(
+        appointmentsQuery,
+        orderBy('date', 'asc')
+      );
+      
+      // Apply limit if specified
+      if (options?.limit) {
+        appointmentsQuery = query(appointmentsQuery, limit(options.limit));
+      }
+      
+      const querySnapshot = await getDocs(appointmentsQuery);
+      
+      return querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        
+        // Safely convert dates and timestamps
+        let date = data.date;
+        if (date) {
+          date = date instanceof Timestamp ? date.toDate() : date;
+        }
+        
+        let createdAt = data.createdAt;
+        if (createdAt) {
+          createdAt = createdAt instanceof Timestamp ? createdAt.toDate() : createdAt;
+        } else {
+          createdAt = new Date();
+        }
+        
+        let updatedAt = data.updatedAt;
+        if (updatedAt) {
+          updatedAt = updatedAt instanceof Timestamp ? updatedAt.toDate() : updatedAt;
+        } else {
+          updatedAt = new Date();
+        }
+        
+        let recurrenceEndDate = data.recurrenceEndDate;
+        if (recurrenceEndDate) {
+          recurrenceEndDate = recurrenceEndDate instanceof Timestamp ? recurrenceEndDate.toDate() : recurrenceEndDate;
+        }
+        
+        // Convert notificationTimes
+        const notificationTimes = data.notificationTimes || [];
+        const convertedNotificationTimes = notificationTimes.map(time => 
+          time instanceof Timestamp ? time.toDate() : time
+        );
+        
+        return {
+          ...data,
+          appointmentID: doc.id,
+          date: date,
+          createdAt: createdAt,
+          updatedAt: updatedAt,
+          recurrenceEndDate: recurrenceEndDate,
+          notificationTimes: convertedNotificationTimes
+        } as Appointment;
+      });
+    } catch (error) {
+      console.error("Error fetching user appointments:", error);
+      return [];
+    }
+  },
+  
+  async getAppointmentsByDate(userId: string, date: Date): Promise<Appointment[]> {
+    try {
+      // Convert the provided date to start and end of day
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+      
+      // Query for appointments on the specific date
+      const appointmentsQuery = query(
+        collection(db, 'appointments'),
+        where('userID', '==', userId),
+        where('date', '>=', startOfDay),
+        where('date', '<=', endOfDay),
+        orderBy('date', 'asc')
+      );
+      
+      const querySnapshot = await getDocs(appointmentsQuery);
+      
+      // Process each document
+      const appointments = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        
+        // Convert timestamps
+        let date = data.date instanceof Timestamp ? data.date.toDate() : data.date;
+        let createdAt = data.createdAt instanceof Timestamp ? data.createdAt.toDate() : (data.createdAt || new Date());
+        let updatedAt = data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : (data.updatedAt || new Date());
+        
+        // Convert notification times
+        const notificationTimes = (data.notificationTimes || []).map(time => 
+          time instanceof Timestamp ? time.toDate() : time
+        );
+        
+        return {
+          ...data,
+          appointmentID: doc.id,
+          date: date,
+          createdAt: createdAt,
+          updatedAt: updatedAt,
+          notificationTimes: notificationTimes
+        } as Appointment;
+      });
+      
+      // Additionally, we should check for recurring appointments
+      const recurringAppointmentsQuery = query(
+        collection(db, 'appointments'),
+        where('userID', '==', userId),
+        where('isRecurring', '==', true)
+      );
+      
+      const recurringSnapshot = await getDocs(recurringAppointmentsQuery);
+      
+      // Filter recurring appointments that occur on the specified date
+      const matchingRecurringAppointments = recurringSnapshot.docs
+        .map(doc => {
+          const data = doc.data();
+          
+          // Convert timestamps
+          let appointmentDate = data.date instanceof Timestamp ? data.date.toDate() : data.date;
+          let createdAt = data.createdAt instanceof Timestamp ? data.createdAt.toDate() : (data.createdAt || new Date());
+          let updatedAt = data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : (data.updatedAt || new Date());
+          let recurrenceEndDate = data.recurrenceEndDate instanceof Timestamp ? data.recurrenceEndDate.toDate() : data.recurrenceEndDate;
+          
+          // Convert notification times
+          const notificationTimes = (data.notificationTimes || []).map(time => 
+            time instanceof Timestamp ? time.toDate() : time
+          );
+          
+          const appointment = {
+            ...data,
+            appointmentID: doc.id,
+            date: appointmentDate,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            recurrenceEndDate: recurrenceEndDate,
+            notificationTimes: notificationTimes
+          } as Appointment;
+          
+          // Check if this recurring appointment occurs on the specified date
+          return this.doesRecurringAppointmentOccurOnDate(appointment, date) ? appointment : null;
+        })
+        .filter(Boolean) as Appointment[];
+      
+      // Combine regular and matching recurring appointments
+      return [...appointments, ...matchingRecurringAppointments];
+    } catch (error) {
+      console.error("Error fetching appointments by date:", error);
+      return [];
+    }
+  },
+  
+  /**
+   * Check if a recurring appointment occurs on a specific date
+   */
+  doesRecurringAppointmentOccurOnDate(appointment: Appointment, targetDate: Date): boolean {
+    if (!appointment.isRecurring) return false;
+    
+    const appointmentDate = appointment.date;
+    const recurrenceEndDate = appointment.recurrenceEndDate;
+    
+    // Check if target date is beyond recurrence end date
+    if (recurrenceEndDate && targetDate > recurrenceEndDate) {
+      return false;
+    }
+    
+    // Check if target date is before the first occurrence
+    if (targetDate < appointmentDate) {
+      return false;
+    }
+    
+    // Calculate based on recurrence pattern
+    switch (appointment.recurrencePattern) {
+      case 'daily':
+        // Every day
+        return true;
+        
+      case 'weekly':
+        // Same day of week
+        return appointmentDate.getDay() === targetDate.getDay();
+        
+      case 'monthly':
+        // Same day of month
+        return appointmentDate.getDate() === targetDate.getDate();
+        
+      case 'yearly':
+        // Same day of year
+        return (
+          appointmentDate.getMonth() === targetDate.getMonth() &&
+          appointmentDate.getDate() === targetDate.getDate()
+        );
+        
+      default:
+        return false;
+    }
+  },
+  
+  async updateAppointment(appointmentId: string, appointmentData: Partial<Omit<Appointment, 'appointmentID' | 'createdAt'>>): Promise<void> {
+    try {
+      const updateData = {
+        ...appointmentData,
+        updatedAt: new Date()
+      };
+      
+      await updateDoc(doc(db, 'appointments', appointmentId), updateData);
+    } catch (error) {
+      console.error("Error updating appointment:", error);
+      throw error;
+    }
+  },
+  
+  async deleteAppointment(appointmentId: string): Promise<void> {
+    try {
+      await deleteDoc(doc(db, 'appointments', appointmentId));
+    } catch (error) {
+      console.error("Error deleting appointment:", error);
+      throw error;
+    }
+  },
+  
+  async getUpcomingAppointments(userId: string, limit: number = 3): Promise<Appointment[]> {
+    try {
+      const now = new Date();
+      
+      // Query for upcoming appointments
+      const appointmentsQuery = query(
       collection(db, 'appointments'),
       where('userID', '==', userId),
+        where('date', '>=', now),
       orderBy('date', 'asc'),
-      limit(10)
-    );
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => doc.data() as Appointment);
+        limit(limit)
+      );
+      
+      const querySnapshot = await getDocs(appointmentsQuery);
+      
+      return querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        
+        // Convert timestamps
+        let date = data.date instanceof Timestamp ? data.date.toDate() : data.date;
+        let createdAt = data.createdAt instanceof Timestamp ? data.createdAt.toDate() : (data.createdAt || new Date());
+        let updatedAt = data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : (data.updatedAt || new Date());
+        let recurrenceEndDate = data.recurrenceEndDate instanceof Timestamp ? data.recurrenceEndDate.toDate() : data.recurrenceEndDate;
+        
+        // Convert notification times
+        const notificationTimes = (data.notificationTimes || []).map(time => 
+          time instanceof Timestamp ? time.toDate() : time
+        );
+        
+        return {
+          ...data,
+          appointmentID: doc.id,
+          date: date,
+          createdAt: createdAt,
+          updatedAt: updatedAt,
+          recurrenceEndDate: recurrenceEndDate,
+          notificationTimes: notificationTimes
+        } as Appointment;
+      });
+    } catch (error) {
+      console.error("Error fetching upcoming appointments:", error);
+      return [];
+    }
+  },
+  
+  async getDatesWithAppointments(userId: string, startDate: Date, endDate: Date): Promise<Date[]> {
+    try {
+      // Query for appointments in the date range
+      const appointmentsQuery = query(
+        collection(db, 'appointments'),
+        where('userID', '==', userId),
+        where('date', '>=', startDate),
+        where('date', '<=', endDate)
+      );
+      
+      const querySnapshot = await getDocs(appointmentsQuery);
+      
+      // Extract dates from appointments
+      const datesWithAppointments = new Set<string>();
+      
+      querySnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const date = data.date instanceof Timestamp ? data.date.toDate() : data.date;
+        datesWithAppointments.add(date.toISOString().split('T')[0]);
+      });
+      
+      // Also check recurring appointments
+      const recurringAppointmentsQuery = query(
+        collection(db, 'appointments'),
+        where('userID', '==', userId),
+        where('isRecurring', '==', true)
+      );
+      
+      const recurringSnapshot = await getDocs(recurringAppointmentsQuery);
+      
+      // For each recurring appointment, check each day in the range
+      recurringSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const appointment = {
+          ...data,
+          appointmentID: doc.id,
+          date: data.date instanceof Timestamp ? data.date.toDate() : data.date,
+          recurrenceEndDate: data.recurrenceEndDate instanceof Timestamp 
+            ? data.recurrenceEndDate.toDate() 
+            : data.recurrenceEndDate
+        } as Appointment;
+        
+        // Check each day in the range
+        const currentDate = new Date(startDate);
+        while (currentDate <= endDate) {
+          if (this.doesRecurringAppointmentOccurOnDate(appointment, currentDate)) {
+            datesWithAppointments.add(currentDate.toISOString().split('T')[0]);
+          }
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+      });
+      
+      // Convert back to Date objects
+      return Array.from(datesWithAppointments).map(dateString => {
+        const [year, month, day] = dateString.split('-').map(Number);
+        return new Date(year, month - 1, day);
+      });
+    } catch (error) {
+      console.error("Error fetching dates with appointments:", error);
+      return [];
+    }
   },
 
   // Reminder operations
@@ -253,7 +609,7 @@ export const DatabaseService = {
       const now = new Date();
       
       const newNote = {
-        ...noteData,
+      ...noteData,
         updatedAt: now,
       };
       

@@ -23,12 +23,21 @@ export interface Task {
 
 export interface Appointment {
   userID: string;
+  appointmentID?: string;
   appointmentName: string;
   description: string;
   date: Date;
-  time: string;
+  startTime: string;
+  endTime: string;
+  allDay?: boolean;
   address?: string;
   notificationTimes: Date[];
+  color?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  isRecurring?: boolean;
+  recurrencePattern?: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  recurrenceEndDate?: Date | null;
 }
 
 export interface Reminder {

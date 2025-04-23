@@ -608,14 +608,14 @@ export default function NotesScreen() {
             <FileText size={16} color="#9333ea" />
             <Text style={styles.actionButtonText}>New Note</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
+
+        <TouchableOpacity
             style={styles.actionButton}
             onPress={() => setShowCreateFolderModal(true)}
           >
             <FolderIcon size={16} color="#9333ea" />
             <Text style={styles.actionButtonText}>New Folder</Text>
-          </TouchableOpacity>
+        </TouchableOpacity>
         </View>
       </LinearGradient>
 
@@ -672,30 +672,30 @@ export default function NotesScreen() {
                 <Text style={styles.sectionTitle}>
                   {currentFolder === null ? 'Notes' : 'Notes in this folder'}
                 </Text>
-                {notes.map(note => (
+        {notes.map(note => (
                   <View key={note.noteID} style={styles.noteCard}>
                     <TouchableOpacity 
                       style={styles.noteCardContent}
                       onPress={() => openViewNoteModal(note)}
                     >
-                      <View style={styles.noteHeader}>
-                        <FileText size={20} color="#9333ea" />
-                        <Text style={styles.noteTitle}>{note.title}</Text>
-                      </View>
+            <View style={styles.noteHeader}>
+              <FileText size={20} color="#9333ea" />
+              <Text style={styles.noteTitle}>{note.title}</Text>
+            </View>
 
-                      <Text style={styles.noteContent} numberOfLines={3}>
-                        {note.content}
-                      </Text>
+            <Text style={styles.noteContent} numberOfLines={3}>
+              {note.content}
+            </Text>
 
-                      <View style={styles.noteFooter}>
-                        <View style={styles.timestampContainer}>
-                          <Clock size={14} color="#6b7280" />
-                          <Text style={styles.timestampText}>
-                            {formatDate(note.updatedAt)}
-                          </Text>
-                        </View>
-                      </View>
-                    </TouchableOpacity>
+            <View style={styles.noteFooter}>
+              <View style={styles.timestampContainer}>
+                <Clock size={14} color="#6b7280" />
+                <Text style={styles.timestampText}>
+                  {formatDate(note.updatedAt)}
+                </Text>
+              </View>
+            </View>
+          </TouchableOpacity>
                     
                     <View style={styles.noteActions}>
                       <TouchableOpacity

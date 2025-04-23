@@ -2,20 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Platform, Modal, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
-import { Menu, Calendar, Bell, FileText, SquareCheck as CheckSquare, X } from 'lucide-react-native';
+import { Menu, Calendar, Bell, FileText, SquareCheck as CheckSquare, X, Clock, MapPin, Edit } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { getAuth } from 'firebase/auth';
 import { DatabaseService } from '@/services/database';
 import type { User, Appointment, Reminder, Task } from '@/types/database';
 import { useAuth } from '@/utils/AuthContext';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 
 export default function HomePage() {
+  const router = useRouter();
   const { user: authUser, authInitialized } = useAuth();
   const { t } = useTranslation();
   const [showMenu, setShowMenu] = useState(false);
   const [showAppointments, setShowAppointments] = useState(false);
   const [showReminders, setShowReminders] = useState(false);
+  const [showAppointmentDetails, setShowAppointmentDetails] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [expandedAppointments, setExpandedAppointments] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -30,11 +34,12 @@ export default function HomePage() {
       console.log('Home tab focused, refreshing data');
       if (authInitialized && authUser) {
         loadDailyTasks();
+        loadUpcomingAppointments();
       }
       return () => {
         // Cleanup function when component unfocuses
       };
-    }, [authInitialized, authUser])
+    }, [authInitialized, authUser, expandedAppointments])
   );
 
   useEffect(() => {
@@ -63,10 +68,9 @@ export default function HomePage() {
           console.error('Error loading user data:', error);
         }
         
-        // Load appointments
+        // Load upcoming appointments
         try {
-          const userAppointments = await DatabaseService.getUserAppointments(userId);
-          if (isMounted) setAppointments(userAppointments || []);
+          await loadUpcomingAppointments();
         } catch (error) {
           console.error('Error loading appointments:', error);
           if (isMounted) setAppointments([]);
@@ -154,7 +158,10 @@ export default function HomePage() {
     <View style={styles.scheduleSection}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Today's Schedule</Text>
-        <TouchableOpacity style={styles.weekViewButton}>
+        <TouchableOpacity 
+          style={styles.weekViewButton}
+          onPress={() => router.push('/appointments')}
+        >
           <Calendar size={18} color="#9333ea" />
         </TouchableOpacity>
       </View>
@@ -176,16 +183,42 @@ export default function HomePage() {
           <ScrollView 
             style={styles.eventList} 
             showsVerticalScrollIndicator={false}
-            pointerEvents="none"
           >
-            {appointments.map((appointment, index) => (
-              <View key={index} style={styles.eventItem}>
-                <Text style={styles.eventTime}>{appointment.time}</Text>
-                <Text style={styles.eventName} numberOfLines={1}>
-                  {appointment.appointmentName}
-                </Text>
+            {appointments.length > 0 ? (
+              appointments.map((appointment, index) => (
+                <TouchableOpacity 
+                  key={index} 
+                  style={styles.eventItem}
+                  onPress={() => {
+                    setSelectedAppointment(appointment);
+                    setShowAppointmentDetails(true);
+                  }}
+                >
+                  <Text style={styles.eventTime}>{new Date(appointment.date).toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}</Text>
+                  <Text style={styles.eventName} numberOfLines={1}>
+                    {appointment.appointmentName}
+                  </Text>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <View style={styles.emptyEventContainer}>
+                <Text style={styles.emptyEventText}>No upcoming appointments</Text>
               </View>
-            ))}
+            )}
+            
+            {appointments.length > 0 && (
+              <TouchableOpacity 
+                style={styles.seeMoreButton}
+                onPress={() => setExpandedAppointments(!expandedAppointments)}
+              >
+                <Text style={styles.seeMoreButtonText}>
+                  {expandedAppointments ? 'Show less' : 'See more...'}
+                </Text>
+              </TouchableOpacity>
+            )}
           </ScrollView>
         </TouchableOpacity>
 
@@ -400,6 +433,110 @@ export default function HomePage() {
     }
   };
 
+  // Load upcoming appointments specifically
+  const loadUpcomingAppointments = async () => {
+    if (!authUser) return;
+    
+    try {
+      // Get upcoming appointments (future dates only)
+      const upcomingAppointments = await DatabaseService.getUpcomingAppointments(authUser.uid, expandedAppointments ? 10 : 3);
+      setAppointments(upcomingAppointments);
+    } catch (error) {
+      console.error("Error loading upcoming appointments:", error);
+      setAppointments([]);
+    }
+  };
+
+  // Function to format appointment time
+  const formatAppointmentTime = (time: string) => {
+    return time;
+  };
+
+  // Add appointment detail modal
+  const renderAppointmentDetail = () => {
+    if (!selectedAppointment) return null;
+    
+    return (
+      <Modal
+        visible={showAppointmentDetails}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAppointmentDetails(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <View style={styles.modalHeaderLeft}>
+                <Calendar size={20} color="#9333ea" />
+                <Text style={styles.modalTitle}>Appointment Details</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowAppointmentDetails(false)}
+              >
+                <X size={20} color="#ffffff" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.appointmentDetailContainer}>
+              <Text style={styles.appointmentDetailTitle}>
+                {selectedAppointment.appointmentName}
+              </Text>
+              
+              <View style={styles.appointmentDetailRow}>
+                <Clock size={18} color="#9333ea" />
+                <Text style={styles.appointmentDetailText}>
+                  {new Date(selectedAppointment.date).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </Text>
+              </View>
+              
+              <View style={styles.appointmentDetailRow}>
+                <Clock size={18} color="#9333ea" />
+                <Text style={styles.appointmentDetailText}>
+                  {selectedAppointment.startTime} - {selectedAppointment.endTime}
+                </Text>
+              </View>
+              
+              {selectedAppointment.description && (
+                <View style={styles.appointmentDescriptionContainer}>
+                  <Text style={styles.appointmentDescription}>
+                    {selectedAppointment.description}
+                  </Text>
+                </View>
+              )}
+              
+              {selectedAppointment.address && (
+                <View style={styles.appointmentDetailRow}>
+                  <MapPin size={18} color="#9333ea" />
+                  <Text style={styles.appointmentDetailText}>
+                    {selectedAppointment.address}
+                  </Text>
+                </View>
+              )}
+              
+              <TouchableOpacity
+                style={styles.editAppointmentButton}
+                onPress={() => {
+                  setShowAppointmentDetails(false);
+                  router.push('/appointments');
+                }}
+              >
+                <Edit size={18} color="#ffffff" />
+                <Text style={styles.editAppointmentButtonText}>
+                  Edit Appointment
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -450,6 +587,7 @@ export default function HomePage() {
         )}
 
         {renderMenu()}
+        {renderAppointmentDetail()}
       </LinearGradient>
     </View>
   );
@@ -869,5 +1007,70 @@ const styles = StyleSheet.create({
   },
   completedTaskText: {
     textDecorationLine: 'line-through',
+  },
+  emptyEventContainer: {
+    alignItems: 'center',
+    padding: 8,
+  },
+  emptyEventText: {
+    fontSize: 12,
+    color: '#9ca3af',
+  },
+  seeMoreButton: {
+    alignItems: 'center',
+    padding: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  seeMoreButtonText: {
+    fontSize: 12,
+    color: '#9333ea',
+    fontWeight: '600',
+  },
+  appointmentDetailContainer: {
+    padding: 8,
+  },
+  appointmentDetailTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginBottom: 16,
+  },
+  appointmentDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  appointmentDetailText: {
+    fontSize: 16,
+    color: '#e5e7eb',
+    marginLeft: 12,
+  },
+  appointmentDescriptionContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 8,
+    padding: 12,
+    marginVertical: 8,
+  },
+  appointmentDescription: {
+    fontSize: 16,
+    color: '#e5e7eb',
+    lineHeight: 24,
+  },
+  editAppointmentButton: {
+    backgroundColor: '#9333ea',
+    borderRadius: 8,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+  },
+  editAppointmentButtonText: {
+    color: '#ffffff',
+    fontWeight: '600',
+    fontSize: 16,
+    marginLeft: 8,
   },
 }); 
