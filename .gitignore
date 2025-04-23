@@ -37,7 +37,4 @@ yarn-error.*
 .bolt
 
 # MCP configuration
-.cursor/.env
-.cursor/mcp.json
-MCP_GUIDE.md
-setup-mcp.js
+.cursor
