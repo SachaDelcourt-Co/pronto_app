@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, TextInput, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, TextInput, Modal, ActivityIndicator, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { CircleCheck as CheckCircle2, Plus, X, Calendar, Edit3 } from 'lucide-react-native';
-import { getAuth } from 'firebase/auth';
+import { CircleCheck as CheckCircle2, Plus, X, Calendar, Edit3, Trash2 } from 'lucide-react-native';
 import { DatabaseService } from '@/services/database';
 import type { Task } from '@/types/database';
 import { useAuth } from '@/utils/AuthContext';
 import { useFocusEffect } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 export default function TasksScreen() {
+  const { t } = useTranslation();
   const { user, authInitialized } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -17,6 +18,9 @@ export default function TasksScreen() {
   const [selectedDays, setSelectedDays] = useState(3); // Default to 3 days
   const [loading, setLoading] = useState(false);
   const [loadingTasks, setLoadingTasks] = useState(true);
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
 
   // Refresh tasks when the tab is focused
   useFocusEffect(
@@ -109,6 +113,39 @@ export default function TasksScreen() {
     }
   };
 
+  const handleDeleteTask = async (taskId: string) => {
+    console.log('handleDeleteTask called with ID:', taskId);
+    // Show custom delete confirmation modal
+    setTaskToDelete(taskId);
+    setShowDeleteConfirmation(true);
+  };
+
+  const confirmDeleteTask = async () => {
+    console.log("Delete confirmed, proceeding with deletion");
+    if (taskToDelete) {
+      try {
+        setDeletingTaskId(taskToDelete);
+        await DatabaseService.deleteTask(taskToDelete);
+        console.log("Task successfully deleted, reloading tasks");
+        // Reload tasks after successful deletion
+        await loadTasks();
+      } catch (error) {
+        console.error('Error deleting task:', error);
+        Alert.alert("Error", "Failed to delete task. Please try again.");
+      } finally {
+        setDeletingTaskId(null);
+        setShowDeleteConfirmation(false);
+        setTaskToDelete(null);
+      }
+    }
+  };
+
+  const cancelDeleteTask = () => {
+    console.log("Delete canceled");
+    setShowDeleteConfirmation(false);
+    setTaskToDelete(null);
+  };
+
   const renderTaskModal = () => {
     return (
       <Modal
@@ -194,6 +231,42 @@ export default function TasksScreen() {
     );
   };
 
+  const renderDeleteConfirmationModal = () => {
+    return (
+      <Modal
+        visible={showDeleteConfirmation}
+        transparent
+        animationType="fade"
+        onRequestClose={cancelDeleteTask}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.confirmModalContent}>
+            <Text style={styles.confirmModalTitle}>Delete Task</Text>
+            <Text style={styles.confirmModalText}>
+              Are you sure you want to delete this task?
+            </Text>
+            
+            <View style={styles.confirmModalButtons}>
+              <TouchableOpacity
+                style={[styles.confirmModalButton, styles.confirmModalCancelButton]}
+                onPress={cancelDeleteTask}
+              >
+                <Text style={styles.confirmModalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.confirmModalButton, styles.confirmModalDeleteButton]}
+                onPress={confirmDeleteTask}
+              >
+                <Text style={styles.confirmModalDeleteText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -260,6 +333,24 @@ export default function TasksScreen() {
                       </Text>
                     ) : null}
                   </View>
+                  <TouchableOpacity 
+                    style={styles.deleteButton}
+                    onPress={() => {
+                      console.log('Delete button pressed for task:', task.taskID);
+                      if (task.taskID) {
+                        handleDeleteTask(task.taskID);
+                      } else {
+                        console.error('Task ID is undefined');
+                      }
+                    }}
+                    disabled={deletingTaskId === task.taskID}
+                  >
+                    {deletingTaskId === task.taskID ? (
+                      <ActivityIndicator size="small" color="#ef4444" />
+                    ) : (
+                      <Trash2 size={18} color="#ef4444" />
+                    )}
+                  </TouchableOpacity>
                 </View>
 
                 <View style={styles.taskProgress}>
@@ -292,6 +383,7 @@ export default function TasksScreen() {
       </TouchableOpacity>
 
       {renderTaskModal()}
+      {renderDeleteConfirmationModal()}
     </View>
   );
 }
@@ -372,11 +464,14 @@ const styles = StyleSheet.create({
   },
   taskHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 12,
+    alignItems: 'center',
+    marginBottom: 10,
   },
   taskIconContainer: {
-    width: 30,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(147, 51, 234, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -544,6 +639,69 @@ const styles = StyleSheet.create({
     backgroundColor: '#d1d5db',
   },
   createButtonText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: '#ffffff',
+  },
+  deleteButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+  },
+  confirmModalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    width: '90%',
+    maxWidth: 350,
+    padding: 20,
+  },
+  confirmModalTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
+    color: '#1f2937',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  confirmModalText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    color: '#4b5563',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  confirmModalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  confirmModalButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  confirmModalCancelButton: {
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  confirmModalDeleteButton: {
+    backgroundColor: '#ef4444',
+  },
+  confirmModalCancelText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: '#4b5563',
+  },
+  confirmModalDeleteText: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
     color: '#ffffff',

@@ -200,6 +200,17 @@ export const DatabaseService = {
     }
   },
 
+  async deleteTask(taskId: string): Promise<void> {
+    try {
+      console.log(`Deleting task with ID: ${taskId}`);
+      await deleteDoc(doc(db, 'tasks', taskId));
+      console.log(`Task ${taskId} successfully deleted`);
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      throw error;
+    }
+  },
+
   // Appointment operations
   async createAppointment(appointmentData: Appointment): Promise<void> {
     const appointmentRef = doc(collection(db, 'appointments'));
