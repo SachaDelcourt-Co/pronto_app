@@ -512,26 +512,138 @@ export default function HomePage() {
   const renderMenu = () => {
     if (!showMenu) return null;
 
+    const handleLogout = async () => {
+      try {
+        // Close the menu
+        setShowMenu(false);
+        
+        // Sign out the user
+        const auth = getAuth();
+        await auth.signOut();
+        
+        // Any additional cleanup can go here
+        console.log('User logged out successfully');
+        
+        // Redirect to login page
+        router.replace('/login');
+      } catch (error) {
+        console.error('Error signing out:', error);
+      }
+    };
+
+    // Format date for last activity
+    const formatLastActivity = () => {
+      const now = new Date();
+      return now.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    };
+
     return (
       <View style={StyleSheet.absoluteFill}>
         <BlurView intensity={80} style={StyleSheet.absoluteFill} tint="dark">
-          <View style={styles.menuContent}>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setShowMenu(false)}
-            >
-              <Menu color="#ffffff" size={24} />
-            </TouchableOpacity>
+          <ScrollView style={styles.menuScrollContent}>
+            <View style={styles.menuContent}>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setShowMenu(false)}
+              >
+                <X color="#ffffff" size={24} />
+              </TouchableOpacity>
 
-            <View style={styles.profileSection}>
-              <Image
-                source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=80' }}
-                style={styles.profileImage}
-              />
-              <Text style={styles.profileName}>{user?.name || 'User'}</Text>
-              <Text style={styles.profileEmail}>{user?.email}</Text>
+              {/* Profile Section */}
+              <View style={styles.profileSection}>
+                <Image
+                  source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=80' }}
+                  style={styles.profileImage}
+                />
+                <Text style={styles.profileName}>{user?.name || 'User'}</Text>
+                <Text style={styles.profileEmail}>{user?.email}</Text>
+              </View>
+
+              {/* Quick Stats Section */}
+              <View style={styles.menuSection}>
+                <Text style={styles.menuSectionTitle}>Activity Summary</Text>
+                <View style={styles.statsContainer}>
+                  <View style={styles.statItem}>
+                    <CheckSquare size={20} color="#9333ea" />
+                    <Text style={styles.statNumber}>{dailyTasks.length}</Text>
+                    <Text style={styles.statLabel}>Tasks</Text>
+                  </View>
+                  
+                  <View style={styles.statItem}>
+                    <Calendar size={20} color="#9333ea" />
+                    <Text style={styles.statNumber}>{totalAppointmentCount}</Text>
+                    <Text style={styles.statLabel}>Appointments</Text>
+                  </View>
+                  
+                  <View style={styles.statItem}>
+                    <Bell size={20} color="#9333ea" />
+                    <Text style={styles.statNumber}>{totalReminderCount}</Text>
+                    <Text style={styles.statLabel}>Reminders</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Last Activity */}
+              <View style={styles.menuSection}>
+                <Text style={styles.menuSectionTitle}>Account Info</Text>
+                <View style={styles.infoItem}>
+                  <Text style={styles.infoLabel}>Last Activity:</Text>
+                  <Text style={styles.infoValue}>{formatLastActivity()}</Text>
+                </View>
+                <View style={styles.infoItem}>
+                  <Text style={styles.infoLabel}>Language:</Text>
+                  <Text style={styles.infoValue}>{user?.language?.toUpperCase() || 'EN'}</Text>
+                </View>
+                {user && user.motivations && user.motivations.length > 0 && (
+                  <View style={styles.infoItem}>
+                    <Text style={styles.infoLabel}>Motivations:</Text>
+                    <View style={styles.motivationsContainer}>
+                      {user.motivations.map((motivation, index) => (
+                        <View key={index} style={styles.motivationChip}>
+                          <Text style={styles.motivationText}>
+                            {motivation.charAt(0).toUpperCase() + motivation.slice(1)}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+              </View>
+
+              {/* App Version and Support */}
+              <View style={styles.menuSection}>
+                <Text style={styles.menuSectionTitle}>App Info</Text>
+                <View style={styles.infoItem}>
+                  <Text style={styles.infoLabel}>Version:</Text>
+                  <Text style={styles.infoValue}>1.0.0</Text>
+                </View>
+                <TouchableOpacity 
+                  style={styles.supportButton}
+                  onPress={() => {
+                    setShowMenu(false);
+                    // Navigate to support or open support chat
+                    // router.push('/support');
+                    alert('Support feature coming soon!');
+                  }}
+                >
+                  <Text style={styles.supportButtonText}>Contact Support</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Logout Button */}
+              <TouchableOpacity
+                style={styles.logoutButton}
+                onPress={handleLogout}
+              >
+                <Text style={styles.logoutButtonText}>Log Out</Text>
+              </TouchableOpacity>
             </View>
-          </View>
+          </ScrollView>
         </BlurView>
       </View>
     );
@@ -1438,5 +1550,103 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 16,
     marginLeft: 8,
+  },
+  menuScrollContent: {
+    flex: 1,
+  },
+  menuSection: {
+    padding: 16,
+  },
+  menuSectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginBottom: 16,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#9ca3af',
+  },
+  quickAccessGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    justifyContent: 'space-between',
+  },
+  quickAccessItem: {
+    width: '48%',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  quickAccessText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#ffffff',
+    marginTop: 4,
+  },
+  infoItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  infoLabel: {
+    fontSize: 14,
+    color: '#9ca3af',
+  },
+  infoValue: {
+    fontSize: 14,
+    color: '#ffffff',
+  },
+  motivationsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  motivationChip: {
+    backgroundColor: 'rgba(147, 51, 234, 0.2)',
+    borderRadius: 8,
+    padding: 4,
+  },
+  motivationText: {
+    color: '#ffffff',
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  supportButton: {
+    backgroundColor: '#9333ea',
+    borderRadius: 8,
+    padding: 12,
+  },
+  supportButtonText: {
+    color: '#ffffff',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  logoutButton: {
+    backgroundColor: '#9333ea',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 16,
+  },
+  logoutButtonText: {
+    color: '#ffffff',
+    fontWeight: '600',
+    fontSize: 16,
   },
 }); 

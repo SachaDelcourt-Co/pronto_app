@@ -31,7 +31,7 @@ export default function Login() {
     try {
       const auth = getAuth();
       await signInWithEmailAndPassword(auth, email, password);
-      router.replace('/(tabs)/');
+      router.replace('/(tabs)/home');
     } catch (err) {
       setError(t('login.invalidCredentials'));
     }
