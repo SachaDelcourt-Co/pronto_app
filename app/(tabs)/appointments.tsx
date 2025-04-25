@@ -6,17 +6,23 @@ import { Calendar } from 'react-native-calendars';
 import { useAuth } from '@/utils/AuthContext';
 import { DatabaseService } from '@/services/database';
 import type { Appointment } from '@/types/database';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function AppointmentsScreen() {
+  const router = useRouter();
   const { user } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [dailyAppointments, setDailyAppointments] = useState<Appointment[]>([]);
+  const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]); // Store upcoming appointments
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [displayDate, setDisplayDate] = useState(new Date()); // Separate state for the main view
   const [showCalendar, setShowCalendar] = useState(false);
   const [markedDates, setMarkedDates] = useState<Record<string, any>>({});
   const [currentHour, setCurrentHour] = useState(new Date().getHours());
+  const processedAppointmentIds = React.useRef<Set<string>>(new Set());
+  const timelineScrollRef = React.useRef<ScrollView>(null); // Ref for the scrollview
   
   // Modal states
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
@@ -28,6 +34,7 @@ export default function AppointmentsScreen() {
   const [appointmentName, setAppointmentName] = useState('');
   const [appointmentDescription, setAppointmentDescription] = useState('');
   const [appointmentDate, setAppointmentDate] = useState(new Date());
+  const [appointmentDateInput, setAppointmentDateInput] = useState('');
   const [appointmentStartTime, setAppointmentStartTime] = useState('09:00');
   const [appointmentEndTime, setAppointmentEndTime] = useState('10:00');
   const [appointmentAddress, setAppointmentAddress] = useState('');
@@ -39,6 +46,57 @@ export default function AppointmentsScreen() {
   // Show more in home
   const [expandedInHome, setExpandedInHome] = useState(false);
 
+  // 1. Add state to track the visible month
+  const formatLocalDate = (date: Date): string => {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  };
+
+  // Add back parseLocalDate function
+  // Ensure date parsing is timezone-aware
+  const parseLocalDate = (dateString: string): Date => {
+    // Parse a YYYY-MM-DD date string to a Date object in the local timezone
+    const [year, month, day] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    return date;
+  };
+
+  // Track the currently visible month in the calendar
+  const [currentVisibleMonth, setCurrentVisibleMonth] = useState(formatLocalDate(new Date()).substring(0, 7)); // YYYY-MM format
+
+  // Add effect to load marked dates when month changes
+  useEffect(() => {
+    if (showCalendar && user) {
+      console.log('Month changed, loading marks for:', currentVisibleMonth);
+      
+      // Use requestAnimationFrame instead of setTimeout to ensure better timing
+      const rafId = requestAnimationFrame(() => {
+        loadMarkedDates(currentVisibleMonth);
+      });
+      
+      return () => cancelAnimationFrame(rafId);
+    }
+  }, [currentVisibleMonth, user, showCalendar]);
+
+  // Update resetForm to use the formatLocalDate function
+  const resetForm = (appointment?: Appointment | null) => {
+    setAppointmentName(appointment?.appointmentName || '');
+    setAppointmentDescription(appointment?.description || '');
+    
+    const date = appointment?.date ? new Date(appointment.date) : new Date();
+    setAppointmentDate(date);
+    setAppointmentDateInput(formatLocalDate(date));
+    
+    setAppointmentStartTime(appointment?.startTime || '09:00');
+    setAppointmentEndTime(appointment?.endTime || '10:00');
+    setAppointmentAddress(appointment?.address || '');
+    setIsEditMode(!!appointment);
+  };
+
+  // Update the useEffect that sets appointmentDateInput
+  useEffect(() => {
+    setAppointmentDateInput(formatLocalDate(appointmentDate));
+  }, [appointmentDate]);
+
   // Update time tracker
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -48,19 +106,91 @@ export default function AppointmentsScreen() {
     return () => clearInterval(intervalId);
   }, []);
 
+  // Load upcoming appointments (future dates)
+  const loadUpcomingAppointments = async () => {
+    if (!user) return;
+    
+    try {
+      // Set to beginning of today to include all of today's appointments
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Get future appointments including today's appointments
+      const futureAppointments = await DatabaseService.getUserAppointments(user.uid, {
+        startDate: today,
+        limit: 50 // Increased limit to get more appointments
+      });
+      
+      // Sort by date and time
+      futureAppointments.sort((a, b) => {
+        // First compare by date
+        const dateComparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+        if (dateComparison !== 0) return dateComparison;
+        
+        // If same date, compare by start time
+        return a.startTime.localeCompare(b.startTime);
+      });
+      
+      setUpcomingAppointments(futureAppointments);
+    } catch (error) {
+      console.error('Error loading upcoming appointments:', error);
+      setUpcomingAppointments([]);
+    }
+  };
+
   // Load data when the screen is focused
   useFocusEffect(
     React.useCallback(() => {
-      if (user) {
-        loadAppointments();
-        loadDailyAppointments(selectedDate);
-        loadMarkedDates();
-      }
-      return () => {
-        // Cleanup
+      const loadData = async () => {
+        if (user) {
+          loadAppointments();
+          
+          // Always load today's appointments for the main view
+          const today = new Date();
+          setDisplayDate(today);
+          loadDailyAppointments(today);
+          
+          // Load upcoming appointments
+          loadUpcomingAppointments();
+          
+          // Always reload marked dates when focused
+          loadMarkedDates();
+          
+          // Scroll to current time when tab is focused
+          scrollToCurrentTime();
+          
+          // Check if we need to open an appointment for editing
+          try {
+            const editId = await AsyncStorage.getItem('editAppointmentId');
+            if (editId && !processedAppointmentIds.current.has(editId)) {
+              // Mark this ID as processed to prevent infinite loops
+              processedAppointmentIds.current.add(editId);
+              // Clear the storage to avoid repeat processing
+              await AsyncStorage.removeItem('editAppointmentId');
+              // Handle the edit
+              handleEditAppointment(editId);
+            }
+          } catch (error) {
+            console.error('Error checking for appointment to edit:', error);
+          }
+        }
       };
-    }, [user, selectedDate])
+      
+      loadData();
+      
+      return () => {
+        // No need to clear processedAppointmentIds on each unfocus
+        // Only want to clear when completely leaving the screen
+      };
+    }, [user])
   );
+
+  // Clear processedAppointmentIds when component unmounts
+  useEffect(() => {
+    return () => {
+      processedAppointmentIds.current.clear();
+    };
+  }, []);
 
   const loadAppointments = async () => {
     try {
@@ -87,59 +217,101 @@ export default function AppointmentsScreen() {
     }
   };
 
-  const loadMarkedDates = async () => {
+  // 2. Update loadMarkedDates to use the current visible month instead of selectedDate
+  const loadMarkedDates = async (visibleMonth?: string) => {
     if (!user) return;
     
     try {
-      // Get first and last day of current month
-      const date = new Date(selectedDate);
-      const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
-      const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+      // Always start with a clean slate for marked dates
+      setMarkedDates({});
+      
+      // Use provided month or current visible month
+      const monthToLoad = visibleMonth || currentVisibleMonth;
+      console.log('Loading marked dates for month:', monthToLoad);
+      
+      // Parse the month string (YYYY-MM) to create first and last day
+      const [year, month] = monthToLoad.split('-').map(Number);
+      const firstDay = new Date(year, month - 1, 1);
+      const lastDay = new Date(year, month, 0); // Last day of the month
+      
+      console.log('Loading marked dates from', formatLocalDate(firstDay), 'to', formatLocalDate(lastDay));
       
       // Get all dates with appointments
       const dates = await DatabaseService.getDatesWithAppointments(user.uid, firstDay, lastDay);
       
-      // Format for the calendar
+      console.log('Received dates with appointments:', dates.map(formatLocalDate));
+      
+      // Create a new object instead of modifying the existing one
       const markedDatesObj: Record<string, any> = {};
       
+      // Mark dates with dots
       dates.forEach(date => {
-        const dateString = date.toISOString().split('T')[0];
-        markedDatesObj[dateString] = { marked: true, dotColor: '#9333ea' };
+        const dateString = formatLocalDate(date);
+        console.log('Marking date:', dateString);
+        markedDatesObj[dateString] = { 
+          marked: true, 
+          dotColor: '#9333ea'
+        };
       });
       
       // Also mark the selected date
-      const selectedDateString = selectedDate.toISOString().split('T')[0];
+      const selectedDateString = formatLocalDate(selectedDate);
       markedDatesObj[selectedDateString] = { 
         ...(markedDatesObj[selectedDateString] || {}),
         selected: true, 
-        selectedColor: '#9333ea'
+        selectedColor: '#9333ea',
+        marked: markedDatesObj[selectedDateString]?.marked || false,
+        dotColor: '#ffffff'
       };
       
+      console.log('Final marked dates:', Object.keys(markedDatesObj).sort());
       setMarkedDates(markedDatesObj);
     } catch (error) {
       console.error('Error loading marked dates:', error);
     }
   };
 
+  // 4. Modify the handleDayPress function to not override the current month
   const handleDayPress = (day: any) => {
     // Convert the selected date string to a Date object
-    const [year, month, date] = day.dateString.split('-');
-    const newSelectedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(date));
+    const newSelectedDate = parseLocalDate(day.dateString);
     
+    // Update the selected date for the calendar
     setSelectedDate(newSelectedDate);
-    loadDailyAppointments(newSelectedDate);
     
-    // Update marked dates
+    // Update the current visible month to match the clicked date
+    // This prevents jumping between months when clicking on a date
+    const clickedMonth = day.dateString.substring(0, 7); // YYYY-MM format
+    if (clickedMonth !== currentVisibleMonth) {
+      console.log(`Month changed by day press: ${currentVisibleMonth} -> ${clickedMonth}`);
+      setCurrentVisibleMonth(clickedMonth);
+    }
+    
+    // But we don't change the display date - main view always shows today
+    // Only load the appointments for the selected date for the calendar popup
+    if (user) {
+      DatabaseService.getAppointmentsByDate(user.uid, newSelectedDate)
+        .then(appointments => {
+          // Only update dailyAppointments when calendar is open
+          if (showCalendar) {
+            setDailyAppointments(appointments);
+          }
+        })
+        .catch(error => {
+          console.error('Error loading selected date appointments:', error);
+        });
+    }
+    
+    // Update marked dates to show the new selection
     const newMarkedDates = { ...markedDates };
     
-    // Remove previous selection
+    // Remove previous selection highlight (but keep the dots!)
     Object.keys(newMarkedDates).forEach(dateString => {
-      if (newMarkedDates[dateString].selected) {
-        if (newMarkedDates[dateString].marked) {
-          newMarkedDates[dateString] = { marked: true, dotColor: '#9333ea' };
-        } else {
-          delete newMarkedDates[dateString];
-        }
+      if (newMarkedDates[dateString]?.selected) {
+        // Add null check with optional chaining
+        // Remove the 'selected' property but keep 'marked' if it exists
+        const { selected, selectedColor, ...rest } = newMarkedDates[dateString];
+        newMarkedDates[dateString] = rest;
       }
     });
     
@@ -147,23 +319,144 @@ export default function AppointmentsScreen() {
     newMarkedDates[day.dateString] = { 
       ...(newMarkedDates[day.dateString] || {}),
       selected: true, 
-      selectedColor: '#9333ea' 
+      selectedColor: '#9333ea',
+      marked: newMarkedDates[day.dateString]?.marked || false,
+      dotColor: newMarkedDates[day.dateString]?.marked ? '#ffffff' : undefined
     };
     
     setMarkedDates(newMarkedDates);
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
+    // Format dates in a consistent way across the app
+    const options: Intl.DateTimeFormatOptions = {
       weekday: 'long',
       month: 'long',
       day: 'numeric',
-    });
+    };
+    
+    // Use the user's locale for display
+    return date.toLocaleDateString('en-US', options);
+  };
+
+  const formatShortDate = (date: Date) => {
+    // Format dates in a shorter format for the upcoming list
+    const options: Intl.DateTimeFormatOptions = {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric'
+    };
+    
+    return date.toLocaleDateString('en-US', options);
   };
 
   const formatTime = (time: string) => {
     return time;
   };
+
+  // Handle opening an appointment for editing
+  const handleEditAppointment = async (appointmentId: string) => {
+    try {
+      if (!user) return;
+      
+      // Find the appointment in the existing list or load it
+      let appointmentToEdit = appointments.find(a => a.appointmentID === appointmentId);
+      
+      if (!appointmentToEdit && user) {
+        // Need to load all appointments to find the one to edit
+        const userAppointments = await DatabaseService.getUserAppointments(user.uid);
+        appointmentToEdit = userAppointments.find(a => a.appointmentID === appointmentId);
+        
+        if (appointmentToEdit) {
+          setAppointments(userAppointments);
+        }
+      }
+      
+      if (appointmentToEdit) {
+        setSelectedAppointment(appointmentToEdit);
+        resetForm(appointmentToEdit);
+        setShowAppointmentModal(true);
+        
+        // Also set selected date to the appointment date
+        const appointmentDate = new Date(appointmentToEdit.date);
+        setSelectedDate(appointmentDate);
+        loadDailyAppointments(appointmentDate);
+      }
+    } catch (error) {
+      console.error('Error handling appointment edit:', error);
+    }
+  };
+
+  // Scroll to the current time
+  const scrollToCurrentTime = () => {
+    // Add a small delay to ensure the ScrollView is mounted
+    setTimeout(() => {
+      if (timelineScrollRef.current) {
+        // Calculate position based on current time
+        const now = new Date();
+        const hour = now.getHours();
+        const minutes = now.getMinutes();
+        const position = (hour * 60 + minutes) - 120; // Scroll to position 2 hours before current time
+        
+        // Ensure we don't scroll to negative values
+        timelineScrollRef.current.scrollTo({ 
+          y: Math.max(0, position), 
+          animated: true 
+        });
+      }
+    }, 300);
+  };
+
+  // Update loadAppointmentsByDate to use the currentVisibleMonth
+  const loadAppointmentsByDate = async () => {
+    try {
+      setIsLoading(true);
+      // Extract year and month from currentVisibleMonth (format: YYYY-MM)
+      const [year, month] = currentVisibleMonth.split('-').map(Number);
+      
+      if (!user) {
+        console.log('No user logged in');
+        setIsLoading(false);
+        return;
+      }
+
+      // Get appointments for the entire month
+      // Since getAppointmentsByDate only accepts a single date, we need to modify our approach
+      // We'll use the getDatesWithAppointments function instead to get dates with appointments
+      const startOfMonth = new Date(year, month - 1, 1); // Start of month
+      const endOfMonth = new Date(year, month, 0);       // End of month
+      
+      // Get all dates with appointments
+      const datesWithAppointments = await DatabaseService.getDatesWithAppointments(
+        user.uid,
+        startOfMonth,
+        endOfMonth
+      );
+
+      // Update markedDates
+      const newMarkedDates: {[key: string]: {marked: boolean, dotColor: string}} = {};
+      datesWithAppointments.forEach((date: Date) => {
+        const dateString = formatLocalDate(date);
+        newMarkedDates[dateString] = { marked: true, dotColor: '#9333ea' };
+      });
+
+      setMarkedDates(newMarkedDates);
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Error loading appointments by date:', error);
+      setIsLoading(false);
+    }
+  };
+
+  // Add effect to refresh calendar when it's opened
+  useEffect(() => {
+    if (showCalendar && user) {
+      // Clear cache and marks, then fetch fresh data when calendar opens
+      DatabaseService.clearAppointmentCache();
+      setMarkedDates({});
+      loadMarkedDates(currentVisibleMonth);
+    }
+  }, [showCalendar, user]);
 
   return (
     <View style={styles.container}>
@@ -176,7 +469,11 @@ export default function AppointmentsScreen() {
 
         <TouchableOpacity 
           style={styles.calendarButton}
-          onPress={() => setShowCalendar(true)}
+          onPress={() => {
+            // Clear cache before showing calendar
+            DatabaseService.clearAppointmentCache();
+            setShowCalendar(true);
+          }}
         >
           <CalendarIcon size={24} color="#9333ea" />
           <Text style={styles.calendarButtonText}>View Calendar</Text>
@@ -186,12 +483,13 @@ export default function AppointmentsScreen() {
 
       <View style={styles.dayCalendarContainer}>
         <View style={styles.dayHeader}>
-          <Text style={styles.dayHeaderDate}>{formatDate(selectedDate)}</Text>
-        </View>
-        
+          <Text style={styles.dayHeaderDate}>{formatDate(displayDate)}</Text>
+            </View>
+
         <ScrollView 
           style={styles.timelineContainer}
           showsVerticalScrollIndicator={false}
+          ref={timelineScrollRef}
         >
           {Array.from({ length: 24 }).map((_, hour) => (
             <View key={hour} style={styles.timeSlot}>
@@ -213,7 +511,7 @@ export default function AppointmentsScreen() {
                     >
                       <Text style={styles.appointmentBlockTitle}>
                         {appointment.appointmentName}
-                      </Text>
+              </Text>
                       <Text style={styles.appointmentBlockTime}>
                         {appointment.startTime} - {appointment.endTime}
                       </Text>
@@ -236,12 +534,86 @@ export default function AppointmentsScreen() {
         </ScrollView>
       </View>
 
+      {/* Upcoming Appointments List */}
+      <View style={styles.upcomingAppointmentsContainer}>
+        <View style={styles.upcomingHeader}>
+          <Text style={styles.upcomingTitle}>Upcoming Appointments</Text>
+        </View>
+        
+        <ScrollView style={styles.upcomingList}>
+          {upcomingAppointments.length > 0 ? (
+            upcomingAppointments.map((appointment, index) => (
+              <TouchableOpacity 
+                key={index} 
+                style={styles.upcomingAppointmentItem}
+                onPress={() => {
+                  setSelectedAppointment(appointment);
+                  setShowAppointmentDetails(true);
+                }}
+              >
+                <LinearGradient
+                  colors={['rgba(147, 51, 234, 0.1)', 'rgba(147, 51, 234, 0.05)']}
+                  style={styles.upcomingAppointmentGradient}
+                >
+                  <View style={styles.upcomingAppointmentDetails}>
+                    <Text style={styles.upcomingAppointmentName}>
+                      {appointment.appointmentName}
+                    </Text>
+                    <Text style={styles.upcomingAppointmentDate}>
+                      {formatShortDate(new Date(appointment.date))}
+                    </Text>
+                    <Text style={styles.upcomingAppointmentTime}>
+                      {appointment.startTime} - {appointment.endTime}
+                    </Text>
+                  </View>
+                  <View style={styles.upcomingAppointmentActions}>
+                    <TouchableOpacity 
+                      style={styles.upcomingActionButton}
+                      onPress={(e) => {
+                        e.stopPropagation(); // Prevent the parent touchable from triggering
+                        setSelectedAppointment(appointment);
+                        resetForm(appointment);
+                        setShowAppointmentModal(true);
+                      }}
+                    >
+                      <Edit size={16} color="#9333ea" />
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={[styles.upcomingActionButton, styles.upcomingDeleteButton]}
+                      onPress={(e) => {
+                        e.stopPropagation(); // Prevent the parent touchable from triggering
+                        setSelectedAppointment(appointment);
+                        setShowDeleteConfirmation(true);
+                      }}
+                    >
+                      <Trash2 size={16} color="#ef4444" />
+                    </TouchableOpacity>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <View style={styles.noUpcomingAppointments}>
+              <Text style={styles.noUpcomingText}>No upcoming appointments</Text>
+            </View>
+          )}
+        </ScrollView>
+      </View>
+
       {/* Calendar Modal */}
       <Modal
         visible={showCalendar}
         transparent
         animationType="slide"
-        onRequestClose={() => setShowCalendar(false)}
+        onRequestClose={() => {
+          setShowCalendar(false);
+          // Restore today's appointments when closing
+          if (user) {
+            const today = new Date();
+            loadDailyAppointments(today);
+          }
+        }}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.calendarModalContent}>
@@ -249,15 +621,30 @@ export default function AppointmentsScreen() {
               <Text style={styles.modalTitle}>Select Date</Text>
               <TouchableOpacity
                 style={styles.closeButton}
-                onPress={() => setShowCalendar(false)}
+                onPress={() => {
+                  setShowCalendar(false);
+                  // Restore today's appointments when closing
+                  if (user) {
+                    const today = new Date();
+                    loadDailyAppointments(today);
+                  }
+                }}
               >
                 <X size={20} color="#666666" />
               </TouchableOpacity>
             </View>
 
             <Calendar
+              key={`calendar-${currentVisibleMonth}`}
               onDayPress={handleDayPress}
-              markedDates={markedDates}
+              markedDates={{
+                ...markedDates,
+                [formatLocalDate(selectedDate)]: {
+                  ...(markedDates[formatLocalDate(selectedDate)] || {}),
+                  selected: true,
+                  selectedColor: '#9333ea',
+                },
+              }}
               theme={{
                 backgroundColor: '#ffffff',
                 calendarBackground: '#ffffff',
@@ -279,6 +666,13 @@ export default function AppointmentsScreen() {
                 textMonthFontSize: 18,
                 textDayHeaderFontSize: 14
               }}
+              onMonthChange={(month: {year: number, month: number}) => {
+                const newVisibleMonth = `${month.year}-${String(month.month).padStart(2, '0')}`;
+                console.log('Calendar month changed to:', newVisibleMonth);
+                setCurrentVisibleMonth(newVisibleMonth);
+              }}
+              current={parseLocalDate(`${currentVisibleMonth}-01`)}
+              hideExtraDays={false}
             />
             
             {/* Display appointments for the selected date */}
@@ -295,11 +689,11 @@ export default function AppointmentsScreen() {
                   dailyAppointments.map((appointment, index) => (
                     <View key={index} style={styles.calendarDayAppointmentItem}>
                       <View style={styles.appointmentTimeBlock}>
-                        <Clock size={16} color="#9333ea" />
+                  <Clock size={16} color="#9333ea" />
                         <Text style={styles.appointmentTimeText}>
                           {appointment.startTime} - {appointment.endTime}
                         </Text>
-                      </View>
+                </View>
                       <View style={styles.appointmentDetailsBlock}>
                         <Text style={styles.calendarAppointmentTitle}>
                           {appointment.appointmentName}
@@ -375,19 +769,23 @@ export default function AppointmentsScreen() {
                 textAlignVertical="top"
               />
 
-              <Text style={styles.inputLabel}>Date</Text>
+              <Text style={styles.inputLabel}>Date <Text style={styles.inputFormat}>(Format: YYYY-MM-DD)</Text></Text>
               <View style={styles.datePickerContainer}>
-                {/* Note: In a real implementation, use a date picker component */}
                 <TextInput
                   style={styles.dateInput}
                   placeholder="YYYY-MM-DD"
                   placeholderTextColor="#999999"
-                  value={appointmentDate.toISOString().split('T')[0]}
+                  value={appointmentDateInput}
                   onChangeText={(text) => {
-                    const [year, month, day] = text.split('-').map(Number);
-                    const date = new Date(year, month - 1, day);
-                    if (!isNaN(date.getTime())) {
-                      setAppointmentDate(date);
+                    // Always update the text input
+                    setAppointmentDateInput(text);
+                    
+                    // Only try to parse complete dates with the right format
+                    if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+                      const date = parseLocalDate(text);
+                      if (!isNaN(date.getTime())) {
+                        setAppointmentDate(date);
+                      }
                     }
                   }}
                 />
@@ -434,17 +832,28 @@ export default function AppointmentsScreen() {
                 onPress={async () => {
                   if (!appointmentName.trim() || isSubmitting || !user) return;
                   
+                  // Validate date format
+                  if (!/^\d{4}-\d{2}-\d{2}$/.test(appointmentDateInput)) {
+                    // If you want to show an error message, you could add state for that
+                    console.error('Invalid date format');
+                    return;
+                  }
+                  
                   try {
                     setIsSubmitting(true);
+                    
+                    // Parse the date from the input text to ensure it's correct
+                    const date = parseLocalDate(appointmentDateInput);
                     
                     const appointmentData = {
                       userID: user.uid,
                       appointmentName: appointmentName.trim(),
                       description: appointmentDescription.trim(),
-                      date: appointmentDate,
+                      date: date, // Use the parsed date
                       startTime: appointmentStartTime,
                       endTime: appointmentEndTime,
-                      address: appointmentAddress.trim() || undefined,
+                      // Only include address if it's not empty
+                      ...(appointmentAddress.trim() ? { address: appointmentAddress.trim() } : {}),
                       notificationTimes: [],
                       allDay: false,
                     };
@@ -462,6 +871,7 @@ export default function AppointmentsScreen() {
                     await loadAppointments();
                     await loadDailyAppointments(selectedDate);
                     await loadMarkedDates();
+                    await loadUpcomingAppointments();
                     
                     // Close modal
                     setShowAppointmentModal(false);
@@ -511,7 +921,7 @@ export default function AppointmentsScreen() {
                   {selectedAppointment.appointmentName}
                 </Text>
                 
-                <View style={styles.detailItem}>
+                  <View style={styles.detailItem}>
                   <Clock size={18} color="#9333ea" />
                   <Text style={styles.detailText}>
                     {formatDate(selectedAppointment.date)}, {selectedAppointment.startTime} - {selectedAppointment.endTime}
@@ -532,20 +942,15 @@ export default function AppointmentsScreen() {
                     <Text style={styles.detailText}>
                       {selectedAppointment.address}
                     </Text>
-                  </View>
+              </View>
                 )}
                 
                 <View style={styles.appointmentActions}>
                   <TouchableOpacity
                     style={styles.actionButton}
                     onPress={() => {
-                      setAppointmentName(selectedAppointment.appointmentName);
-                      setAppointmentDescription(selectedAppointment.description);
-                      setAppointmentDate(selectedAppointment.date);
-                      setAppointmentStartTime(selectedAppointment.startTime);
-                      setAppointmentEndTime(selectedAppointment.endTime);
-                      setAppointmentAddress(selectedAppointment.address || '');
-                      setIsEditMode(true);
+                      setSelectedAppointment(selectedAppointment);
+                      resetForm(selectedAppointment);
                       setShowAppointmentDetails(false);
                       setShowAppointmentModal(true);
                     }}
@@ -563,11 +968,11 @@ export default function AppointmentsScreen() {
                     <Trash2 size={18} color="#ef4444" />
                     <Text style={styles.deleteActionButtonText}>Delete</Text>
                   </TouchableOpacity>
-                </View>
-              </View>
-            )}
                   </View>
               </View>
+            )}
+            </View>
+        </View>
       </Modal>
 
       {/* Delete Confirmation Modal */}
@@ -590,7 +995,7 @@ export default function AppointmentsScreen() {
                 onPress={() => setShowDeleteConfirmation(false)}
               >
                 <Text style={styles.confirmModalCancelText}>Cancel</Text>
-              </TouchableOpacity>
+          </TouchableOpacity>
               
               <TouchableOpacity
                 style={[styles.confirmModalButton, styles.confirmModalDeleteButton]}
@@ -598,12 +1003,20 @@ export default function AppointmentsScreen() {
                   if (!selectedAppointment?.appointmentID) return;
                   
                   try {
+                    // Clear the cache before deleting to ensure all views are refreshed
+                    DatabaseService.clearAppointmentCache();
                     await DatabaseService.deleteAppointment(selectedAppointment.appointmentID);
                     
-                    // Reload data
+                    // Reload data after deletion
                     await loadAppointments();
                     await loadDailyAppointments(selectedDate);
+                    
+                    // Refresh markers on calendar - create a fresh object
+                    setMarkedDates({});
                     await loadMarkedDates();
+                    
+                    // Reload upcoming appointments
+                    await loadUpcomingAppointments();
                     
                     // Close both modals
                     setShowDeleteConfirmation(false);
@@ -623,13 +1036,7 @@ export default function AppointmentsScreen() {
       <TouchableOpacity 
         style={styles.addButton}
         onPress={() => {
-          setIsEditMode(false);
-          setAppointmentName('');
-          setAppointmentDescription('');
-          setAppointmentDate(new Date());
-          setAppointmentStartTime('09:00');
-          setAppointmentEndTime('10:00');
-          setAppointmentAddress('');
+          resetForm(); // Use the reset function instead
           setShowAppointmentModal(true);
         }}
       >
@@ -675,8 +1082,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dayCalendarContainer: {
-    flex: 1,
     backgroundColor: '#ffffff',
+    flex: 1,
   },
   dayHeader: {
     paddingVertical: 12,
@@ -797,6 +1204,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  refreshButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#9333ea',
+    borderRadius: 16,
+  },
+  refreshButtonText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   modalTitle: {
     fontSize: 20,
@@ -1070,5 +1492,83 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
+  },
+  upcomingAppointmentsContainer: {
+    backgroundColor: '#1a1a1a',
+    borderTopWidth: 1,
+    borderTopColor: '#2a1a2a',
+  },
+  upcomingHeader: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2a1a2a',
+  },
+  upcomingTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  upcomingList: {
+    maxHeight: 300,
+  },
+  upcomingAppointmentItem: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#2a1a2a',
+    marginBottom: 8,
+  },
+  upcomingAppointmentGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#9333ea',
+    marginHorizontal: 8,
+  },
+  upcomingAppointmentDetails: {
+    flex: 1,
+  },
+  upcomingAppointmentName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
+    marginBottom: 4,
+  },
+  upcomingAppointmentDate: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#cccccc',
+    marginBottom: 2,
+  },
+  upcomingAppointmentTime: {
+    fontSize: 12,
+    color: '#9333ea',
+  },
+  upcomingAppointmentActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  upcomingActionButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(147, 51, 234, 0.2)',
+    marginLeft: 8,
+  },
+  upcomingDeleteButton: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+  },
+  noUpcomingAppointments: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  noUpcomingText: {
+    fontSize: 14,
+    color: '#999999',
+  },
+  inputFormat: {
+    fontSize: 12,
+    fontWeight: 'normal',
+    color: '#6b7280',
   },
 });

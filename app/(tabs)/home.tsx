@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Platform, Modal, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
-import { Menu, Calendar, Bell, FileText, SquareCheck as CheckSquare, X, Clock, MapPin, Edit } from 'lucide-react-native';
+import { Menu, Calendar, Bell, FileText, SquareCheck as CheckSquare, X, Clock, MapPin, Edit, ChevronUp, ChevronDown } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { getAuth } from 'firebase/auth';
 import { DatabaseService } from '@/services/database';
 import type { User, Appointment, Reminder, Task } from '@/types/database';
 import { useAuth } from '@/utils/AuthContext';
 import { useFocusEffect, useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function HomePage() {
   const router = useRouter();
@@ -27,19 +28,25 @@ export default function HomePage() {
   const [dailyTasks, setDailyTasks] = useState<Task[]>([]);
   const [loadingTaskId, setLoadingTaskId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [totalAppointmentCount, setTotalAppointmentCount] = useState<number>(0);
+  const [totalReminderCount, setTotalReminderCount] = useState<number>(0);
+  const [expandedReminders, setExpandedReminders] = useState(false);
 
-  // Refresh data when the tab is focused
+  // Add a more aggressive refresh when tab is focused
   useFocusEffect(
     React.useCallback(() => {
-      console.log('Home tab focused, refreshing data');
+      console.log('Home tab focused, clearing cache and refreshing all data');
       if (authInitialized && authUser) {
-        loadDailyTasks();
+        // Clear cache and reload everything
+        DatabaseService.clearAppointmentCache();
         loadUpcomingAppointments();
+        loadDailyTasks();
+        loadReminders();
       }
       return () => {
         // Cleanup function when component unfocuses
       };
-    }, [authInitialized, authUser, expandedAppointments])
+    }, [authInitialized, authUser])
   );
 
   useEffect(() => {
@@ -78,8 +85,7 @@ export default function HomePage() {
         
         // Load reminders
         try {
-          const userReminders = await DatabaseService.getUserReminders(userId);
-          if (isMounted) setReminders(userReminders || []);
+          await loadReminders();
         } catch (error) {
           console.error('Error loading reminders:', error);
           if (isMounted) setReminders([]);
@@ -110,6 +116,24 @@ export default function HomePage() {
       isMounted = false;
     };
   }, [authInitialized, authUser]);
+
+  // Add auto-refresh for appointments
+  useEffect(() => {
+    // Initial load
+    if (authUser) {
+      loadUpcomingAppointments();
+    }
+    
+    // Set up an interval to refresh appointments every minute
+    const intervalId = setInterval(() => {
+      if (authUser) {
+        loadUpcomingAppointments();
+      }
+    }, 60000); // 60000 ms = 1 minute
+    
+    // Clean up the interval on component unmount
+    return () => clearInterval(intervalId);
+  }, [authUser, expandedAppointments]);
 
   const handleCompleteTask = async (taskId: string) => {
     if (!taskId || !authUser) return;
@@ -168,88 +192,135 @@ export default function HomePage() {
       
       <View style={styles.scheduleBanners}>
         {/* Appointments Banner */}
-        <TouchableOpacity 
-          style={styles.scheduleBanner}
-          onPress={() => setShowAppointments(true)}
+        <View 
+          style={[
+            styles.scheduleBanner,
+            expandedAppointments && appointments.length > 0
+              ? { height: 'auto', minHeight: 260, maxHeight: 500 } // Increase height when expanded
+              : null
+          ]}
         >
           <View style={styles.bannerHeader}>
             <Calendar size={18} color="#9333ea" />
             <Text style={styles.bannerTitle}>Appointments</Text>
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>{appointments.length}</Text>
+              <Text style={styles.badgeText}>{totalAppointmentCount}</Text>
             </View>
           </View>
           
-          <ScrollView 
-            style={styles.eventList} 
-            showsVerticalScrollIndicator={false}
-          >
+          <View style={{ flex: 1, justifyContent: 'space-between' }}>
             {appointments.length > 0 ? (
-              appointments.map((appointment, index) => (
-                <TouchableOpacity 
-                  key={index} 
-                  style={styles.eventItem}
-                  onPress={() => {
-                    setSelectedAppointment(appointment);
-                    setShowAppointmentDetails(true);
-                  }}
-                >
-                  <Text style={styles.eventTime}>{new Date(appointment.date).toLocaleTimeString('en-US', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}</Text>
-                  <Text style={styles.eventName} numberOfLines={1}>
-                    {appointment.appointmentName}
-                  </Text>
-                </TouchableOpacity>
-              ))
+              <>
+                <View style={{ maxHeight: expandedAppointments ? undefined : 180, overflow: expandedAppointments ? 'visible' : 'hidden' }}>
+                  {appointments.map((appointment, index) => {
+                    // Check if appointment is today or a future date
+                    const appointmentDate = new Date(appointment.date);
+                    const today = new Date();
+                    const isToday = 
+                      appointmentDate.getDate() === today.getDate() &&
+                      appointmentDate.getMonth() === today.getMonth() &&
+                      appointmentDate.getFullYear() === today.getFullYear();
+                    
+                    return (
+                      <TouchableOpacity 
+                        key={index} 
+                        style={styles.eventItem}
+                        onPress={() => {
+                          setSelectedAppointment(appointment);
+                          setShowAppointmentDetails(true);
+                        }}
+                      >
+                        <Text style={styles.eventTime}>
+                          {appointment.startTime}
+                          {!isToday && ` - ${appointmentDate.toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric'
+                          })}`}
+                        </Text>
+                        <Text style={styles.eventName} numberOfLines={1}>
+                          {appointment.appointmentName}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                
+                {appointments.length > 0 && (
+                  <TouchableOpacity 
+                    style={styles.seeMoreButton}
+                    onPress={() => setExpandedAppointments(!expandedAppointments)}
+                  >
+                    {expandedAppointments ? 
+                      <ChevronUp size={14} color="#9333ea" /> : 
+                      <ChevronDown size={14} color="#9333ea" />
+                    }
+                    <Text style={styles.seeMoreButtonText}>
+                      {expandedAppointments ? 'Show less' : 'See more...'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </>
             ) : (
               <View style={styles.emptyEventContainer}>
                 <Text style={styles.emptyEventText}>No upcoming appointments</Text>
               </View>
             )}
-            
-            {appointments.length > 0 && (
-              <TouchableOpacity 
-                style={styles.seeMoreButton}
-                onPress={() => setExpandedAppointments(!expandedAppointments)}
-              >
-                <Text style={styles.seeMoreButtonText}>
-                  {expandedAppointments ? 'Show less' : 'See more...'}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </ScrollView>
-        </TouchableOpacity>
+          </View>
+        </View>
 
         {/* Reminders Banner */}
-        <TouchableOpacity 
-          style={styles.scheduleBanner}
-          onPress={() => setShowReminders(true)}
+        <View 
+          style={[
+            styles.scheduleBanner,
+            expandedReminders && reminders.length > 0
+              ? { height: 'auto', minHeight: 260, maxHeight: 500 } // Increase height when expanded
+              : null
+          ]}
         >
           <View style={styles.bannerHeader}>
             <Bell size={18} color="#9333ea" />
             <Text style={styles.bannerTitle}>Reminders</Text>
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>{reminders.length}</Text>
+              <Text style={styles.badgeText}>{totalReminderCount}</Text>
             </View>
           </View>
           
-          <ScrollView 
-            style={styles.eventList} 
-            showsVerticalScrollIndicator={false}
-            pointerEvents="none"
-          >
-            {reminders.map((reminder, index) => (
-              <View key={index} style={styles.eventItem}>
-                <Text style={styles.eventTime}>{reminder.time}</Text>
-                <Text style={styles.eventName} numberOfLines={1}>
-                  {reminder.reminderName}
-                </Text>
+          <View style={{ flex: 1, justifyContent: 'space-between' }}>
+            {reminders.length > 0 ? (
+              <>
+                <View style={{ maxHeight: expandedReminders ? undefined : 180, overflow: expandedReminders ? 'visible' : 'hidden' }}>
+                  {reminders.map((reminder, index) => (
+                    <View key={index} style={styles.eventItem}>
+                      <Text style={styles.eventTime}>{reminder.time}</Text>
+                      <Text style={styles.eventName} numberOfLines={1}>
+                        {reminder.reminderName}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+                
+                {reminders.length > 0 && (
+                  <TouchableOpacity 
+                    style={styles.seeMoreButton}
+                    onPress={() => setExpandedReminders(!expandedReminders)}
+                  >
+                    {expandedReminders ? 
+                      <ChevronUp size={14} color="#9333ea" /> : 
+                      <ChevronDown size={14} color="#9333ea" />
+                    }
+                    <Text style={styles.seeMoreButtonText}>
+                      {expandedReminders ? 'Show less' : 'See more...'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            ) : (
+              <View style={styles.emptyEventContainer}>
+                <Text style={styles.emptyEventText}>No reminders</Text>
               </View>
-            ))}
-          </ScrollView>
-        </TouchableOpacity>
+            )}
+          </View>
+        </View>
       </View>
     </View>
   );
@@ -292,7 +363,36 @@ export default function HomePage() {
             {items.map((item, index) => (
               <View key={index} style={styles.modalItem}>
                 <Text style={styles.modalItemTime}>
-                  {(item as any).time}
+                  {/* Display date if it's not today */}
+                  {item.date && (() => {
+                    const itemDate = new Date(item.date);
+                    const today = new Date();
+                    const isToday = 
+                      itemDate.getDate() === today.getDate() &&
+                      itemDate.getMonth() === today.getMonth() &&
+                      itemDate.getFullYear() === today.getFullYear();
+                    
+                    if (isToday) {
+                      // Just show time for today's items
+                      return (item as any).time || 
+                             (item as Appointment).startTime || 
+                             new Date(item.date).toLocaleTimeString('en-US', {
+                               hour: '2-digit',
+                               minute: '2-digit',
+                             });
+                    } else {
+                      // Show date and time for future dates
+                      return `${itemDate.toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric'
+                      })} ${(item as any).time || 
+                             (item as Appointment).startTime ||
+                             new Date(item.date).toLocaleTimeString('en-US', {
+                               hour: '2-digit',
+                               minute: '2-digit',
+                             })}`;
+                    }
+                  })()}
                 </Text>
                 <View style={styles.modalItemContent}>
                   <Text style={styles.modalItemTitle}>
@@ -433,17 +533,31 @@ export default function HomePage() {
     }
   };
 
-  // Load upcoming appointments specifically
+  // Function to load upcoming appointments
   const loadUpcomingAppointments = async () => {
     if (!authUser) return;
     
     try {
-      // Get upcoming appointments (future dates only)
-      const upcomingAppointments = await DatabaseService.getUpcomingAppointments(authUser.uid, expandedAppointments ? 10 : 3);
+      // Always use fresh data for home screen
+      DatabaseService.clearAppointmentCache();
+      
+      // Use beginning of today instead of current time
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Set to beginning of today
+      
+      // Get upcoming appointments with expanded limit if needed
+      const upcomingAppointments = await DatabaseService.getUpcomingAppointments(
+        authUser.uid, 
+        expandedAppointments ? 10 : 3,
+        today // Pass today's start time
+      );
+      
       setAppointments(upcomingAppointments);
+      setTotalAppointmentCount(upcomingAppointments.length);
     } catch (error) {
-      console.error("Error loading upcoming appointments:", error);
+      console.error('Error loading upcoming appointments:', error);
       setAppointments([]);
+      setTotalAppointmentCount(0);
     }
   };
 
@@ -520,9 +634,20 @@ export default function HomePage() {
               
               <TouchableOpacity
                 style={styles.editAppointmentButton}
-                onPress={() => {
+                onPress={async () => {
                   setShowAppointmentDetails(false);
-                  router.push('/appointments');
+                  
+                  if (selectedAppointment?.appointmentID) {
+                    try {
+                      // Store the appointment ID in AsyncStorage
+                      await AsyncStorage.setItem('editAppointmentId', selectedAppointment.appointmentID);
+                      
+                      // Navigate to the appointments tab
+                      router.navigate('/appointments');
+                    } catch (error) {
+                      console.error('Error storing appointment ID:', error);
+                    }
+                  }
                 }}
               >
                 <Edit size={18} color="#ffffff" />
@@ -535,6 +660,21 @@ export default function HomePage() {
         </View>
       </Modal>
     );
+  };
+
+  // Add a function to load reminders with total count
+  const loadReminders = async () => {
+    if (!authUser) return;
+    
+    try {
+      const userReminders = await DatabaseService.getUserReminders(authUser.uid);
+      setReminders(userReminders || []);
+      setTotalReminderCount(userReminders.length);
+    } catch (error) {
+      console.error('Error loading reminders:', error);
+      setReminders([]);
+      setTotalReminderCount(0);
+    }
   };
 
   return (
@@ -693,7 +833,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 16,
     padding: 12,
-    height: 180,
+    height: 260,
   },
   bannerHeader: {
     flexDirection: 'row',
@@ -720,14 +860,15 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   eventList: {
-    maxHeight: 120,
+    flex: 1,
+    paddingBottom: 10,
   },
   eventItem: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    padding: 8,
+    padding: 10,
     borderRadius: 10,
   },
   eventTime: {
@@ -1018,15 +1159,21 @@ const styles = StyleSheet.create({
   },
   seeMoreButton: {
     alignItems: 'center',
-    padding: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    padding: 10,
+    backgroundColor: 'rgba(147, 51, 234, 0.2)',
     borderRadius: 8,
-    marginTop: 4,
+    marginTop: 12,
+    marginBottom: 8,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(147, 51, 234, 0.3)',
   },
   seeMoreButtonText: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#9333ea',
     fontWeight: '600',
+    marginLeft: 4,
   },
   appointmentDetailContainer: {
     padding: 8,

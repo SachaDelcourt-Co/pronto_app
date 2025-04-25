@@ -217,8 +217,16 @@ export const DatabaseService = {
       const appointmentRef = collection(db, 'appointments');
       const now = new Date();
       
+      // Create a clean object without undefined values
+      const cleanData: Record<string, any> = {};
+      Object.entries(appointmentData).forEach(([key, value]) => {
+        if (value !== undefined) {
+          cleanData[key] = value;
+        }
+      });
+      
       const newAppointment = {
-        ...appointmentData,
+        ...cleanData,
         createdAt: now,
         updatedAt: now
       };
@@ -232,6 +240,27 @@ export const DatabaseService = {
     }
   },
 
+  // Add these internal cache variables for appointments
+  _appointmentCache: new Map<string, any>(),
+  
+  // Add a function to clear appointment cache
+  clearAppointmentCache(): void {
+    this._appointmentCache.clear();
+    console.log("Appointment cache cleared");
+  },
+
+  async deleteAppointment(appointmentId: string): Promise<void> {
+    try {
+      await deleteDoc(doc(db, 'appointments', appointmentId));
+      
+      // Clear all appointment-related cache
+      this.clearAppointmentCache();
+    } catch (error) {
+      console.error("Error deleting appointment:", error);
+      throw error;
+    }
+  },
+  
   async getUserAppointments(userId: string, options?: { 
     limit?: number, 
     startDate?: Date, 
@@ -239,6 +268,15 @@ export const DatabaseService = {
     includeRecurring?: boolean 
   }): Promise<Appointment[]> {
     try {
+      // Generate a cache key based on the query parameters
+      const cacheKey = `getUserAppointments:${userId}:${JSON.stringify(options || {})}`;
+      
+      // Check if we have a cached result
+      if (this._appointmentCache.has(cacheKey)) {
+        console.log("Using cached appointments for", cacheKey);
+        return this._appointmentCache.get(cacheKey);
+      }
+      
       // Start building the query
       let appointmentsQuery = query(
         collection(db, 'appointments'),
@@ -266,7 +304,7 @@ export const DatabaseService = {
       
       const querySnapshot = await getDocs(appointmentsQuery);
       
-      return querySnapshot.docs.map(doc => {
+      const appointments = querySnapshot.docs.map(doc => {
         const data = doc.data();
         
         // Safely convert dates and timestamps
@@ -296,7 +334,7 @@ export const DatabaseService = {
         
         // Convert notificationTimes
         const notificationTimes = data.notificationTimes || [];
-        const convertedNotificationTimes = notificationTimes.map(time => 
+        const convertedNotificationTimes = notificationTimes.map((time: any) => 
           time instanceof Timestamp ? time.toDate() : time
         );
         
@@ -310,14 +348,58 @@ export const DatabaseService = {
           notificationTimes: convertedNotificationTimes
         } as Appointment;
       });
+      
+      // Cache the result
+      this._appointmentCache.set(cacheKey, appointments);
+      
+      return appointments;
     } catch (error) {
       console.error("Error fetching user appointments:", error);
       return [];
     }
   },
   
-  async getAppointmentsByDate(userId: string, date: Date): Promise<Appointment[]> {
+  async getUpcomingAppointments(userId: string, limitCount: number = 3, startDate?: Date): Promise<Appointment[]> {
     try {
+      // Use the getUserAppointments with appropriate options to leverage the same cache
+      const now = startDate || new Date();
+      return this.getUserAppointments(userId, {
+        startDate: now,
+        limit: limitCount
+      });
+    } catch (error) {
+      console.error("Error fetching upcoming appointments:", error);
+      return [];
+    }
+  },
+  
+  async getAppointmentsByDate(userId: string, date: Date, endDate?: Date): Promise<Appointment[]> {
+    try {
+      // Generate a cache key
+      const endDateStr = endDate ? endDate.toISOString() : "";
+      const cacheKey = `getAppointmentsByDate:${userId}:${date.toISOString()}:${endDateStr}`;
+      
+      // Check if we have a cached result
+      if (this._appointmentCache.has(cacheKey)) {
+        console.log("Using cached appointments for date", date);
+        return this._appointmentCache.get(cacheKey);
+      }
+      
+      // If endDate is provided, we're looking for appointments in a date range
+      if (endDate) {
+        // Get all appointments in the date range
+        const appointments = await this.getUserAppointments(userId, {
+          startDate: date,
+          endDate: endDate
+        });
+        
+        // Cache the result
+        this._appointmentCache.set(cacheKey, appointments);
+        
+        return appointments;
+      }
+      
+      // Otherwise, we're looking for appointments on a specific date
       // Convert the provided date to start and end of day
       const startOfDay = new Date(date);
       startOfDay.setHours(0, 0, 0, 0);
@@ -346,7 +428,7 @@ export const DatabaseService = {
         let updatedAt = data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : (data.updatedAt || new Date());
         
         // Convert notification times
-        const notificationTimes = (data.notificationTimes || []).map(time => 
+        const notificationTimes = (data.notificationTimes || []).map((time: any) => 
           time instanceof Timestamp ? time.toDate() : time
         );
         
@@ -362,8 +444,8 @@ export const DatabaseService = {
       
       // Additionally, we should check for recurring appointments
       const recurringAppointmentsQuery = query(
-        collection(db, 'appointments'),
-        where('userID', '==', userId),
+      collection(db, 'appointments'),
+      where('userID', '==', userId),
         where('isRecurring', '==', true)
       );
       
@@ -381,7 +463,7 @@ export const DatabaseService = {
           let recurrenceEndDate = data.recurrenceEndDate instanceof Timestamp ? data.recurrenceEndDate.toDate() : data.recurrenceEndDate;
           
           // Convert notification times
-          const notificationTimes = (data.notificationTimes || []).map(time => 
+          const notificationTimes = (data.notificationTimes || []).map((time: any) => 
             time instanceof Timestamp ? time.toDate() : time
           );
           
@@ -401,7 +483,12 @@ export const DatabaseService = {
         .filter(Boolean) as Appointment[];
       
       // Combine regular and matching recurring appointments
-      return [...appointments, ...matchingRecurringAppointments];
+      const result = [...appointments, ...matchingRecurringAppointments];
+      
+      // Cache the result
+      this._appointmentCache.set(cacheKey, result);
+      
+      return result;
     } catch (error) {
       console.error("Error fetching appointments by date:", error);
       return [];
@@ -467,82 +554,45 @@ export const DatabaseService = {
     }
   },
   
-  async deleteAppointment(appointmentId: string): Promise<void> {
-    try {
-      await deleteDoc(doc(db, 'appointments', appointmentId));
-    } catch (error) {
-      console.error("Error deleting appointment:", error);
-      throw error;
-    }
-  },
-  
-  async getUpcomingAppointments(userId: string, limit: number = 3): Promise<Appointment[]> {
-    try {
-      const now = new Date();
-      
-      // Query for upcoming appointments
-      const appointmentsQuery = query(
-      collection(db, 'appointments'),
-      where('userID', '==', userId),
-        where('date', '>=', now),
-      orderBy('date', 'asc'),
-        limit(limit)
-      );
-      
-      const querySnapshot = await getDocs(appointmentsQuery);
-      
-      return querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        
-        // Convert timestamps
-        let date = data.date instanceof Timestamp ? data.date.toDate() : data.date;
-        let createdAt = data.createdAt instanceof Timestamp ? data.createdAt.toDate() : (data.createdAt || new Date());
-        let updatedAt = data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : (data.updatedAt || new Date());
-        let recurrenceEndDate = data.recurrenceEndDate instanceof Timestamp ? data.recurrenceEndDate.toDate() : data.recurrenceEndDate;
-        
-        // Convert notification times
-        const notificationTimes = (data.notificationTimes || []).map(time => 
-          time instanceof Timestamp ? time.toDate() : time
-        );
-        
-        return {
-          ...data,
-          appointmentID: doc.id,
-          date: date,
-          createdAt: createdAt,
-          updatedAt: updatedAt,
-          recurrenceEndDate: recurrenceEndDate,
-          notificationTimes: notificationTimes
-        } as Appointment;
-      });
-    } catch (error) {
-      console.error("Error fetching upcoming appointments:", error);
-      return [];
-    }
-  },
-  
   async getDatesWithAppointments(userId: string, startDate: Date, endDate: Date): Promise<Date[]> {
     try {
-      // Query for appointments in the date range
-      const appointmentsQuery = query(
-        collection(db, 'appointments'),
-        where('userID', '==', userId),
-        where('date', '>=', startDate),
-        where('date', '<=', endDate)
-      );
+      // Generate a cache key
+      const cacheKey = `getDatesWithAppointments:${userId}:${startDate.toISOString()}:${endDate.toISOString()}`;
       
-      const querySnapshot = await getDocs(appointmentsQuery);
+      // Check if we have a cached result
+      if (this._appointmentCache.has(cacheKey)) {
+        console.log("Using cached dates with appointments");
+        return this._appointmentCache.get(cacheKey);
+      }
+      
+      console.log(`Getting dates with appointments for user ${userId} from ${startDate.toISOString()} to ${endDate.toISOString()}`);
+      
+      // Create clean date objects to avoid timezone issues
+      const cleanStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), 0, 0, 0);
+      const cleanEndDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59);
+      
+      console.log(`Using clean date range: ${cleanStartDate.toISOString()} to ${cleanEndDate.toISOString()}`);
+      
+      // Get all appointments in this date range
+      const appointments = await this.getUserAppointments(userId, {
+        startDate: cleanStartDate,
+        endDate: cleanEndDate
+      });
       
       // Extract dates from appointments
       const datesWithAppointments = new Set<string>();
       
-      querySnapshot.docs.forEach(doc => {
-        const data = doc.data();
-        const date = data.date instanceof Timestamp ? data.date.toDate() : data.date;
-        datesWithAppointments.add(date.toISOString().split('T')[0]);
+      appointments.forEach(appointment => {
+        const date = appointment.date;
+        
+        // Format date as YYYY-MM-DD string in local timezone
+        const localDateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        
+        console.log(`Appointment on date: ${localDateString} (from ${date.toISOString()})`);
+        datesWithAppointments.add(localDateString);
       });
       
-      // Also check recurring appointments
+      // Process recurring appointments
       const recurringAppointmentsQuery = query(
         collection(db, 'appointments'),
         where('userID', '==', userId),
@@ -550,6 +600,7 @@ export const DatabaseService = {
       );
       
       const recurringSnapshot = await getDocs(recurringAppointmentsQuery);
+      console.log(`Found ${recurringSnapshot.size} recurring appointments`);
       
       // For each recurring appointment, check each day in the range
       recurringSnapshot.docs.forEach(doc => {
@@ -564,20 +615,32 @@ export const DatabaseService = {
         } as Appointment;
         
         // Check each day in the range
-        const currentDate = new Date(startDate);
-        while (currentDate <= endDate) {
+        const currentDate = new Date(cleanStartDate);
+        while (currentDate <= cleanEndDate) {
           if (this.doesRecurringAppointmentOccurOnDate(appointment, currentDate)) {
-            datesWithAppointments.add(currentDate.toISOString().split('T')[0]);
+            // Format as YYYY-MM-DD in local timezone
+            const localDateString = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+            
+            console.log(`Recurring appointment on date: ${localDateString}`);
+            datesWithAppointments.add(localDateString);
           }
+          // Clone the date to avoid modifying the same object
           currentDate.setDate(currentDate.getDate() + 1);
         }
       });
       
-      // Convert back to Date objects
-      return Array.from(datesWithAppointments).map(dateString => {
+      // Convert back to Date objects, using local parsing
+      const result = Array.from(datesWithAppointments).map(dateString => {
         const [year, month, day] = dateString.split('-').map(Number);
         return new Date(year, month - 1, day);
       });
+      
+      console.log(`Returning ${result.length} dates with appointments`);
+      
+      // Cache the result
+      this._appointmentCache.set(cacheKey, result);
+      
+      return result;
     } catch (error) {
       console.error("Error fetching dates with appointments:", error);
       return [];
