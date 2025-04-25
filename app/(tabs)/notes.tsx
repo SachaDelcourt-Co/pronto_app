@@ -1,11 +1,70 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, TextInput, Modal, ActivityIndicator, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { FileText, Folder as FolderIcon, Plus, Clock, ChevronRight, X, ArrowLeft, Edit, Trash2 } from 'lucide-react-native';
+import { FileText, Folder as FolderIcon, Plus, Clock, ChevronRight, X, ArrowLeft, Edit, Trash2, CheckSquare, Square } from 'lucide-react-native';
 import { useAuth } from '@/utils/AuthContext';
 import { DatabaseService } from '@/services/database';
 import type { Note, Folder } from '@/types/database';
 import { useFocusEffect } from 'expo-router';
+
+// Regex pattern to match checkbox syntax: "- [ ]" for unchecked, "- [x]" for checked
+const CHECKBOX_REGEX = /^(\s*)- \[([ x])\] (.*)$/gm;
+
+// Function to parse note content and render checkboxes
+const renderNoteWithCheckboxes = (content: string, onToggleCheckbox?: (text: string) => void) => {
+  if (!content) return null;
+  
+  // Split content by lines
+  const lines = content.split('\n');
+  
+  return lines.map((line, index) => {
+    // Check if the line matches checkbox pattern
+    const match = /^(\s*)- \[([ x])\] (.*)$/.exec(line);
+    
+    if (match) {
+      const [_, indentation, checkState, text] = match;
+      const isChecked = checkState === 'x';
+      
+      return (
+        <TouchableOpacity 
+          key={index}
+          style={styles.checkboxLine}
+          onPress={() => onToggleCheckbox && onToggleCheckbox(line)}
+          disabled={!onToggleCheckbox}
+        >
+          <View style={styles.checkboxContainer}>
+            {isChecked ? (
+              <CheckSquare size={18} color="#9333ea" />
+            ) : (
+              <Square size={18} color="#9333ea" />
+            )}
+            <Text style={[
+              styles.checkboxText,
+              isChecked && styles.checkedText
+            ]}>
+              {text}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      );
+    } else {
+      // Return regular text for non-checkbox lines
+      return (
+        <Text key={index} style={styles.viewNoteContent}>
+          {line}
+        </Text>
+      );
+    }
+  });
+};
+
+// Function to toggle checkbox state in text
+const toggleCheckbox = (text: string, line: string): string => {
+  return text.replace(line, line.indexOf('- [ ]') !== -1 
+    ? line.replace('- [ ]', '- [x]') 
+    : line.replace('- [x]', '- [ ]')
+  );
+};
 
 export default function NotesScreen() {
   const { user } = useAuth();
@@ -230,6 +289,23 @@ export default function NotesScreen() {
     setShowViewNoteModal(true);
   };
 
+  const handleToggleCheckbox = (line: string) => {
+    if (viewingNote && viewingNote.noteID) {
+      const updatedContent = toggleCheckbox(viewingNote.content, line);
+      
+      // Update note in database
+      DatabaseService.updateNote(viewingNote.noteID, {
+        content: updatedContent
+      });
+      
+      // Update local state
+      setViewingNote({
+        ...viewingNote,
+        content: updatedContent
+      });
+    }
+  };
+
   const renderCreateNoteModal = () => {
     return (
       <Modal
@@ -258,9 +334,30 @@ export default function NotesScreen() {
               onChangeText={setNewNoteTitle}
             />
 
+            <View style={styles.contentInputHeader}>
+              <Text style={styles.contentInputLabel}>Note Content</Text>
+              <TouchableOpacity
+                style={styles.addCheckboxButton}
+                onPress={() => {
+                  const checkboxText = '- [ ] ';
+                  setNewNoteContent(prevContent => {
+                    if (prevContent) {
+                      // If content doesn't end with newline, add one
+                      const separator = prevContent.endsWith('\n') ? '' : '\n';
+                      return prevContent + separator + checkboxText;
+                    }
+                    return checkboxText;
+                  });
+                }}
+              >
+                <Square size={16} color="#9333ea" />
+                <Text style={styles.addCheckboxText}>Add Checkbox</Text>
+              </TouchableOpacity>
+            </View>
+
             <TextInput
               style={styles.contentInput}
-              placeholder="Note content"
+              placeholder="Note content (Use '- [ ] ' for checkboxes, '- [x] ' for checked)"
               placeholderTextColor="#999999"
               value={newNoteContent}
               onChangeText={setNewNoteContent}
@@ -350,9 +447,30 @@ export default function NotesScreen() {
               onChangeText={setNewNoteTitle}
             />
 
+            <View style={styles.contentInputHeader}>
+              <Text style={styles.contentInputLabel}>Note Content</Text>
+              <TouchableOpacity
+                style={styles.addCheckboxButton}
+                onPress={() => {
+                  const checkboxText = '- [ ] ';
+                  setNewNoteContent(prevContent => {
+                    if (prevContent) {
+                      // If content doesn't end with newline, add one
+                      const separator = prevContent.endsWith('\n') ? '' : '\n';
+                      return prevContent + separator + checkboxText;
+                    }
+                    return checkboxText;
+                  });
+                }}
+              >
+                <Square size={16} color="#9333ea" />
+                <Text style={styles.addCheckboxText}>Add Checkbox</Text>
+              </TouchableOpacity>
+            </View>
+
             <TextInput
               style={styles.largeContentInput}
-              placeholder="Note content"
+              placeholder="Note content (Use '- [ ] ' for checkboxes, '- [x] ' for checked)"
               placeholderTextColor="#999999"
               value={newNoteContent}
               onChangeText={setNewNoteContent}
@@ -524,9 +642,7 @@ export default function NotesScreen() {
 
             <View style={styles.viewNoteContainer}>
               <ScrollView style={styles.viewNoteScrollContainer}>
-                <Text style={styles.viewNoteContent}>
-                  {viewingNote.content}
-                </Text>
+                {renderNoteWithCheckboxes(viewingNote.content, handleToggleCheckbox)}
               </ScrollView>
             </View>
             
@@ -1025,6 +1141,31 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     marginBottom: 12,
   },
+  contentInputHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  contentInputLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#4b5563',
+  },
+  addCheckboxButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(147, 51, 234, 0.1)',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+  },
+  addCheckboxText: {
+    color: '#9333ea',
+    fontWeight: '500',
+    fontSize: 14,
+    marginLeft: 6,
+  },
   contentInput: {
     backgroundColor: '#f9fafb',
     borderWidth: 1,
@@ -1203,5 +1344,23 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontWeight: '600',
     color: '#ef4444',
+  },
+  checkboxLine: {
+    paddingVertical: 4,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  checkboxText: {
+    fontSize: 16,
+    color: '#1f2937',
+    marginLeft: 8,
+    flex: 1,
+    lineHeight: 24,
+  },
+  checkedText: {
+    textDecorationLine: 'line-through',
+    color: '#9ca3af',
   },
 });
