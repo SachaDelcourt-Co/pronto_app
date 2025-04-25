@@ -70,19 +70,16 @@ export default function RemindersScreen() {
     }, [user])
   );
 
-  // Load marked dates when month changes
+  // Update the useEffect that loads marked dates when month changes
   useEffect(() => {
     if (showCalendar && user) {
-      loadMarkedDates(currentVisibleMonth);
+      // Add a slight delay to prevent immediate refresh when navigating
+      const timer = setTimeout(() => {
+        loadMarkedDates(currentVisibleMonth);
+      }, 50);
+      return () => clearTimeout(timer);
     }
   }, [currentVisibleMonth, user, showCalendar]);
-
-  // Refresh calendar when it's opened
-  useEffect(() => {
-    if (showCalendar && user) {
-      loadMarkedDates(currentVisibleMonth);
-    }
-  }, [showCalendar, user]);
 
   // Load all reminders
   const loadReminders = async () => {
@@ -118,14 +115,19 @@ export default function RemindersScreen() {
     try {
       // Use provided month or current visible month
       const monthToLoad = visibleMonth || currentVisibleMonth;
+      console.log(`Loading marked dates for month: ${monthToLoad}`);
       
       // Parse the month string (YYYY-MM) to create first and last day
       const [year, month] = monthToLoad.split('-').map(Number);
       const firstDay = new Date(year, month - 1, 1);
       const lastDay = new Date(year, month, 0); // Last day of the month
       
+      console.log(`Date range: ${firstDay.toISOString()} to ${lastDay.toISOString()}`);
+      
       // Get all dates with reminders
       const dates = await DatabaseService.getDatesWithReminders(user.uid, firstDay, lastDay);
+      
+      console.log(`Received ${dates.length} dates with reminders`);
       
       // Create a new object for marked dates
       const markedDatesObj: Record<string, any> = {};
@@ -133,9 +135,10 @@ export default function RemindersScreen() {
       // Mark dates with dots
       dates.forEach(date => {
         const dateString = formatLocalDate(date);
+        console.log(`Marking date with reminder: ${dateString}`);
         markedDatesObj[dateString] = { 
-          marked: true, 
-          dotColor: '#ef4444' // Red color for reminders
+          dots: [{ key: 'reminder', color: '#ef4444' }],
+          marked: true
         };
       });
       
@@ -143,20 +146,19 @@ export default function RemindersScreen() {
       try {
         const appointmentDates = await DatabaseService.getDatesWithAppointments(user.uid, firstDay, lastDay);
         
+        console.log(`Received ${appointmentDates.length} dates with appointments`);
+        
         appointmentDates.forEach(date => {
           const dateString = formatLocalDate(date);
           
           if (markedDatesObj[dateString]) {
-            // If already marked for reminders, add a second dot
-            markedDatesObj[dateString].dots = [
-              { key: 'reminder', color: '#ef4444' },
-              { key: 'appointment', color: '#9333ea' }
-            ];
+            // If already marked for reminders, add appointment dot
+            markedDatesObj[dateString].dots.push({ key: 'appointment', color: '#9333ea' });
           } else {
             // Otherwise just mark it for appointments
             markedDatesObj[dateString] = { 
-              marked: true, 
-              dotColor: '#9333ea' // Purple color for appointments
+              dots: [{ key: 'appointment', color: '#9333ea' }],
+              marked: true
             };
           }
         });
@@ -166,12 +168,22 @@ export default function RemindersScreen() {
       
       // Mark the selected date
       const selectedDateString = formatLocalDate(selectedDate);
-      markedDatesObj[selectedDateString] = { 
-        ...(markedDatesObj[selectedDateString] || {}),
-        selected: true, 
-        selectedColor: '#9333ea',
-      };
+      if (markedDatesObj[selectedDateString]) {
+        // If the selected date already has markers, keep them while adding selection
+        markedDatesObj[selectedDateString] = {
+          ...markedDatesObj[selectedDateString],
+          selected: true,
+          selectedColor: '#9333ea',
+        };
+      } else {
+        // Otherwise just mark it as selected
+        markedDatesObj[selectedDateString] = { 
+          selected: true, 
+          selectedColor: '#9333ea',
+        };
+      }
       
+      console.log(`Total marked dates: ${Object.keys(markedDatesObj).length}`);
       setMarkedDates(markedDatesObj);
     } catch (error) {
       console.error('Error loading marked dates:', error);
@@ -567,9 +579,9 @@ export default function RemindersScreen() {
             </View>
 
             <Calendar
-              key={`calendar-${currentVisibleMonth}`}
               onDayPress={handleDayPress}
               markedDates={markedDates}
+              markingType="multi-dot"
               theme={{
                 backgroundColor: '#ffffff',
                 calendarBackground: '#ffffff',
@@ -579,7 +591,7 @@ export default function RemindersScreen() {
                 todayTextColor: '#9333ea',
                 dayTextColor: '#1f2937',
                 textDisabledColor: '#d1d5db',
-                dotColor: '#9333ea',
+                dotColor: '#ef4444',
                 selectedDotColor: '#ffffff',
                 arrowColor: '#9333ea',
                 monthTextColor: '#1f2937',
@@ -595,7 +607,7 @@ export default function RemindersScreen() {
                 const newVisibleMonth = `${month.year}-${String(month.month).padStart(2, '0')}`;
                 setCurrentVisibleMonth(newVisibleMonth);
               }}
-              markingType="multi-dot"
+              current={currentVisibleMonth}
             />
             
             {/* Display reminders for the selected date */}
@@ -676,7 +688,28 @@ export default function RemindersScreen() {
                 />
               </View>
 
-              {isRecurring ? (
+              {/* Always show date field, for both recurring and non-recurring reminders */}
+              <Text style={styles.inputLabel}>
+                {isRecurring ? 'Start Date ' : 'Date '}
+                <Text style={styles.inputFormat}>(Format: YYYY-MM-DD)</Text>
+              </Text>
+              <TextInput
+                style={styles.dateInput}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor="#999999"
+                value={reminderDateInput}
+                onChangeText={(text) => {
+                  setReminderDateInput(text);
+                  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+                    const date = parseLocalDate(text);
+                    if (!isNaN(date.getTime())) {
+                      setReminderDate(date);
+                    }
+                  }
+                }}
+              />
+
+              {isRecurring && (
                 <View style={styles.recurringContainer}>
                   <Text style={styles.inputLabel}>Select days</Text>
                   <View style={styles.daysContainer}>
@@ -699,25 +732,6 @@ export default function RemindersScreen() {
                     ))}
                   </View>
                 </View>
-              ) : (
-                <>
-                  <Text style={styles.inputLabel}>Date <Text style={styles.inputFormat}>(Format: YYYY-MM-DD)</Text></Text>
-                  <TextInput
-                    style={styles.dateInput}
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor="#999999"
-                    value={reminderDateInput}
-                    onChangeText={(text) => {
-                      setReminderDateInput(text);
-                      if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
-                        const date = parseLocalDate(text);
-                        if (!isNaN(date.getTime())) {
-                          setReminderDate(date);
-                        }
-                      }
-                    }}
-                  />
-                </>
               )}
 
               <Text style={styles.inputLabel}>Time <Text style={styles.inputFormat}>(24-hour format: HH:MM)</Text></Text>
@@ -747,8 +761,8 @@ export default function RemindersScreen() {
                       <X size={16} color="#ef4444" />
                     </TouchableOpacity>
                   )}
-          </View>
-        ))}
+                </View>
+              ))}
               <TouchableOpacity
                 style={styles.addTimeButton}
                 onPress={addNotificationTime}
@@ -786,7 +800,7 @@ export default function RemindersScreen() {
                   </>
                 )}
               </TouchableOpacity>
-      </ScrollView>
+            </ScrollView>
           </View>
         </View>
       </Modal>

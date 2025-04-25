@@ -798,6 +798,12 @@ export const DatabaseService = {
           
           // Convert date timestamp
           let reminderDate = data.date instanceof Timestamp ? data.date.toDate() : data.date;
+          
+          // Only include the reminder if the selected date is on or after the initial reminder date
+          if (startOfDay < reminderDate) {
+            return null;
+          }
+          
           let createdAt = data.createdAt instanceof Timestamp ? data.createdAt.toDate() : (data.createdAt || new Date());
           let updatedAt = data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : (data.updatedAt || new Date());
           
@@ -880,15 +886,21 @@ export const DatabaseService = {
         const data = doc.data();
         const daysOfWeek = data.daysOfWeek || [];
         
-        // Find the next occurrence of this reminder
-        const nextOccurrence = upcomingDays.find(day => daysOfWeek.includes(day.dayOfWeek));
+        // Convert timestamps for the reminder's initial date
+        let reminderDate = data.date instanceof Timestamp ? data.date.toDate() : data.date;
+        let createdAt = data.createdAt instanceof Timestamp ? data.createdAt.toDate() : (data.createdAt || new Date());
+        let updatedAt = data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : (data.updatedAt || new Date());
+        
+        // Find the next occurrence of this reminder within the upcoming days
+        const nextOccurrence = upcomingDays.find(day => {
+          // Only include if:
+          // 1. The day of week matches
+          // 2. The occurrence date is on or after the initial reminder date
+          return daysOfWeek.includes(day.dayOfWeek) && 
+                 day.date.getTime() >= reminderDate.setHours(0, 0, 0, 0);
+        });
         
         if (nextOccurrence) {
-          // Convert timestamps
-          let reminderDate = data.date instanceof Timestamp ? data.date.toDate() : data.date;
-          let createdAt = data.createdAt instanceof Timestamp ? data.createdAt.toDate() : (data.createdAt || new Date());
-          let updatedAt = data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : (data.updatedAt || new Date());
-          
           // Create a new date object for the next occurrence
           const nextDate = new Date(nextOccurrence.date);
           // Match the time from the original reminder
@@ -922,6 +934,8 @@ export const DatabaseService = {
       const cleanStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), 0, 0, 0);
       const cleanEndDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59);
       
+      console.log(`Getting dates with reminders from ${cleanStartDate.toISOString()} to ${cleanEndDate.toISOString()}`);
+      
       // Get non-recurring reminders in this date range
       const remindersQuery = query(
         collection(db, 'reminders'),
@@ -932,6 +946,7 @@ export const DatabaseService = {
       );
       
       const querySnapshot = await getDocs(remindersQuery);
+      console.log(`Found ${querySnapshot.size} non-recurring reminders in date range`);
       
       // Extract dates from reminders
       const datesWithReminders = new Set<string>();
@@ -942,6 +957,7 @@ export const DatabaseService = {
         
         // Format date as YYYY-MM-DD string in local timezone
         const localDateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        console.log(`Adding non-recurring reminder on date: ${localDateString}`);
         datesWithReminders.add(localDateString);
       });
       
@@ -954,6 +970,7 @@ export const DatabaseService = {
       );
       
       const recurringSnapshot = await getDocs(recurringQuery);
+      console.log(`Found ${recurringSnapshot.size} recurring reminders to process`);
       
       // For each recurring reminder, add dates that match the days of week
       recurringSnapshot.docs.forEach(doc => {
@@ -963,15 +980,22 @@ export const DatabaseService = {
         // Skip if no days of week specified
         if (daysOfWeek.length === 0) return;
         
+        // Get initial reminder date for checking
+        const initialDate = data.date instanceof Timestamp ? data.date.toDate() : data.date;
+        const initialDateTime = initialDate.getTime();
+        
         // Check each day in the range
         const currentDate = new Date(cleanStartDate);
         while (currentDate <= cleanEndDate) {
           const dayOfWeek = currentDate.getDay();
           
-          // If this day of week is in the reminder's daysOfWeek
-          if (daysOfWeek.includes(dayOfWeek)) {
+          // Only include dates that:
+          // 1. Match one of the days of week AND
+          // 2. Are on or after the initial reminder date
+          if (daysOfWeek.includes(dayOfWeek) && currentDate.getTime() >= initialDateTime) {
             // Format as YYYY-MM-DD in local timezone
             const localDateString = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+            console.log(`Adding recurring reminder on date: ${localDateString}`);
             datesWithReminders.add(localDateString);
           }
           
@@ -981,10 +1005,13 @@ export const DatabaseService = {
       });
       
       // Convert back to Date objects, using local parsing
-      return Array.from(datesWithReminders).map(dateString => {
+      const result = Array.from(datesWithReminders).map(dateString => {
         const [year, month, day] = dateString.split('-').map(Number);
         return new Date(year, month - 1, day);
       });
+      
+      console.log(`Returning ${result.length} dates with reminders`);
+      return result;
     } catch (error) {
       console.error("Error fetching dates with reminders:", error);
       return [];
