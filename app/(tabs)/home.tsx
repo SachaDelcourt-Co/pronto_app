@@ -298,21 +298,24 @@ export default function HomePage() {
             {reminders.length > 0 ? (
               <>
                 <View style={{ maxHeight: expandedReminders ? undefined : 180, overflow: expandedReminders ? 'visible' : 'hidden' }}>
-                  {reminders.map((reminder, index) => (
-                    <TouchableOpacity 
-                      key={index} 
-                      style={styles.eventItem}
-                      onPress={() => {
-                        setSelectedReminder(reminder);
-                        setShowReminderDetails(true);
-                      }}
-                    >
-                      <Text style={styles.eventTime}>{reminder.time}</Text>
-                      <Text style={styles.eventName} numberOfLines={1}>
-                        {reminder.reminderName}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                  {reminders.map((reminder, index) => {
+                    // Use reminderID for key to avoid duplicates
+                    return (
+                      <TouchableOpacity 
+                        key={reminder.reminderID || index} 
+                        style={styles.eventItem}
+                        onPress={() => {
+                          setSelectedReminder(reminder);
+                          setShowReminderDetails(true);
+                        }}
+                      >
+                        <Text style={styles.eventTime}>{reminder.time}</Text>
+                        <Text style={styles.eventName} numberOfLines={1}>
+                          {reminder.reminderName}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
                 
                 {reminders.length > 0 && (
@@ -693,7 +696,15 @@ export default function HomePage() {
         expandedReminders ? 10 : 3 // Show more when expanded
       );
       
-      setReminders(userReminders || []);
+      // Ensure no duplicates by using a Map with reminderID as key
+      const uniqueReminders = new Map();
+      userReminders.forEach(reminder => {
+        if (reminder.reminderID) {
+          uniqueReminders.set(reminder.reminderID, reminder);
+        }
+      });
+      
+      setReminders(Array.from(uniqueReminders.values()));
       
       // Get the total count of all active reminders
       const allActiveReminders = await DatabaseService.getUserReminders(
