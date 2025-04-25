@@ -648,21 +648,370 @@ export const DatabaseService = {
   },
 
   // Reminder operations
-  async createReminder(reminderData: Reminder): Promise<void> {
-    const reminderRef = doc(collection(db, 'reminders'));
-    await setDoc(reminderRef, reminderData);
+  async createReminder(reminderData: Omit<Reminder, 'reminderID' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    try {
+      const reminderRef = collection(db, 'reminders');
+      const now = new Date();
+      
+      const newReminder = {
+        ...reminderData,
+        createdAt: now,
+        updatedAt: now
+      };
+      
+      const docRef = await addDoc(reminderRef, newReminder);
+      await updateDoc(docRef, { reminderID: docRef.id });
+      return docRef.id;
+    } catch (error) {
+      console.error("Error creating reminder:", error);
+      throw error;
+    }
   },
 
-  async getUserReminders(userId: string): Promise<Reminder[]> {
-    const q = query(
+  async getUserReminders(userId: string, options?: { limit?: number, active?: boolean }): Promise<Reminder[]> {
+    try {
+      // Start with base query
+      let remindersQuery = query(
+        collection(db, 'reminders'),
+        where('userID', '==', userId)
+      );
+      
+      // Add active filter if specified
+      if (options?.active !== undefined) {
+        remindersQuery = query(
+          remindersQuery,
+          where('active', '==', options.active)
+        );
+      }
+      
+      // Always order by date
+      remindersQuery = query(
+        remindersQuery,
+        orderBy('date', 'asc')
+      );
+      
+      // Apply limit if specified
+      if (options?.limit) {
+        remindersQuery = query(remindersQuery, limit(options.limit));
+      }
+      
+      const querySnapshot = await getDocs(remindersQuery);
+      
+      return querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        
+        // Convert date timestamp
+        let date = data.date;
+        if (date) {
+          date = date instanceof Timestamp ? date.toDate() : date;
+        }
+        
+        // Convert createdAt timestamp
+        let createdAt = data.createdAt;
+        if (createdAt) {
+          createdAt = createdAt instanceof Timestamp ? createdAt.toDate() : createdAt;
+        } else {
+          createdAt = new Date();
+        }
+        
+        // Convert updatedAt timestamp
+        let updatedAt = data.updatedAt;
+        if (updatedAt) {
+          updatedAt = updatedAt instanceof Timestamp ? updatedAt.toDate() : updatedAt;
+        } else {
+          updatedAt = new Date();
+        }
+        
+        return {
+          ...data,
+          reminderID: doc.id,
+          date: date,
+          createdAt: createdAt,
+          updatedAt: updatedAt
+        } as unknown as Reminder;
+      });
+    } catch (error) {
+      console.error("Error fetching user reminders:", error);
+      return [];
+    }
+  },
+
+  async getRemindersByDate(userId: string, date: Date): Promise<Reminder[]> {
+    try {
+      // Convert the provided date to start and end of day
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+      
+      // Query for non-recurring reminders on the specific date
+      const remindersQuery = query(
+        collection(db, 'reminders'),
+        where('userID', '==', userId),
+        where('active', '==', true),
+        where('date', '>=', startOfDay),
+        where('date', '<=', endOfDay)
+      );
+      
+      const querySnapshot = await getDocs(remindersQuery);
+      
+      // Process each document
+      const reminders = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        
+        // Convert date timestamp
+        let date = data.date instanceof Timestamp ? data.date.toDate() : data.date;
+        let createdAt = data.createdAt instanceof Timestamp ? data.createdAt.toDate() : (data.createdAt || new Date());
+        let updatedAt = data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : (data.updatedAt || new Date());
+        
+        return {
+          ...data,
+          reminderID: doc.id,
+          date: date,
+          createdAt: createdAt,
+          updatedAt: updatedAt
+        } as unknown as Reminder;
+      });
+      
+      // Query for recurring reminders
+      const recurringRemindersQuery = query(
+        collection(db, 'reminders'),
+        where('userID', '==', userId),
+        where('active', '==', true),
+        where('isRecurring', '==', true)
+      );
+      
+      const recurringSnapshot = await getDocs(recurringRemindersQuery);
+      
+      // Filter recurring reminders for the target day of week
+      const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      
+      const matchingRecurringReminders = recurringSnapshot.docs
+        .map(doc => {
+          const data = doc.data();
+          
+          // Skip if daysOfWeek doesn't include this day
+          if (!data.daysOfWeek || !data.daysOfWeek.includes(dayOfWeek)) {
+            return null;
+          }
+          
+          // Convert date timestamp
+          let reminderDate = data.date instanceof Timestamp ? data.date.toDate() : data.date;
+          let createdAt = data.createdAt instanceof Timestamp ? data.createdAt.toDate() : (data.createdAt || new Date());
+          let updatedAt = data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : (data.updatedAt || new Date());
+          
+          return {
+            ...data,
+            reminderID: doc.id,
+            date: reminderDate,
+            createdAt: createdAt,
+            updatedAt: updatedAt
+          } as unknown as Reminder;
+        })
+        .filter(Boolean) as Reminder[];
+      
+      // Combine regular and recurring reminders
+      return [...reminders, ...matchingRecurringReminders];
+    } catch (error) {
+      console.error("Error fetching reminders by date:", error);
+      return [];
+    }
+  },
+
+  async getUpcomingReminders(userId: string, limitCount: number = 3): Promise<Reminder[]> {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Get non-recurring reminders first
+      const nonRecurringQuery = query(
       collection(db, 'reminders'),
       where('userID', '==', userId),
       where('active', '==', true),
+        where('date', '>=', today),
       orderBy('date', 'asc'),
-      limit(10)
-    );
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => doc.data() as Reminder);
+        limit(limitCount)
+      );
+      
+      const nonRecurringSnapshot = await getDocs(nonRecurringQuery);
+      
+      let nonRecurringReminders = nonRecurringSnapshot.docs.map(doc => {
+        const data = doc.data();
+        
+        // Convert date timestamp
+        let date = data.date instanceof Timestamp ? data.date.toDate() : data.date;
+        let createdAt = data.createdAt instanceof Timestamp ? data.createdAt.toDate() : (data.createdAt || new Date());
+        let updatedAt = data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : (data.updatedAt || new Date());
+        
+        return {
+          ...data,
+          reminderID: doc.id,
+          date: date,
+          createdAt: createdAt,
+          updatedAt: updatedAt
+        } as unknown as Reminder;
+      });
+      
+      // Get recurring reminders
+      const recurringQuery = query(
+        collection(db, 'reminders'),
+        where('userID', '==', userId),
+        where('active', '==', true),
+        where('isRecurring', '==', true)
+      );
+      
+      const recurringSnapshot = await getDocs(recurringQuery);
+      
+      // Filter recurring reminders for the upcoming week
+      const upcomingDays: Array<{date: Date, dayOfWeek: number}> = [];
+      for (let i = 0; i < 7; i++) {
+        const date = new Date();
+        date.setDate(date.getDate() + i);
+        upcomingDays.push({
+          date: date,
+          dayOfWeek: date.getDay()
+        });
+      }
+      
+      let recurringReminders: Reminder[] = [];
+      
+      recurringSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const daysOfWeek = data.daysOfWeek || [];
+        
+        // Find the next occurrence of this reminder
+        const nextOccurrence = upcomingDays.find(day => daysOfWeek.includes(day.dayOfWeek));
+        
+        if (nextOccurrence) {
+          // Convert timestamps
+          let reminderDate = data.date instanceof Timestamp ? data.date.toDate() : data.date;
+          let createdAt = data.createdAt instanceof Timestamp ? data.createdAt.toDate() : (data.createdAt || new Date());
+          let updatedAt = data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : (data.updatedAt || new Date());
+          
+          // Create a new date object for the next occurrence
+          const nextDate = new Date(nextOccurrence.date);
+          // Match the time from the original reminder
+          nextDate.setHours(reminderDate.getHours(), reminderDate.getMinutes(), 0, 0);
+          
+          recurringReminders.push({
+            ...data,
+            reminderID: doc.id,
+            date: nextDate, // Use the next occurrence date
+            createdAt: createdAt,
+            updatedAt: updatedAt
+          } as unknown as Reminder);
+        }
+      });
+      
+      // Combine and sort all reminders
+      const allReminders = [...nonRecurringReminders, ...recurringReminders];
+      allReminders.sort((a, b) => a.date.getTime() - b.date.getTime());
+      
+      // Return only the requested number of reminders
+      return allReminders.slice(0, limitCount);
+    } catch (error) {
+      console.error("Error fetching upcoming reminders:", error);
+      return [];
+    }
+  },
+  
+  async getDatesWithReminders(userId: string, startDate: Date, endDate: Date): Promise<Date[]> {
+    try {
+      // Create clean date objects to avoid timezone issues
+      const cleanStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), 0, 0, 0);
+      const cleanEndDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59);
+      
+      // Get non-recurring reminders in this date range
+      const remindersQuery = query(
+        collection(db, 'reminders'),
+        where('userID', '==', userId),
+        where('active', '==', true),
+        where('date', '>=', cleanStartDate),
+        where('date', '<=', cleanEndDate)
+      );
+      
+      const querySnapshot = await getDocs(remindersQuery);
+      
+      // Extract dates from reminders
+      const datesWithReminders = new Set<string>();
+      
+      querySnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const date = data.date instanceof Timestamp ? data.date.toDate() : data.date;
+        
+        // Format date as YYYY-MM-DD string in local timezone
+        const localDateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        datesWithReminders.add(localDateString);
+      });
+      
+      // Get recurring reminders
+      const recurringQuery = query(
+        collection(db, 'reminders'),
+        where('userID', '==', userId),
+        where('active', '==', true),
+        where('isRecurring', '==', true)
+      );
+      
+      const recurringSnapshot = await getDocs(recurringQuery);
+      
+      // For each recurring reminder, add dates that match the days of week
+      recurringSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const daysOfWeek = data.daysOfWeek || [];
+        
+        // Skip if no days of week specified
+        if (daysOfWeek.length === 0) return;
+        
+        // Check each day in the range
+        const currentDate = new Date(cleanStartDate);
+        while (currentDate <= cleanEndDate) {
+          const dayOfWeek = currentDate.getDay();
+          
+          // If this day of week is in the reminder's daysOfWeek
+          if (daysOfWeek.includes(dayOfWeek)) {
+            // Format as YYYY-MM-DD in local timezone
+            const localDateString = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+            datesWithReminders.add(localDateString);
+          }
+          
+          // Clone the date and move to the next day
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+      });
+      
+      // Convert back to Date objects, using local parsing
+      return Array.from(datesWithReminders).map(dateString => {
+        const [year, month, day] = dateString.split('-').map(Number);
+        return new Date(year, month - 1, day);
+      });
+    } catch (error) {
+      console.error("Error fetching dates with reminders:", error);
+      return [];
+    }
+  },
+  
+  async updateReminder(reminderId: string, reminderData: Partial<Omit<Reminder, 'reminderID' | 'createdAt'>>): Promise<void> {
+    try {
+      const updateData = {
+        ...reminderData,
+        updatedAt: new Date()
+      };
+      
+      await updateDoc(doc(db, 'reminders', reminderId), updateData);
+    } catch (error) {
+      console.error("Error updating reminder:", error);
+      throw error;
+    }
+  },
+  
+  async deleteReminder(reminderId: string): Promise<void> {
+    try {
+      await deleteDoc(doc(db, 'reminders', reminderId));
+    } catch (error) {
+      console.error("Error deleting reminder:", error);
+      throw error;
+    }
   },
 
   // Note operations

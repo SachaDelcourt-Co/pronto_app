@@ -31,6 +31,8 @@ export default function HomePage() {
   const [totalAppointmentCount, setTotalAppointmentCount] = useState<number>(0);
   const [totalReminderCount, setTotalReminderCount] = useState<number>(0);
   const [expandedReminders, setExpandedReminders] = useState(false);
+  const [showReminderDetails, setShowReminderDetails] = useState(false);
+  const [selectedReminder, setSelectedReminder] = useState<Reminder | null>(null);
 
   // Add a more aggressive refresh when tab is focused
   useFocusEffect(
@@ -134,6 +136,13 @@ export default function HomePage() {
     // Clean up the interval on component unmount
     return () => clearInterval(intervalId);
   }, [authUser, expandedAppointments]);
+
+  // Add effect for reminders that triggers on expandedReminders change
+  useEffect(() => {
+    if (authUser) {
+      loadReminders();
+    }
+  }, [authUser, expandedReminders]);
 
   const handleCompleteTask = async (taskId: string) => {
     if (!taskId || !authUser) return;
@@ -290,12 +299,19 @@ export default function HomePage() {
               <>
                 <View style={{ maxHeight: expandedReminders ? undefined : 180, overflow: expandedReminders ? 'visible' : 'hidden' }}>
                   {reminders.map((reminder, index) => (
-                    <View key={index} style={styles.eventItem}>
+                    <TouchableOpacity 
+                      key={index} 
+                      style={styles.eventItem}
+                      onPress={() => {
+                        setSelectedReminder(reminder);
+                        setShowReminderDetails(true);
+                      }}
+                    >
                       <Text style={styles.eventTime}>{reminder.time}</Text>
                       <Text style={styles.eventName} numberOfLines={1}>
                         {reminder.reminderName}
                       </Text>
-                    </View>
+                    </TouchableOpacity>
                   ))}
                 </View>
                 
@@ -667,14 +683,125 @@ export default function HomePage() {
     if (!authUser) return;
     
     try {
-      const userReminders = await DatabaseService.getUserReminders(authUser.uid);
+      // Use the start of today to include all of today's reminders
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Get upcoming reminders
+      const userReminders = await DatabaseService.getUpcomingReminders(
+        authUser.uid, 
+        expandedReminders ? 10 : 3 // Show more when expanded
+      );
+      
       setReminders(userReminders || []);
-      setTotalReminderCount(userReminders.length);
+      
+      // Get the total count of all active reminders
+      const allActiveReminders = await DatabaseService.getUserReminders(
+        authUser.uid, 
+        { active: true }
+      );
+      
+      setTotalReminderCount(allActiveReminders.length);
     } catch (error) {
       console.error('Error loading reminders:', error);
       setReminders([]);
       setTotalReminderCount(0);
     }
+  };
+
+  // Add a function to render reminder details
+  const renderReminderDetail = () => {
+    if (!selectedReminder) return null;
+    
+    return (
+      <Modal
+        visible={showReminderDetails}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowReminderDetails(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <View style={styles.modalHeaderLeft}>
+                <Bell size={20} color="#9333ea" />
+                <Text style={styles.modalTitle}>Reminder Details</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowReminderDetails(false)}
+              >
+                <X size={20} color="#ffffff" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.reminderDetailContainer}>
+              <Text style={styles.reminderDetailTitle}>
+                {selectedReminder.reminderName}
+              </Text>
+              
+              {selectedReminder.isRecurring ? (
+                <View>
+                  <Text style={styles.reminderDetailText}>
+                    Recurring on:
+                  </Text>
+                  <View style={styles.reminderDetailDays}>
+                    {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+                      .filter((_, index) => selectedReminder.daysOfWeek?.includes(index))
+                      .map((day, index) => (
+                        <View key={index} style={styles.reminderDayChip}>
+                          <Text style={styles.reminderDayText}>{day}</Text>
+                        </View>
+                      ))
+                    }
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.reminderDetailRow}>
+                  <Bell size={18} color="#9333ea" />
+                  <Text style={styles.reminderDetailText}>
+                    {new Date(selectedReminder.date).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
+                    {' at '}
+                    {selectedReminder.time}
+                  </Text>
+                </View>
+              )}
+              
+              {selectedReminder.notificationTimes && selectedReminder.notificationTimes.length > 0 && (
+                <View style={styles.reminderNotificationsContainer}>
+                  <Text style={styles.reminderDetailLabel}>Notifications:</Text>
+                  <View style={styles.reminderNotificationsRow}>
+                    {selectedReminder.notificationTimes.map((time, index) => (
+                      <View key={index} style={styles.reminderNotificationChip}>
+                        <Bell size={12} color="#9333ea" />
+                        <Text style={styles.reminderNotificationText}>{time}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+              
+              <TouchableOpacity
+                style={styles.editReminderButton}
+                onPress={() => {
+                  setShowReminderDetails(false);
+                  router.navigate('/reminders');
+                }}
+              >
+                <Edit size={18} color="#ffffff" />
+                <Text style={styles.editReminderButtonText}>
+                  Edit Reminder
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
   };
 
   return (
@@ -728,6 +855,7 @@ export default function HomePage() {
 
         {renderMenu()}
         {renderAppointmentDetail()}
+        {renderReminderDetail()}
       </LinearGradient>
     </View>
   );
@@ -1215,6 +1343,86 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   editAppointmentButtonText: {
+    color: '#ffffff',
+    fontWeight: '600',
+    fontSize: 16,
+    marginLeft: 8,
+  },
+  reminderDetailContainer: {
+    padding: 8,
+  },
+  reminderDetailTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginBottom: 16,
+  },
+  reminderDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  reminderDetailText: {
+    fontSize: 16,
+    color: '#e5e7eb',
+    marginLeft: 12,
+  },
+  reminderDetailLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#e5e7eb',
+    marginBottom: 8,
+  },
+  reminderDetailDays: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  reminderDayChip: {
+    backgroundColor: 'rgba(147, 51, 234, 0.2)',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  reminderDayText: {
+    color: '#e5e7eb',
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  reminderNotificationsContainer: {
+    marginTop: 16,
+  },
+  reminderNotificationsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  reminderNotificationChip: {
+    backgroundColor: 'rgba(147, 51, 234, 0.2)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  reminderNotificationText: {
+    color: '#e5e7eb',
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  editReminderButton: {
+    backgroundColor: '#9333ea',
+    borderRadius: 8,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+  },
+  editReminderButtonText: {
     color: '#ffffff',
     fontWeight: '600',
     fontSize: 16,

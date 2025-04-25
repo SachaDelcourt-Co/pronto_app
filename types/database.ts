@@ -42,6 +42,7 @@ export interface Appointment {
 
 export interface Reminder {
   userID: string;
+  reminderID?: string;
   reminderName: string;
   date: Date;
   time: string;
@@ -49,6 +50,8 @@ export interface Reminder {
   daysOfWeek?: number[];
   notificationTimes: string[];
   active: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface Note {
