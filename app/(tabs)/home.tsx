@@ -555,7 +555,7 @@ export default function HomePage() {
 
     return (
       <View style={StyleSheet.absoluteFill}>
-        <BlurView intensity={80} style={StyleSheet.absoluteFill} tint="dark">
+        <BlurView intensity={95} style={[StyleSheet.absoluteFill, styles.menuOverlay]} tint="dark">
           <ScrollView style={styles.menuScrollContent}>
             <View style={styles.menuContent}>
               <TouchableOpacity
@@ -1245,6 +1245,12 @@ const styles = StyleSheet.create({
     color: '#666666',
     letterSpacing: 0.3,
   },
+  menuOverlay: {
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+  },
+  menuScrollContent: {
+    flex: 1,
+  },
   menuContent: {
     flex: 1,
     padding: 16,
@@ -1254,7 +1260,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1278,7 +1284,7 @@ const styles = StyleSheet.create({
   profileEmail: {
     fontSize: 12,
     fontFamily: 'Inter-Regular',
-    color: '#9ca3af',
+    color: '#d1d5db',
     letterSpacing: 0.2,
   },
   modalOverlay: {
@@ -1598,11 +1604,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginLeft: 8,
   },
-  menuScrollContent: {
-    flex: 1,
-  },
   menuSection: {
     padding: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 10,
+    marginTop: 16,
   },
   menuSectionTitle: {
     fontSize: 18,
@@ -1625,7 +1631,7 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: '#d1d5db',
   },
   quickAccessGrid: {
     flexDirection: 'row',
@@ -1654,7 +1660,7 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: '#d1d5db',
   },
   infoValue: {
     fontSize: 14,
@@ -1666,7 +1672,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   motivationChip: {
-    backgroundColor: 'rgba(147, 51, 234, 0.2)',
+    backgroundColor: 'rgba(147, 51, 234, 0.3)',
     borderRadius: 8,
     padding: 4,
   },
@@ -1679,22 +1685,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#9333ea',
     borderRadius: 8,
     padding: 12,
+    marginTop: 12,
   },
   supportButtonText: {
     color: '#ffffff',
     fontWeight: '600',
     fontSize: 16,
+    textAlign: 'center',
   },
   logoutButton: {
     backgroundColor: '#9333ea',
     borderRadius: 8,
     padding: 12,
     marginTop: 16,
+    marginBottom: 32,
   },
   logoutButtonText: {
     color: '#ffffff',
     fontWeight: '600',
     fontSize: 16,
+    textAlign: 'center',
   },
   languageSwitcher: {
     flexDirection: 'row',
@@ -1705,7 +1715,7 @@ const styles = StyleSheet.create({
     padding: 12,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
     borderRadius: 8,
     flex: 1,
     alignItems: 'center',
