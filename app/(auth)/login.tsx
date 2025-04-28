@@ -1,33 +1,38 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, Modal } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, Modal, Alert } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
-import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
-import { ChevronDown, X } from 'lucide-react-native';
-import { saveLanguagePreference, SUPPORTED_LANGUAGES } from '@/utils/i18n';
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { ChevronDown, X, Check } from 'lucide-react-native';
+import { saveLanguagePreference, SUPPORTED_LANGUAGES, SupportedLanguage } from '@/utils/i18n';
+import { DatabaseService } from '@/services/database';
+import { User } from '@/types/database';
 
-const MOTIVATION_CATEGORIES = [
-  'Sport',
-  'Business',
-  'Studies',
-  'Well-being',
-  'Parenting',
-  'Personal Development',
-  'Financial Management'
-] as const;
+// Map UI-friendly motivation categories to database values
+const MOTIVATION_CATEGORIES: { [key: string]: 'sport' | 'business' | 'studies' | 'wellbeing' | 'parenting' | 'personalDevelopment' | 'financialManagement' } = {
+  'Sport': 'sport',
+  'Business': 'business',
+  'Studies': 'studies',
+  'Well-being': 'wellbeing',
+  'Parenting': 'parenting',
+  'Personal Development': 'personalDevelopment',
+  'Financial Management': 'financialManagement'
+};
 
-type MotivationCategory = typeof MOTIVATION_CATEGORIES[number];
+type MotivationCategoryUI = keyof typeof MOTIVATION_CATEGORIES;
+type MotivationCategoryDB = typeof MOTIVATION_CATEGORIES[MotivationCategoryUI];
 
 export default function Login() {
   const { t, i18n } = useTranslation();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [selectedMotivations, setSelectedMotivations] = useState<MotivationCategory[]>([]);
+  const [selectedMotivations, setSelectedMotivations] = useState<MotivationCategoryUI[]>([]);
   const [showMotivationPicker, setShowMotivationPicker] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [error, setError] = useState('');
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const handleLogin = async () => {
     try {
@@ -39,7 +44,63 @@ export default function Login() {
     }
   };
 
-  const toggleMotivation = (category: MotivationCategory) => {
+  const handleSignup = async () => {
+    setError('');
+    
+    // Form validation
+    if (!email || !password) {
+      setError(t('login.fieldsRequired'));
+      return;
+    }
+    
+    if (!termsAccepted) {
+      setError(t('login.acceptTerms'));
+      return;
+    }
+    
+    if (selectedMotivations.length === 0) {
+      setError(t('login.selectMotivationsRequired'));
+      return;
+    }
+    
+    try {
+      const auth = getAuth();
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Map UI motivations to DB motivations
+      const dbMotivations = selectedMotivations.map(m => MOTIVATION_CATEGORIES[m]);
+      
+      // Create user profile in database
+      try {
+        await DatabaseService.createUser({
+          email,
+          name: email.split('@')[0], // Default name from email
+          motivations: dbMotivations,
+          language: i18n.language as SupportedLanguage,
+        });
+        
+        router.replace('/(tabs)/home');
+      } catch (dbError) {
+        console.error('Error creating user profile:', dbError);
+        setError(t('login.registrationError'));
+      }
+    } catch (authError: any) {
+      console.error('Auth error:', authError);
+      
+      // Handle specific error codes
+      if (authError.code === 'auth/email-already-in-use') {
+        setError(t('login.emailInUse'));
+      } else if (authError.code === 'auth/invalid-email') {
+        setError(t('login.invalidEmail'));
+      } else if (authError.code === 'auth/weak-password') {
+        setError(t('login.weakPassword'));
+      } else {
+        setError(t('login.registrationError'));
+      }
+    }
+  };
+
+  const toggleMotivation = (category: MotivationCategoryUI) => {
     setSelectedMotivations(prev => {
       if (prev.includes(category)) {
         return prev.filter(c => c !== category);
@@ -51,8 +112,12 @@ export default function Login() {
     });
   };
 
+  const toggleTermsAccepted = () => {
+    setTermsAccepted(!termsAccepted);
+  };
+
   const changeLanguage = async (lang: string) => {
-    await saveLanguagePreference(lang as 'fr' | 'en');
+    await saveLanguagePreference(lang as SupportedLanguage);
     setShowLanguagePicker(false);
   };
 
@@ -160,18 +225,18 @@ export default function Login() {
 
               {showMotivationPicker && (
                 <View style={styles.motivationList}>
-                  {MOTIVATION_CATEGORIES.map(category => (
+                  {Object.keys(MOTIVATION_CATEGORIES).map(category => (
                     <TouchableOpacity
                       key={category}
                       style={[
                         styles.motivationItem,
-                        selectedMotivations.includes(category) && styles.motivationItemSelected
+                        selectedMotivations.includes(category as MotivationCategoryUI) && styles.motivationItemSelected
                       ]}
-                      onPress={() => toggleMotivation(category)}
+                      onPress={() => toggleMotivation(category as MotivationCategoryUI)}
                     >
                       <Text style={[
                         styles.motivationItemText,
-                        selectedMotivations.includes(category) && styles.motivationItemTextSelected
+                        selectedMotivations.includes(category as MotivationCategoryUI) && styles.motivationItemTextSelected
                       ]}>
                         {category}
                       </Text>
@@ -205,7 +270,7 @@ export default function Login() {
 
           <TouchableOpacity 
             style={styles.button}
-            onPress={isLogin ? handleLogin : () => {}}
+            onPress={isLogin ? handleLogin : handleSignup}
           >
             <Text style={styles.buttonText}>
               {isLogin ? t('login.loginButton') : t('login.createAccount')}
@@ -221,8 +286,11 @@ export default function Login() {
 
         {!isLogin && (
           <View style={styles.termsContainer}>
-            <TouchableOpacity style={styles.checkbox}>
-              {/* Checkbox implementation */}
+            <TouchableOpacity 
+              style={styles.checkbox}
+              onPress={toggleTermsAccepted}
+            >
+              {termsAccepted && <Check size={16} color="#9333ea" />}
             </TouchableOpacity>
             <Text style={styles.termsText}>
               {t('login.termsAgreement')}{' '}

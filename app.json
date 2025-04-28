@@ -37,6 +37,14 @@
     "experiments": {
       "typedRoutes": true,
       "tsconfigPaths": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id"
+      },
+      "reactNativeIgnoreWarnings": [
+        "Unsupported top level event type \"topInsetsChange\" dispatched"
+      ]
     }
   }
 }

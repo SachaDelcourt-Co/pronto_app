@@ -7,8 +7,9 @@ import { SplashScreen } from 'expo-router';
 import { View } from 'react-native';
 import { initI18n } from '@/utils/i18n';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { AuthContext } from '@/utils/AuthContext';
+import { AuthContext } from '../utils/AuthContext';
 import { User } from 'firebase/auth';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync().catch(() => {
@@ -62,12 +63,14 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthContext.Provider value={{ user, authInitialized }}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-      </Stack>
-      <StatusBar style="light" />
-    </AuthContext.Provider>
+    <SafeAreaProvider>
+      <AuthContext.Provider value={{ user, authInitialized }}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        </Stack>
+        <StatusBar style="light" />
+      </AuthContext.Provider>
+    </SafeAreaProvider>
   );
 }
