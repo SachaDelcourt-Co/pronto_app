@@ -51,11 +51,11 @@ export default function Login() {
 
   return (
     <LinearGradient
-      colors={['#4c1d95', '#7c3aed']}
+      colors={['#1a1a1a', '#2a1a2a']}
       style={styles.container}
     >
       <View style={styles.content}>
-        <Text style={styles.title}>{t('login.title')}</Text>
+        <Text style={styles.title}>PRONTO</Text>
         <Text style={styles.subtitle}>{t('login.subtitle')}</Text>
 
         <View style={styles.toggleContainer}>
@@ -165,6 +165,24 @@ export default function Login() {
           )}
         </View>
 
+        {!isLogin && (
+          <View style={styles.termsContainer}>
+            <TouchableOpacity style={styles.checkbox}>
+              {/* Checkbox implementation */}
+            </TouchableOpacity>
+            <Text style={styles.termsText}>
+              {t('login.acceptTerms')}{' '}
+              <Link href="/privacy-policy" style={styles.termsLink}>
+                <Text style={styles.termsLinkText}>{t('login.privacyPolicy')}</Text>
+              </Link>{' '}
+              {t('login.and')}{' '}
+              <Link href="/terms" style={styles.termsLink}>
+                <Text style={styles.termsLinkText}>{t('login.termsOfUse')}</Text>
+              </Link>
+            </Text>
+          </View>
+        )}
+
         <View style={styles.footer}>
           <Link href="/privacy-policy" style={styles.footerLink}>
             <Text style={styles.footerLinkText}>{t('login.privacyPolicy')}</Text>
@@ -193,6 +211,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     textAlign: 'center',
     marginBottom: 8,
+    letterSpacing: 1,
   },
   subtitle: {
     fontFamily: 'Inter-Regular',
@@ -214,7 +233,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   toggleButtonActive: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#9333ea',
   },
   toggleText: {
     color: '#e4e4e7',
@@ -222,7 +241,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-SemiBold',
   },
   toggleTextActive: {
-    color: '#4c1d95',
+    color: '#ffffff',
   },
   form: {
     gap: 16,
@@ -252,20 +271,22 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
   },
   motivationList: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#2a1a2a',
     borderRadius: 12,
     padding: 8,
     gap: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(147, 51, 234, 0.3)',
   },
   motivationItem: {
     padding: 12,
     borderRadius: 8,
   },
   motivationItemSelected: {
-    backgroundColor: '#4c1d95',
+    backgroundColor: '#9333ea',
   },
   motivationItemText: {
-    color: '#1f2937',
+    color: '#ffffff',
     fontFamily: 'Inter-Regular',
   },
   motivationItemTextSelected: {
@@ -279,7 +300,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
   },
   button: {
-    backgroundColor: '#f97316',
+    backgroundColor: '#9333ea',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -295,7 +316,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   linkText: {
-    color: '#e4e4e7',
+    color: '#9333ea',
     fontFamily: 'Inter-Regular',
   },
   error: {
@@ -303,11 +324,41 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     textAlign: 'center',
   },
+  termsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+    paddingHorizontal: 10,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#9333ea',
+    marginRight: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  termsText: {
+    color: '#e4e4e7',
+    fontSize: 14,
+    flex: 1,
+    lineHeight: 20,
+  },
+  termsLink: {
+    
+  },
+  termsLinkText: {
+    color: '#9333ea',
+    textDecorationLine: 'underline',
+  },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 16,
     marginTop: 32,
+    marginBottom: 20,
   },
   footerLink: {
     padding: 8,
