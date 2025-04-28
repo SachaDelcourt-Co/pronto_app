@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Calendar as CalendarIcon, Clock, MapPin, Bell, Plus, ChevronRight, X, Edit, Trash2 } from 'lucide-react-native';
+import { Calendar as CalendarIcon, Clock, MapPin, Bell, Plus, ChevronRight, X, Edit, Trash2, ChevronLeft, Calendar as TodayIcon } from 'lucide-react-native';
 import { Calendar } from 'react-native-calendars';
 import { useAuth } from '@/utils/AuthContext';
 import { DatabaseService } from '@/services/database';
@@ -273,13 +273,16 @@ export default function AppointmentsScreen() {
     }
   };
 
-  // 4. Modify the handleDayPress function to not override the current month
+  // Fix handleDayPress to preserve dots when selecting dates
   const handleDayPress = (day: any) => {
     // Convert the selected date string to a Date object
     const newSelectedDate = parseLocalDate(day.dateString);
     
     // Update the selected date for the calendar
     setSelectedDate(newSelectedDate);
+    
+    // Also update the display date when selecting from calendar
+    setDisplayDate(newSelectedDate);
     
     // Update the current visible month to match the clicked date
     // This prevents jumping between months when clicking on a date
@@ -289,29 +292,25 @@ export default function AppointmentsScreen() {
       setCurrentVisibleMonth(clickedMonth);
     }
     
-    // But we don't change the display date - main view always shows today
     // Only load the appointments for the selected date for the calendar popup
     if (user) {
       DatabaseService.getAppointmentsByDate(user.uid, newSelectedDate)
         .then(appointments => {
-          // Only update dailyAppointments when calendar is open
-          if (showCalendar) {
-            setDailyAppointments(appointments);
-          }
+          // Update dailyAppointments
+          setDailyAppointments(appointments);
         })
         .catch(error => {
           console.error('Error loading selected date appointments:', error);
         });
     }
     
-    // Update marked dates to show the new selection
+    // Update marked dates to show the new selection while preserving dots
     const newMarkedDates = { ...markedDates };
     
-    // Remove previous selection highlight (but keep the dots!)
+    // Remove previous selection highlight (but KEEP the dots!)
     Object.keys(newMarkedDates).forEach(dateString => {
       if (newMarkedDates[dateString]?.selected) {
-        // Add null check with optional chaining
-        // Remove the 'selected' property but keep 'marked' if it exists
+        // Keep the 'marked' and 'dotColor' properties if they exist
         const { selected, selectedColor, ...rest } = newMarkedDates[dateString];
         newMarkedDates[dateString] = rest;
       }
@@ -319,14 +318,71 @@ export default function AppointmentsScreen() {
     
     // Add new selection
     newMarkedDates[day.dateString] = { 
-      ...(newMarkedDates[day.dateString] || {}),
+      ...(newMarkedDates[day.dateString] || {}), // Keep existing properties
       selected: true, 
       selectedColor: '#9333ea',
-      marked: newMarkedDates[day.dateString]?.marked || false,
-      dotColor: newMarkedDates[day.dateString]?.marked ? '#ffffff' : undefined
     };
     
     setMarkedDates(newMarkedDates);
+  };
+
+  // Add function to navigate to previous day
+  const goToPreviousDay = () => {
+    const prevDay = new Date(displayDate);
+    prevDay.setDate(prevDay.getDate() - 1);
+    setDisplayDate(prevDay);
+    setSelectedDate(prevDay);
+    
+    if (user) {
+      // Load appointments for the previous day
+      DatabaseService.getAppointmentsByDate(user.uid, prevDay)
+        .then(appointments => {
+          setDailyAppointments(appointments);
+        })
+        .catch(error => {
+          console.error('Error loading previous day appointments:', error);
+        });
+    }
+  };
+
+  // Add function to navigate to next day
+  const goToNextDay = () => {
+    const nextDay = new Date(displayDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+    setDisplayDate(nextDay);
+    setSelectedDate(nextDay);
+    
+    if (user) {
+      // Load appointments for the next day
+      DatabaseService.getAppointmentsByDate(user.uid, nextDay)
+        .then(appointments => {
+          setDailyAppointments(appointments);
+        })
+        .catch(error => {
+          console.error('Error loading next day appointments:', error);
+        });
+    }
+  };
+
+  // Add function to go to today
+  const goToToday = () => {
+    const today = new Date();
+    setDisplayDate(today);
+    setSelectedDate(today);
+    
+    if (user) {
+      // Load appointments for today
+      DatabaseService.getAppointmentsByDate(user.uid, today)
+        .then(appointments => {
+          setDailyAppointments(appointments);
+        })
+        .catch(error => {
+          console.error('Error loading today\'s appointments:', error);
+        });
+    }
+    
+    // Scroll to current time when going to today
+    scrollToCurrentTime();
   };
 
   const formatDate = (date: Date) => {
@@ -483,6 +539,14 @@ export default function AppointmentsScreen() {
     }
   }, [showCalendar, user]);
 
+  // Add this utility function at the top with other utility functions
+  const isToday = (date: Date) => {
+    const today = new Date();
+    return date.getDate() === today.getDate() && 
+           date.getMonth() === today.getMonth() && 
+           date.getFullYear() === today.getFullYear();
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -508,8 +572,34 @@ export default function AppointmentsScreen() {
 
       <View style={styles.dayCalendarContainer}>
         <View style={styles.dayHeader}>
-          <Text style={styles.dayHeaderDate}>{formatDate(displayDate)}</Text>
+          <View style={styles.dayHeaderControls}>
+            <TouchableOpacity 
+              style={styles.dayNavigationButton}
+              onPress={goToPreviousDay}
+            >
+              <ChevronLeft size={20} color="#6b7280" />
+            </TouchableOpacity>
+            
+            <View style={styles.dayHeaderDateContainer}>
+              <Text style={styles.dayHeaderDate}>{formatDate(displayDate)}</Text>
             </View>
+            
+            <TouchableOpacity 
+              style={styles.dayNavigationButton}
+              onPress={goToNextDay}
+            >
+              <ChevronRight size={20} color="#6b7280" />
+            </TouchableOpacity>
+          </View>
+          
+          <TouchableOpacity 
+            style={styles.todayButton}
+            onPress={goToToday}
+          >
+            <TodayIcon size={16} color="#9333ea" />
+            <Text style={styles.todayButtonText}>{t('common.today')}</Text>
+          </TouchableOpacity>
+        </View>
 
         <ScrollView 
           style={styles.timelineContainer}
@@ -520,42 +610,76 @@ export default function AppointmentsScreen() {
             <View key={hour} style={styles.timeSlot}>
               <Text style={styles.timeLabel}>{hour.toString().padStart(2, '0')}:00</Text>
               <View style={styles.timeSlotContent}>
-                {dailyAppointments
-                  .filter(appointment => {
-                    const [hours] = appointment.startTime.split(':').map(Number);
-                    return hours === hour;
-                  })
-                  .map((appointment, index) => (
-                    <TouchableOpacity 
-                      key={index}
-                      style={styles.appointmentBlock}
-                      onPress={() => {
-                        setSelectedAppointment(appointment);
-                        setShowAppointmentDetails(true);
-                      }}
-                    >
-                      <Text style={styles.appointmentBlockTitle}>
-                        {appointment.appointmentName}
-              </Text>
-                      <Text style={styles.appointmentBlockTime}>
-                        {appointment.startTime} - {appointment.endTime}
-                      </Text>
-                    </TouchableOpacity>
-                  ))
-                }
+                {/* Group appointments by start hour to handle multiple appointments at the same time */}
+                {(() => {
+                  // Get appointments that start in this hour
+                  const hourAppointments = dailyAppointments.filter(appointment => {
+                    const [startHour] = appointment.startTime.split(':').map(Number);
+                    return startHour === hour;
+                  });
+
+                  // If no appointments in this hour, return null
+                  if (hourAppointments.length === 0) return null;
+
+                  // Calculate the width for each appointment based on how many are in this time slot
+                  const appointmentWidth = 100 / Math.min(hourAppointments.length, 3); // Max 3 side by side
+
+                  return hourAppointments.map((appointment, index) => {
+                    // Calculate the height based on the appointment duration
+                    const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
+                    const [endHour, endMinute] = appointment.endTime.split(':').map(Number);
+                    
+                    // Calculate total minutes for height
+                    const durationInMinutes = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
+                    const heightInPixels = Math.max(56, durationInMinutes); // Minimum height of 56px
+                    
+                    // Calculate the top offset based on start minute (1 minute = 1 pixel)
+                    const topOffset = startMinute;
+
+                    return (
+                      <TouchableOpacity 
+                        key={index}
+                        style={[
+                          styles.appointmentBlock,
+                          {
+                            height: heightInPixels,
+                            width: `${appointmentWidth}%`,
+                            left: `${appointmentWidth * (index % 3)}%`,
+                            top: topOffset, // Position vertically based on minutes
+                            zIndex: 10 - index, // Higher index items go behind lower index items
+                          }
+                        ]}
+                        onPress={() => {
+                          setSelectedAppointment(appointment);
+                          setShowAppointmentDetails(true);
+                        }}
+                      >
+                        <Text style={styles.appointmentBlockTitle} numberOfLines={2}>
+                          {appointment.appointmentName}
+                        </Text>
+                        <Text style={styles.appointmentBlockTime}>
+                          {appointment.startTime} - {appointment.endTime}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  });
+                })()}
               </View>
             </View>
           ))}
-          {/* Current time indicator */}
-          <View 
-            style={[
-              styles.currentTimeIndicator, 
-              { top: currentHour * 60 + (new Date().getMinutes()) }
-            ]}
-          >
-            <View style={styles.currentTimeDot} />
-            <View style={styles.currentTimeLine} />
-          </View>
+          
+          {/* Current time indicator - only show for current day */}
+          {isToday(displayDate) && (
+            <View 
+              style={[
+                styles.currentTimeIndicator, 
+                { top: currentHour * 60 + (new Date().getMinutes()) }
+              ]}
+            >
+              <View style={styles.currentTimeDot} />
+              <View style={styles.currentTimeLine} />
+            </View>
+          )}
         </ScrollView>
       </View>
 
@@ -633,11 +757,7 @@ export default function AppointmentsScreen() {
         animationType="slide"
         onRequestClose={() => {
           setShowCalendar(false);
-          // Restore today's appointments when closing
-          if (user) {
-            const today = new Date();
-            loadDailyAppointments(today);
-          }
+          // No longer reset to today here
         }}
       >
         <View style={styles.modalOverlay}>
@@ -648,11 +768,7 @@ export default function AppointmentsScreen() {
                 style={styles.closeButton}
                 onPress={() => {
                   setShowCalendar(false);
-                  // Restore today's appointments when closing
-                  if (user) {
-                    const today = new Date();
-                    loadDailyAppointments(today);
-                  }
+                  // No longer reset to today here
                 }}
               >
                 <X size={20} color="#666666" />
@@ -714,11 +830,11 @@ export default function AppointmentsScreen() {
                   dailyAppointments.map((appointment, index) => (
                     <View key={index} style={styles.calendarDayAppointmentItem}>
                       <View style={styles.appointmentTimeBlock}>
-                  <Clock size={16} color="#9333ea" />
+                        <Clock size={16} color="#9333ea" />
                         <Text style={styles.appointmentTimeText}>
                           {appointment.startTime} - {appointment.endTime}
                         </Text>
-                </View>
+                      </View>
                       <View style={styles.appointmentDetailsBlock}>
                         <Text style={styles.calendarAppointmentTitle}>
                           {appointment.appointmentName}
@@ -944,7 +1060,7 @@ export default function AppointmentsScreen() {
                   {selectedAppointment.appointmentName}
                 </Text>
                 
-                  <View style={styles.detailItem}>
+                <View style={styles.detailItem}>
                   <Clock size={18} color="#9333ea" />
                   <Text style={styles.detailText}>
                     {formatDate(selectedAppointment.date)}, {selectedAppointment.startTime} - {selectedAppointment.endTime}
@@ -965,7 +1081,7 @@ export default function AppointmentsScreen() {
                     <Text style={styles.detailText}>
                       {selectedAppointment.address}
                     </Text>
-              </View>
+                </View>
                 )}
                 
                 <View style={styles.appointmentActions}>
@@ -991,10 +1107,10 @@ export default function AppointmentsScreen() {
                     <Trash2 size={18} color="#ef4444" />
                     <Text style={styles.deleteActionButtonText}>{t('appointments.delete')}</Text>
                   </TouchableOpacity>
-                  </View>
+                </View>
               </View>
             )}
-            </View>
+          </View>
         </View>
       </Modal>
 
@@ -1016,7 +1132,7 @@ export default function AppointmentsScreen() {
                 onPress={() => setShowDeleteConfirmation(false)}
               >
                 <Text style={styles.confirmModalCancelText}>{t('appointments.cancel')}</Text>
-          </TouchableOpacity>
+              </TouchableOpacity>
               
               <TouchableOpacity
                 style={[styles.confirmModalButton, styles.confirmModalDeleteButton]}
@@ -1111,11 +1227,43 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#f3f4f6',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dayHeaderControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dayHeaderDateContainer: {
+    paddingHorizontal: 12,
   },
   dayHeaderDate: {
     fontSize: 18,
     fontWeight: '600',
     color: '#1f2937',
+  },
+  dayNavigationButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f3f4f6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  todayButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(147, 51, 234, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  todayButtonText: {
+    color: '#9333ea',
+    fontWeight: '600',
+    fontSize: 14,
+    marginLeft: 6,
   },
   timelineContainer: {
     flex: 1,
@@ -1138,6 +1286,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: 1,
     borderLeftColor: '#f3f4f6',
     padding: 2,
+    position: 'relative', // Important for absolute positioning of appointments
   },
   appointmentBlock: {
     backgroundColor: 'rgba(147, 51, 234, 0.1)',
@@ -1147,6 +1296,8 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     marginBottom: 1,
     minHeight: 56,
+    position: 'absolute', // Change to absolute positioning
+    width: '100%', // Will be overridden for multiple appointments
   },
   appointmentBlockTitle: {
     fontSize: 14,

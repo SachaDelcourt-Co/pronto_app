@@ -29,7 +29,8 @@ const resources = {
         delete: 'Supprimer',
         edit: 'Modifier',
         create: 'Créer',
-        loading: 'Chargement...'
+        loading: 'Chargement...',
+        today: 'Aujourd\'hui'
       },
       navigation: {
         home: 'Accueil',
@@ -288,7 +289,8 @@ const resources = {
         delete: 'Delete',
         edit: 'Edit',
         create: 'Create',
-        loading: 'Loading...'
+        loading: 'Loading...',
+        today: 'Today'
       },
       navigation: {
         home: 'Home',
