@@ -20,8 +20,6 @@ Notifications.setNotificationHandler({
   }),
 });
 
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
 export default function RemindersScreen() {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
@@ -49,6 +47,26 @@ export default function RemindersScreen() {
   
   // Delete confirmation
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+
+  // Define a function to get localized day abbreviations based on current language
+  const getDaysAbbreviations = () => {
+    if (i18n.language === 'fr') {
+      return ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+    } else {
+      // Default to English
+      return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    }
+  };
+  
+  // Use the function to get the days abbreviations
+  const DAYS = getDaysAbbreviations();
+  
+  // Update if language changes
+  useEffect(() => {
+    // This will update the DAYS constant when language changes
+    const days = getDaysAbbreviations();
+    setSelectedDays(selectedDays.map(idx => idx)); // Force a re-render with same values
+  }, [i18n.language]);
 
   // Update the useEffect that sets reminderDateInput
   useEffect(() => {
@@ -501,7 +519,7 @@ export default function RemindersScreen() {
 
                 {reminder.isRecurring ? (
               <View style={styles.daysContainer}>
-                {DAYS.map((day, index) => (
+                {getDaysAbbreviations().map((day, index) => (
                   <View
                     key={day}
                     style={[
@@ -520,7 +538,7 @@ export default function RemindersScreen() {
               </View>
             ) : (
               <Text style={styles.dateText}>
-                    {new Date(reminder.date).toLocaleDateString()} at {reminder.time}
+                    {new Date(reminder.date).toLocaleDateString()} {t('common.at')} {reminder.time}
               </Text>
             )}
 
@@ -726,7 +744,7 @@ export default function RemindersScreen() {
                 <View style={styles.recurringContainer}>
                   <Text style={styles.inputLabel}>{t('reminders.selectDays')}</Text>
                   <View style={styles.daysContainer}>
-                    {DAYS.map((day, index) => (
+                    {getDaysAbbreviations().map((day, index) => (
                       <TouchableOpacity
                         key={day}
                         style={[

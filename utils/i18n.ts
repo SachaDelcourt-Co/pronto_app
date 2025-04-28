@@ -18,6 +18,19 @@ export type SupportedLanguage = keyof typeof SUPPORTED_LANGUAGES;
 const resources = {
   fr: {
     translation: {
+      common: {
+        at: 'à',
+        on: 'le',
+        yes: 'Oui',
+        no: 'Non',
+        ok: 'OK',
+        cancel: 'Annuler',
+        save: 'Enregistrer',
+        delete: 'Supprimer',
+        edit: 'Modifier',
+        create: 'Créer',
+        loading: 'Chargement...'
+      },
       navigation: {
         home: 'Accueil',
         tasks: 'Tâches',
@@ -207,38 +220,33 @@ const resources = {
       },
       reminders: {
         title: 'Rappels',
-        subtitle: 'Ne manquez pas ce qui est important',
-        openCalendar: 'Ouvrir le calendrier',
+        subtitle: 'Gérez vos rappels',
+        selectDate: 'Sélectionner une date',
         noReminders: 'Aucun rappel',
-        noRemindersForDay: 'Aucun rappel pour {{date}}',
+        noRemindersForDate: 'Aucun rappel pour cette date',
         createReminder: 'Créer un rappel',
-        editReminder: 'Modifier le rappel',
         newReminder: 'Nouveau rappel',
+        editReminder: 'Modifier le rappel',
         reminderTitle: 'Titre du rappel',
         date: 'Date',
         time: 'Heure',
-        recurringReminder: 'Rappel récurrent?',
+        description: 'Description',
+        save: 'Enregistrer',
+        cancel: 'Annuler',
+        delete: 'Supprimer',
+        loading: 'Chargement des rappels...',
+        deleteConfirmation: 'Êtes-vous sûr de vouloir supprimer ce rappel?',
+        deleteConfirmationTitle: 'Supprimer le rappel',
+        remindersFor: 'Rappels pour {{date}}',
+        upcomingReminders: 'Rappels à venir',
+        edit: 'Modifier',
+        reminderDetails: 'Détails du rappel',
+        recurringReminder: 'Rappel récurrent',
         selectDays: 'Sélectionner les jours',
         notificationTimes: 'Heures de notification',
         addNotificationTime: 'Ajouter une heure de notification',
         active: 'Actif',
-        save: 'Enregistrer',
-        cancel: 'Annuler',
-        delete: 'Supprimer',
-        edit: 'Modifier',
-        loading: 'Chargement des rappels...',
-        deleteConfirmation: 'Êtes-vous sûr de vouloir supprimer ce rappel?',
-        deleteConfirmationTitle: 'Supprimer le rappel',
-        daysOfWeek: {
-          sunday: 'Dim',
-          monday: 'Lun',
-          tuesday: 'Mar',
-          wednesday: 'Mer',
-          thursday: 'Jeu',
-          friday: 'Ven',
-          saturday: 'Sam'
-        },
-        remindersFor: 'Rappels pour {{date}}'
+        openCalendar: 'Ouvrir le calendrier'
       },
       tasks: {
         title: 'Tâches quotidiennes',
@@ -269,6 +277,19 @@ const resources = {
   },
   en: {
     translation: {
+      common: {
+        at: 'at',
+        on: 'on',
+        yes: 'Yes',
+        no: 'No',
+        ok: 'OK',
+        cancel: 'Cancel',
+        save: 'Save',
+        delete: 'Delete',
+        edit: 'Edit',
+        create: 'Create',
+        loading: 'Loading...'
+      },
       navigation: {
         home: 'Home',
         tasks: 'Tasks',
