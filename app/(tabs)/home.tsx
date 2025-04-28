@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Platform, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Platform, Modal, ActivityIndicator, Dimensions, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { Menu, Calendar, Bell, FileText, SquareCheck as CheckSquare, X, Clock, MapPin, Edit, ChevronUp, ChevronDown } from 'lucide-react-native';
@@ -16,6 +16,7 @@ export default function HomePage() {
   const router = useRouter();
   const { user: authUser, authInitialized } = useAuth();
   const { t, i18n } = useTranslation();
+  const dimensions = useWindowDimensions();
   const [showMenu, setShowMenu] = useState(false);
   const [showAppointments, setShowAppointments] = useState(false);
   const [showReminders, setShowReminders] = useState(false);
@@ -206,7 +207,11 @@ export default function HomePage() {
           style={[
             styles.scheduleBanner,
             expandedAppointments && appointments.length > 0
-              ? { height: 'auto', minHeight: 260, maxHeight: 500 } // Increase height when expanded
+              ? { 
+                  height: 'auto', 
+                  maxHeight: undefined,
+                  marginBottom: 24 // Add more space when expanded
+                }
               : null
           ]}
         >
@@ -221,7 +226,10 @@ export default function HomePage() {
           <View style={{ flex: 1, justifyContent: 'space-between' }}>
             {appointments.length > 0 ? (
               <>
-                <View style={{ maxHeight: expandedAppointments ? undefined : 180, overflow: expandedAppointments ? 'visible' : 'hidden' }}>
+                <View style={{ 
+                  maxHeight: expandedAppointments ? undefined : 180, // Remove max height limit when expanded
+                  overflow: expandedAppointments ? 'visible' : 'hidden' // Allow content to be fully visible when expanded
+                }}>
                   {appointments.map((appointment, index) => {
                     // Check if appointment is today or a future date
                     const appointmentDate = new Date(appointment.date);
@@ -283,7 +291,11 @@ export default function HomePage() {
           style={[
             styles.scheduleBanner,
             expandedReminders && reminders.length > 0
-              ? { height: 'auto', minHeight: 260, maxHeight: 500 } // Increase height when expanded
+              ? { 
+                  height: 'auto', 
+                  maxHeight: undefined,
+                  marginBottom: 24 // Add more space when expanded
+                }
               : null
           ]}
         >
@@ -298,7 +310,10 @@ export default function HomePage() {
           <View style={{ flex: 1, justifyContent: 'space-between' }}>
             {reminders.length > 0 ? (
               <>
-                <View style={{ maxHeight: expandedReminders ? undefined : 180, overflow: expandedReminders ? 'visible' : 'hidden' }}>
+                <View style={{ 
+                  maxHeight: expandedReminders ? undefined : 180, // Remove max height limit when expanded
+                  overflow: expandedReminders ? 'visible' : 'hidden' // Allow content to be fully visible when expanded
+                }}>
                   {reminders.map((reminder, index) => {
                     // Use reminderID for key to avoid duplicates
                     return (
@@ -358,7 +373,10 @@ export default function HomePage() {
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
+        <View style={[
+          styles.modalContent,
+          dimensions.width > 768 ? { maxWidth: 600 } : { width: '92%' }
+        ]}>
           <View style={styles.modalHeader}>
             <View style={styles.modalHeaderLeft}>
               {icon === Calendar ? (
@@ -483,7 +501,7 @@ export default function HomePage() {
               <Text style={[
                 styles.dailyTaskName,
                 isCompletedToday && styles.completedTaskText
-              ]}>
+              ]} numberOfLines={2}>
                 {task.taskName || 'Unnamed Task'}
               </Text>
             </View>
@@ -756,7 +774,10 @@ export default function HomePage() {
         onRequestClose={() => setShowAppointmentDetails(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[
+            styles.modalContent,
+            dimensions.width > 768 ? { maxWidth: 600 } : { width: '92%' }
+          ]}>
             <View style={styles.modalHeader}>
               <View style={styles.modalHeaderLeft}>
                 <Calendar size={20} color="#9333ea" />
@@ -891,7 +912,10 @@ export default function HomePage() {
         onRequestClose={() => setShowReminderDetails(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[
+            styles.modalContent,
+            dimensions.width > 768 ? { maxWidth: 600 } : { width: '92%' }
+          ]}>
             <View style={styles.modalHeader}>
               <View style={styles.modalHeaderLeft}>
                 <Bell size={20} color="#9333ea" />
@@ -987,23 +1011,31 @@ export default function HomePage() {
         <ScrollView 
           style={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContentContainer}
+          contentContainerStyle={[
+            styles.scrollContentContainer,
+            dimensions.width > 1024 ? { alignItems: 'center' } : null
+          ]}
         >
-          {renderMotivationalBanner()}
-          {renderSchedule()}
-          
-          <View style={styles.lowerContent}>
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t('home.dailyTasks')}</Text>
-              <View style={styles.taskContainer}>
-                {isLoading ? (
-                  <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#9333ea" />
-                    <Text style={styles.loadingText}>{t('home.loadingTasks')}</Text>
-                  </View>
-                ) : (
-                  renderDailyTasks()
-                )}
+          <View style={[
+            styles.contentWrapper,
+            dimensions.width > 1024 ? { maxWidth: 1024 } : { width: '100%' }
+          ]}>
+            {renderMotivationalBanner()}
+            {renderSchedule()}
+            
+            <View style={styles.lowerContent}>
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>{t('home.dailyTasks')}</Text>
+                <View style={styles.taskContainer}>
+                  {isLoading ? (
+                    <View style={styles.loadingContainer}>
+                      <ActivityIndicator size="large" color="#9333ea" />
+                      <Text style={styles.loadingText}>{t('home.loadingTasks')}</Text>
+                    </View>
+                  ) : (
+                    renderDailyTasks()
+                  )}
+                </View>
               </View>
             </View>
           </View>
@@ -1046,12 +1078,21 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flex: 1,
+    width: '100%',
   },
   scrollContentContainer: {
     paddingBottom: 24,
+    width: '100%',
+  },
+  contentWrapper: {
+    width: '100%',
   },
   lowerContent: {
+    width: '100%',
     paddingBottom: 20,
+    zIndex: 0,
+    position: 'relative',
+    marginTop: 10,
   },
   header: {
     flexDirection: 'row',
@@ -1081,7 +1122,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   motivationalBanner: {
-    marginHorizontal: 16,
+    width: '100%',
+    marginHorizontal: 0,
+    paddingHorizontal: 16,
     marginTop: 16,
     padding: 12,
     borderRadius: 12,
@@ -1096,7 +1139,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   scheduleSection: {
-    marginBottom: 20,
+    width: '100%',
+    marginBottom: 30, // More bottom margin for clearer separation
+    position: 'relative', // For proper layering
+    zIndex: 1, // Higher z-index to ensure proper stacking
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -1104,6 +1150,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     marginBottom: 10,
+    width: '100%',
   },
   sectionTitle: {
     fontSize: 16,
@@ -1121,39 +1168,45 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   scheduleBanners: {
-    flex: 1,
-    flexDirection: 'row',
+    width: '100%',
     paddingHorizontal: 16,
-    gap: 12,
+    gap: 8,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    zIndex: 0,
   },
   scheduleBanner: {
-    flex: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 16,
+    borderRadius: 12,
     padding: 12,
+    marginBottom: 16,
     height: 260,
+    overflow: 'visible',
+    flex: 1, 
+    maxWidth: '48%',
   },
   bannerHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   bannerTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: 'Inter-SemiBold',
     color: '#ffffff',
-    marginLeft: 8,
+    marginLeft: 6,
     flex: 1,
     letterSpacing: 0.2,
   },
   badge: {
     backgroundColor: '#9333ea',
     borderRadius: 10,
-    paddingHorizontal: 6,
+    paddingHorizontal: 5,
     paddingVertical: 1,
   },
   badgeText: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: 'Inter-SemiBold',
     color: '#ffffff',
   },
@@ -1168,19 +1221,22 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.03)',
     padding: 10,
     borderRadius: 10,
+    minHeight: 40,
   },
   eventTime: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: 'Inter-SemiBold',
     color: '#9333ea',
-    width: 45,
+    width: 38,
+    flexShrink: 0,
   },
   eventName: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: 'Inter-Regular',
     color: '#ffffff',
     flex: 1,
-    marginLeft: 8,
+    marginLeft: 4,
+    flexShrink: 1,
   },
   dailyTasksSection: {
     flex: 1,
@@ -1293,13 +1349,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16,
+    width: '100%',
   },
   modalContent: {
     backgroundColor: '#1a1a1a',
     borderRadius: 20,
     width: '100%',
-    maxWidth: 500,
-    maxHeight: '80%',
+    maxHeight: '90%',
     padding: 20,
   },
   modalHeader: {
@@ -1382,7 +1438,9 @@ const styles = StyleSheet.create({
   },
   taskTitleContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    flex: 1,
+    marginRight: 8,
   },
   taskIcon: {
     fontSize: 18,
@@ -1393,10 +1451,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 8,
+    overflow: 'hidden',
   },
   taskHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     marginBottom: 10,
   },
@@ -1404,11 +1463,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
     color: '#ffffff',
+    flex: 1,
   },
   completeButton: {
     backgroundColor: '#9333ea',
     borderRadius: 12,
     padding: 8,
+    minWidth: 70,
+    alignItems: 'center',
   },
   completeButtonText: {
     fontSize: 14,
@@ -1440,9 +1502,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 8,
+    width: '100%',
   },
   taskContainer: {
     marginBottom: 16,
+    width: '100%',
   },
   completedTaskCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
@@ -1463,18 +1527,21 @@ const styles = StyleSheet.create({
   },
   seeMoreButton: {
     alignItems: 'center',
-    padding: 10,
+    padding: 8,
     backgroundColor: 'rgba(147, 51, 234, 0.2)',
     borderRadius: 8,
-    marginTop: 12,
-    marginBottom: 8,
+    marginTop: 8,
+    marginBottom: 4,
     flexDirection: 'row',
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(147, 51, 234, 0.3)',
+    alignSelf: 'stretch',
+    position: 'relative',
+    zIndex: 1,
   },
   seeMoreButtonText: {
-    fontSize: 13,
+    fontSize: 11,
     color: '#9333ea',
     fontWeight: '600',
     marginLeft: 4,
