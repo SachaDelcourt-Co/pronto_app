@@ -10,11 +10,12 @@ import type { User, Appointment, Reminder, Task } from '@/types/database';
 import { useAuth } from '@/utils/AuthContext';
 import { useFocusEffect, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { saveLanguagePreference } from '@/utils/i18n';
 
 export default function HomePage() {
   const router = useRouter();
   const { user: authUser, authInitialized } = useAuth();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [showMenu, setShowMenu] = useState(false);
   const [showAppointments, setShowAppointments] = useState(false);
   const [showReminders, setShowReminders] = useState(false);
@@ -165,7 +166,7 @@ export default function HomePage() {
     <View style={styles.header}>
       <View>
         <Text style={styles.headerTitle}>PRONTO</Text>
-        <Text style={styles.headerSubtitle}>Your Personal Assistant</Text>
+        <Text style={styles.headerSubtitle}>{t('home.subtitle')}</Text>
       </View>
       <TouchableOpacity
         style={styles.menuButton}
@@ -190,7 +191,7 @@ export default function HomePage() {
   const renderSchedule = () => (
     <View style={styles.scheduleSection}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Today's Schedule</Text>
+        <Text style={styles.sectionTitle}>{t('home.todaySchedule')}</Text>
         <TouchableOpacity 
           style={styles.weekViewButton}
           onPress={() => router.push('/appointments')}
@@ -211,7 +212,7 @@ export default function HomePage() {
         >
           <View style={styles.bannerHeader}>
             <Calendar size={18} color="#9333ea" />
-            <Text style={styles.bannerTitle}>Appointments</Text>
+            <Text style={styles.bannerTitle}>{t('home.appointments')}</Text>
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{totalAppointmentCount}</Text>
             </View>
@@ -264,14 +265,14 @@ export default function HomePage() {
                       <ChevronDown size={14} color="#9333ea" />
                     }
                     <Text style={styles.seeMoreButtonText}>
-                      {expandedAppointments ? 'Show less' : 'See more...'}
+                      {expandedAppointments ? t('home.showLess') : t('home.seeMore')}
                     </Text>
                   </TouchableOpacity>
                 )}
               </>
             ) : (
               <View style={styles.emptyEventContainer}>
-                <Text style={styles.emptyEventText}>No upcoming appointments</Text>
+                <Text style={styles.emptyEventText}>{t('home.noUpcomingAppointments')}</Text>
               </View>
             )}
           </View>
@@ -288,7 +289,7 @@ export default function HomePage() {
         >
           <View style={styles.bannerHeader}>
             <Bell size={18} color="#9333ea" />
-            <Text style={styles.bannerTitle}>Reminders</Text>
+            <Text style={styles.bannerTitle}>{t('home.reminders')}</Text>
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{totalReminderCount}</Text>
             </View>
@@ -328,14 +329,14 @@ export default function HomePage() {
                       <ChevronDown size={14} color="#9333ea" />
                     }
                     <Text style={styles.seeMoreButtonText}>
-                      {expandedReminders ? 'Show less' : 'See more...'}
+                      {expandedReminders ? t('home.showLess') : t('home.seeMore')}
                     </Text>
                   </TouchableOpacity>
                 )}
               </>
             ) : (
               <View style={styles.emptyEventContainer}>
-                <Text style={styles.emptyEventText}>No reminders</Text>
+                <Text style={styles.emptyEventText}>{t('home.noReminders')}</Text>
               </View>
             )}
           </View>
@@ -437,7 +438,7 @@ export default function HomePage() {
     if (dailyTasks.length === 0) {
       return (
         <View style={styles.emptyStateContainer}>
-          <Text style={styles.emptyStateText}>No tasks for today</Text>
+          <Text style={styles.emptyStateText}>{t('home.noTasks')}</Text>
         </View>
       );
     }
@@ -488,7 +489,7 @@ export default function HomePage() {
             </View>
             {!isCompletedToday && (
               <TouchableOpacity style={styles.completeButton} onPress={handleTaskCompletion}>
-                <Text style={styles.completeButtonText}>Done</Text>
+                <Text style={styles.completeButtonText}>{t('home.done')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -498,7 +499,7 @@ export default function HomePage() {
               styles.taskProgressText,
               isCompletedToday && styles.completedTaskText
             ]}>
-              {`${task.daysDone || 0} / ${task.daysSelected || 1} days`}
+              {`${task.daysDone || 0} / ${task.daysSelected || 1} ${t('home.days')}`}
             </Text>
             <View style={styles.progressBar}>
               <View style={[styles.progressFill, { width: `${progress}%` }]} />
@@ -542,6 +543,16 @@ export default function HomePage() {
       });
     };
 
+    // Handle language change
+    const changeLanguage = async (lang: 'fr' | 'en') => {
+      try {
+        await saveLanguagePreference(lang);
+        // Update user language preference in database if needed
+      } catch (error) {
+        console.error('Error changing language:', error);
+      }
+    };
+
     return (
       <View style={StyleSheet.absoluteFill}>
         <BlurView intensity={80} style={StyleSheet.absoluteFill} tint="dark">
@@ -566,42 +577,78 @@ export default function HomePage() {
 
               {/* Quick Stats Section */}
               <View style={styles.menuSection}>
-                <Text style={styles.menuSectionTitle}>Activity Summary</Text>
+                <Text style={styles.menuSectionTitle}>{t('home.menu.activitySummary')}</Text>
                 <View style={styles.statsContainer}>
                   <View style={styles.statItem}>
                     <CheckSquare size={20} color="#9333ea" />
                     <Text style={styles.statNumber}>{dailyTasks.length}</Text>
-                    <Text style={styles.statLabel}>Tasks</Text>
+                    <Text style={styles.statLabel}>{t('home.menu.tasks')}</Text>
                   </View>
                   
                   <View style={styles.statItem}>
                     <Calendar size={20} color="#9333ea" />
                     <Text style={styles.statNumber}>{totalAppointmentCount}</Text>
-                    <Text style={styles.statLabel}>Appointments</Text>
+                    <Text style={styles.statLabel}>{t('home.menu.appointments')}</Text>
                   </View>
                   
                   <View style={styles.statItem}>
                     <Bell size={20} color="#9333ea" />
                     <Text style={styles.statNumber}>{totalReminderCount}</Text>
-                    <Text style={styles.statLabel}>Reminders</Text>
+                    <Text style={styles.statLabel}>{t('home.menu.reminders')}</Text>
                   </View>
+                </View>
+              </View>
+
+              {/* Language Switcher Section */}
+              <View style={styles.menuSection}>
+                <Text style={styles.menuSectionTitle}>{t('login.selectLanguage')}</Text>
+                <View style={styles.languageSwitcher}>
+                  <TouchableOpacity
+                    style={[
+                      styles.languageOption,
+                      i18n.language === 'fr' && styles.languageOptionSelected
+                    ]}
+                    onPress={() => changeLanguage('fr')}
+                  >
+                    <Text style={[
+                      styles.languageOptionText,
+                      i18n.language === 'fr' && styles.languageOptionTextSelected
+                    ]}>
+                      Français
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.languageOption,
+                      i18n.language === 'en' && styles.languageOptionSelected
+                    ]}
+                    onPress={() => changeLanguage('en')}
+                  >
+                    <Text style={[
+                      styles.languageOptionText,
+                      i18n.language === 'en' && styles.languageOptionTextSelected
+                    ]}>
+                      English
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               </View>
 
               {/* Last Activity */}
               <View style={styles.menuSection}>
-                <Text style={styles.menuSectionTitle}>Account Info</Text>
+                <Text style={styles.menuSectionTitle}>{t('home.menu.accountInfo')}</Text>
                 <View style={styles.infoItem}>
-                  <Text style={styles.infoLabel}>Last Activity:</Text>
+                  <Text style={styles.infoLabel}>{t('home.menu.lastActivity')}:</Text>
                   <Text style={styles.infoValue}>{formatLastActivity()}</Text>
                 </View>
                 <View style={styles.infoItem}>
-                  <Text style={styles.infoLabel}>Language:</Text>
-                  <Text style={styles.infoValue}>{user?.language?.toUpperCase() || 'EN'}</Text>
+                  <Text style={styles.infoLabel}>{t('home.menu.language')}:</Text>
+                  <Text style={styles.infoValue}>{i18n.language === 'fr' ? 'Français' : 'English'}</Text>
                 </View>
                 {user && user.motivations && user.motivations.length > 0 && (
                   <View style={styles.infoItem}>
-                    <Text style={styles.infoLabel}>Motivations:</Text>
+                    <Text style={styles.infoLabel}>{t('home.menu.motivations')}:</Text>
                     <View style={styles.motivationsContainer}>
                       {user.motivations.map((motivation, index) => (
                         <View key={index} style={styles.motivationChip}>
@@ -617,9 +664,9 @@ export default function HomePage() {
 
               {/* App Version and Support */}
               <View style={styles.menuSection}>
-                <Text style={styles.menuSectionTitle}>App Info</Text>
+                <Text style={styles.menuSectionTitle}>{t('home.menu.appInfo')}</Text>
                 <View style={styles.infoItem}>
-                  <Text style={styles.infoLabel}>Version:</Text>
+                  <Text style={styles.infoLabel}>{t('home.menu.version')}:</Text>
                   <Text style={styles.infoValue}>1.0.0</Text>
                 </View>
                 <TouchableOpacity 
@@ -631,7 +678,7 @@ export default function HomePage() {
                     alert('Support feature coming soon!');
                   }}
                 >
-                  <Text style={styles.supportButtonText}>Contact Support</Text>
+                  <Text style={styles.supportButtonText}>{t('home.menu.contactSupport')}</Text>
                 </TouchableOpacity>
               </View>
 
@@ -640,7 +687,7 @@ export default function HomePage() {
                 style={styles.logoutButton}
                 onPress={handleLogout}
               >
-                <Text style={styles.logoutButtonText}>Log Out</Text>
+                <Text style={styles.logoutButtonText}>{t('home.menu.logOut')}</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -713,7 +760,7 @@ export default function HomePage() {
             <View style={styles.modalHeader}>
               <View style={styles.modalHeaderLeft}>
                 <Calendar size={20} color="#9333ea" />
-                <Text style={styles.modalTitle}>Appointment Details</Text>
+                <Text style={styles.modalTitle}>{t('home.appointmentDetails')}</Text>
               </View>
               <TouchableOpacity
                 style={styles.modalCloseButton}
@@ -783,7 +830,7 @@ export default function HomePage() {
               >
                 <Edit size={18} color="#ffffff" />
                 <Text style={styles.editAppointmentButtonText}>
-                  Edit Appointment
+                  {t('home.editAppointment')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -848,7 +895,7 @@ export default function HomePage() {
             <View style={styles.modalHeader}>
               <View style={styles.modalHeaderLeft}>
                 <Bell size={20} color="#9333ea" />
-                <Text style={styles.modalTitle}>Reminder Details</Text>
+                <Text style={styles.modalTitle}>{t('home.reminderDetails')}</Text>
               </View>
               <TouchableOpacity
                 style={styles.modalCloseButton}
@@ -866,7 +913,7 @@ export default function HomePage() {
               {selectedReminder.isRecurring ? (
                 <View>
                   <Text style={styles.reminderDetailText}>
-                    Recurring on:
+                    {t('home.recurringOn')}
                   </Text>
                   <View style={styles.reminderDetailDays}>
                     {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -896,7 +943,7 @@ export default function HomePage() {
               
               {selectedReminder.notificationTimes && selectedReminder.notificationTimes.length > 0 && (
                 <View style={styles.reminderNotificationsContainer}>
-                  <Text style={styles.reminderDetailLabel}>Notifications:</Text>
+                  <Text style={styles.reminderDetailLabel}>{t('home.notifications')}:</Text>
                   <View style={styles.reminderNotificationsRow}>
                     {selectedReminder.notificationTimes.map((time, index) => (
                       <View key={index} style={styles.reminderNotificationChip}>
@@ -917,7 +964,7 @@ export default function HomePage() {
               >
                 <Edit size={18} color="#ffffff" />
                 <Text style={styles.editReminderButtonText}>
-                  Edit Reminder
+                  {t('home.editReminder')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -947,12 +994,12 @@ export default function HomePage() {
           
           <View style={styles.lowerContent}>
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Daily Tasks</Text>
+              <Text style={styles.sectionTitle}>{t('home.dailyTasks')}</Text>
               <View style={styles.taskContainer}>
                 {isLoading ? (
                   <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color="#9333ea" />
-                    <Text style={styles.loadingText}>Loading tasks...</Text>
+                    <Text style={styles.loadingText}>{t('home.loadingTasks')}</Text>
                   </View>
                 ) : (
                   renderDailyTasks()
@@ -963,14 +1010,14 @@ export default function HomePage() {
         </ScrollView>
 
         {showAppointments && renderExpandedList(
-          'Appointments',
+          t('home.appointments'),
           Calendar,
           appointments,
           () => setShowAppointments(false)
         )}
 
         {showReminders && renderExpandedList(
-          'Reminders',
+          t('home.reminders'),
           Bell,
           reminders,
           () => setShowReminders(false)
@@ -1648,5 +1695,31 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: '600',
     fontSize: 16,
+  },
+  languageSwitcher: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  languageOption: {
+    padding: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 8,
+    flex: 1,
+    alignItems: 'center',
+  },
+  languageOptionSelected: {
+    backgroundColor: '#9333ea',
+    borderColor: '#9333ea',
+  },
+  languageOptionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  languageOptionTextSelected: {
+    color: '#ffffff',
   },
 }); 

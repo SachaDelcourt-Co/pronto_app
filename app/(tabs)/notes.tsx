@@ -6,6 +6,7 @@ import { useAuth } from '@/utils/AuthContext';
 import { DatabaseService } from '@/services/database';
 import type { Note, Folder } from '@/types/database';
 import { useFocusEffect } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 // Regex pattern to match checkbox syntax: "- [ ]" for unchecked, "- [x]" for checked
 const CHECKBOX_REGEX = /^(\s*)- \[([ x])\] (.*)$/gm;
@@ -67,6 +68,7 @@ const toggleCheckbox = (text: string, line: string): string => {
 };
 
 export default function NotesScreen() {
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const [notes, setNotes] = useState<Note[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -277,11 +279,25 @@ export default function NotesScreen() {
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
+    const options: Intl.DateTimeFormatOptions = {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
-    });
+    };
+    
+    // Use the current language from i18n instead of hardcoded 'en-US'
+    const currentLanguage = i18n.language;
+    let locale = currentLanguage;
+    
+    // Map languages to locales if needed
+    if (currentLanguage === 'fr') locale = 'fr-FR';
+    else if (currentLanguage === 'en') locale = 'en-US';
+    else if (currentLanguage === 'nl') locale = 'nl-NL';
+    else if (currentLanguage === 'es') locale = 'es-ES';
+    else if (currentLanguage === 'pt') locale = 'pt-PT';
+    else if (currentLanguage === 'it') locale = 'it-IT';
+    
+    return date.toLocaleDateString(locale, options);
   };
 
   const openViewNoteModal = (note: Note) => {
@@ -317,7 +333,7 @@ export default function NotesScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Create New Note</Text>
+              <Text style={styles.modalTitle}>{t('notes.createNote')}</Text>
               <TouchableOpacity
                 style={styles.closeButton}
                 onPress={() => setShowCreateNoteModal(false)}
@@ -326,38 +342,30 @@ export default function NotesScreen() {
               </TouchableOpacity>
             </View>
 
+            <Text style={styles.contentInputLabel}>{t('notes.noteName')}</Text>
             <TextInput
               style={styles.titleInput}
-              placeholder="Note title"
+              placeholder={t('notes.noteName')}
               placeholderTextColor="#999999"
               value={newNoteTitle}
               onChangeText={setNewNoteTitle}
             />
 
-            <View style={styles.contentInputHeader}>
-              <Text style={styles.contentInputLabel}>Note Content</Text>
+            <View style={styles.contentHeaderContainer}>
+              <Text style={styles.contentInputLabel}>{t('notes.content')}</Text>
               <TouchableOpacity
                 style={styles.addCheckboxButton}
                 onPress={() => {
-                  const checkboxText = '- [ ] ';
-                  setNewNoteContent(prevContent => {
-                    if (prevContent) {
-                      // If content doesn't end with newline, add one
-                      const separator = prevContent.endsWith('\n') ? '' : '\n';
-                      return prevContent + separator + checkboxText;
-                    }
-                    return checkboxText;
-                  });
+                  setNewNoteContent(newNoteContent + '\n- [ ] ');
                 }}
               >
-                <Square size={16} color="#9333ea" />
-                <Text style={styles.addCheckboxText}>Add Checkbox</Text>
+                <CheckSquare size={16} color="#22c55e" />
+                <Text style={styles.addCheckboxText}>{t('notes.addCheckbox')}</Text>
               </TouchableOpacity>
             </View>
-
             <TextInput
               style={styles.contentInput}
-              placeholder="Note content (Use '- [ ] ' for checkboxes, '- [x] ' for checked)"
+              placeholder={t('notes.content')}
               placeholderTextColor="#999999"
               value={newNoteContent}
               onChangeText={setNewNoteContent}
@@ -366,7 +374,7 @@ export default function NotesScreen() {
             />
 
             <View style={styles.folderSelector}>
-              <Text style={styles.folderSelectorLabel}>Select Folder:</Text>
+              <Text style={styles.folderSelectorLabel}>{t('notes.selectFolder')}:</Text>
               <View style={styles.folderOptions}>
                 <TouchableOpacity
                   style={[
@@ -378,7 +386,7 @@ export default function NotesScreen() {
                   <Text style={[
                     styles.folderOptionText,
                     selectedFolderForNote === null && styles.folderOptionTextSelected
-                  ]}>Root</Text>
+                  ]}>{t('notes.root')}</Text>
                 </TouchableOpacity>
                 
                 {folders
@@ -410,7 +418,7 @@ export default function NotesScreen() {
               {isSaving ? (
                 <ActivityIndicator size="small" color="#ffffff" />
               ) : (
-                <Text style={styles.saveButtonText}>Save Note</Text>
+                <Text style={styles.saveButtonText}>{t('notes.save')}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -430,7 +438,7 @@ export default function NotesScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Edit Note</Text>
+              <Text style={styles.modalTitle}>{t('notes.editNote')}</Text>
               <TouchableOpacity
                 style={styles.closeButton}
                 onPress={() => setShowEditNoteModal(false)}
@@ -439,38 +447,30 @@ export default function NotesScreen() {
               </TouchableOpacity>
             </View>
 
+            <Text style={styles.contentInputLabel}>{t('notes.noteName')}</Text>
             <TextInput
               style={styles.titleInput}
-              placeholder="Note title"
+              placeholder={t('notes.noteName')}
               placeholderTextColor="#999999"
               value={newNoteTitle}
               onChangeText={setNewNoteTitle}
             />
 
-            <View style={styles.contentInputHeader}>
-              <Text style={styles.contentInputLabel}>Note Content</Text>
+            <View style={styles.contentHeaderContainer}>
+              <Text style={styles.contentInputLabel}>{t('notes.content')}</Text>
               <TouchableOpacity
                 style={styles.addCheckboxButton}
                 onPress={() => {
-                  const checkboxText = '- [ ] ';
-                  setNewNoteContent(prevContent => {
-                    if (prevContent) {
-                      // If content doesn't end with newline, add one
-                      const separator = prevContent.endsWith('\n') ? '' : '\n';
-                      return prevContent + separator + checkboxText;
-                    }
-                    return checkboxText;
-                  });
+                  setNewNoteContent(newNoteContent + '\n- [ ] ');
                 }}
               >
-                <Square size={16} color="#9333ea" />
-                <Text style={styles.addCheckboxText}>Add Checkbox</Text>
+                <CheckSquare size={16} color="#22c55e" />
+                <Text style={styles.addCheckboxText}>{t('notes.addCheckbox')}</Text>
               </TouchableOpacity>
             </View>
-
             <TextInput
               style={styles.largeContentInput}
-              placeholder="Note content (Use '- [ ] ' for checkboxes, '- [x] ' for checked)"
+              placeholder={t('notes.content')}
               placeholderTextColor="#999999"
               value={newNoteContent}
               onChangeText={setNewNoteContent}
@@ -479,7 +479,7 @@ export default function NotesScreen() {
             />
 
             <View style={styles.folderSelector}>
-              <Text style={styles.folderSelectorLabel}>Select Folder:</Text>
+              <Text style={styles.folderSelectorLabel}>{t('notes.selectFolder')}:</Text>
               <View style={styles.folderOptions}>
                 <TouchableOpacity
                   style={[
@@ -491,7 +491,7 @@ export default function NotesScreen() {
                   <Text style={[
                     styles.folderOptionText,
                     selectedFolderForNote === null && styles.folderOptionTextSelected
-                  ]}>Root</Text>
+                  ]}>{t('notes.root')}</Text>
                 </TouchableOpacity>
                 
                 {folders
@@ -523,7 +523,7 @@ export default function NotesScreen() {
               {isSaving ? (
                 <ActivityIndicator size="small" color="#ffffff" />
               ) : (
-                <Text style={styles.saveButtonText}>Update Note</Text>
+                <Text style={styles.saveButtonText}>{t('notes.update')}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -543,7 +543,7 @@ export default function NotesScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Create New Folder</Text>
+              <Text style={styles.modalTitle}>{t('notes.createFolder')}</Text>
               <TouchableOpacity
                 style={styles.closeButton}
                 onPress={() => setShowCreateFolderModal(false)}
@@ -552,9 +552,10 @@ export default function NotesScreen() {
               </TouchableOpacity>
             </View>
 
+            <Text style={styles.contentInputLabel}>{t('notes.folderName')}</Text>
             <TextInput
               style={styles.titleInput}
-              placeholder="Folder name"
+              placeholder={t('notes.folderName')}
               placeholderTextColor="#999999"
               value={newFolderName}
               onChangeText={setNewFolderName}
@@ -568,7 +569,7 @@ export default function NotesScreen() {
               {isSaving ? (
                 <ActivityIndicator size="small" color="#ffffff" />
               ) : (
-                <Text style={styles.saveButtonText}>Create Folder</Text>
+                <Text style={styles.saveButtonText}>{t('notes.create')}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -587,14 +588,11 @@ export default function NotesScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.confirmModalContent}>
-            <Text style={styles.confirmModalTitle}>
-              Delete {deleteItemType === 'note' ? 'Note' : 'Folder'}
-            </Text>
+            <Text style={styles.confirmModalTitle}>{t('notes.deleteConfirmationTitle')}</Text>
             <Text style={styles.confirmModalText}>
               {deleteItemType === 'note' 
-                ? `Are you sure you want to delete "${deleteItemName}"?` 
-                : `Are you sure you want to delete the folder "${deleteItemName}" and move all its notes to the root level?`
-              }
+                ? t('notes.deleteConfirmation') 
+                : t('notes.deleteFolderConfirmation')}
             </Text>
             
             <View style={styles.confirmModalButtons}>
@@ -602,14 +600,14 @@ export default function NotesScreen() {
                 style={[styles.confirmModalButton, styles.confirmModalCancelButton]}
                 onPress={cancelDelete}
               >
-                <Text style={styles.confirmModalCancelText}>Cancel</Text>
+                <Text style={styles.confirmModalCancelText}>{t('notes.cancel')}</Text>
               </TouchableOpacity>
               
               <TouchableOpacity
                 style={[styles.confirmModalButton, styles.confirmModalDeleteButton]}
                 onPress={confirmDelete}
               >
-                <Text style={styles.confirmModalDeleteText}>Delete</Text>
+                <Text style={styles.confirmModalDeleteText}>{t('notes.delete')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -631,7 +629,7 @@ export default function NotesScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{viewingNote.title}</Text>
+              <Text style={styles.modalTitle}>{t('notes.noteDetails')}: {viewingNote.title}</Text>
               <TouchableOpacity
                 style={styles.closeButton}
                 onPress={() => setShowViewNoteModal(false)}
@@ -650,7 +648,7 @@ export default function NotesScreen() {
               <View style={styles.viewNoteTimestamp}>
                 <Clock size={16} color="#6b7280" />
                 <Text style={styles.viewNoteTimestampText}>
-                  Updated {formatDate(viewingNote.updatedAt)}
+                  {t('notes.lastUpdated')} {formatDate(viewingNote.updatedAt)}
                 </Text>
               </View>
               
@@ -663,7 +661,7 @@ export default function NotesScreen() {
                   }}
                 >
                   <Edit size={18} color="#9333ea" />
-                  <Text style={styles.viewNoteActionText}>Edit</Text>
+                  <Text style={styles.viewNoteActionText}>{t('notes.edit')}</Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity
@@ -674,7 +672,7 @@ export default function NotesScreen() {
                   }}
                 >
                   <Trash2 size={18} color="#ef4444" />
-                  <Text style={styles.viewNoteDeleteText}>Delete</Text>
+                  <Text style={styles.viewNoteDeleteText}>{t('notes.delete')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -698,7 +696,7 @@ export default function NotesScreen() {
       >
         <ArrowLeft size={16} color="#9333ea" />
         <Text style={styles.breadcrumbText}>
-          Back to Root / {folder?.folderName || 'Unknown Folder'}
+          {t('notes.backToRoot')} / {folder?.folderName || 'Unknown Folder'}
         </Text>
       </TouchableOpacity>
     );
@@ -710,8 +708,8 @@ export default function NotesScreen() {
         colors={['#1a1a1a', '#2a1a2a']}
         style={styles.header}
       >
-        <Text style={styles.headerTitle}>Notes</Text>
-        <Text style={styles.headerSubtitle}>Organize your thoughts</Text>
+        <Text style={styles.headerTitle}>{t('notes.title')}</Text>
+        <Text style={styles.headerSubtitle}>{t('notes.subtitle')}</Text>
         
         <View style={styles.actionButtons}>
           <TouchableOpacity 
@@ -722,16 +720,16 @@ export default function NotesScreen() {
             }}
           >
             <FileText size={16} color="#9333ea" />
-            <Text style={styles.actionButtonText}>New Note</Text>
+            <Text style={styles.actionButtonText}>{t('notes.newNote')}</Text>
           </TouchableOpacity>
 
-        <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => setShowCreateFolderModal(true)}
-          >
-            <FolderIcon size={16} color="#9333ea" />
-            <Text style={styles.actionButtonText}>New Folder</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => setShowCreateFolderModal(true)}
+            >
+              <FolderIcon size={16} color="#9333ea" />
+              <Text style={styles.actionButtonText}>{t('notes.newFolder')}</Text>
+          </TouchableOpacity>
         </View>
       </LinearGradient>
 
@@ -741,14 +739,14 @@ export default function NotesScreen() {
         {isLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#9333ea" />
-            <Text style={styles.loadingText}>Loading...</Text>
+            <Text style={styles.loadingText}>{t('notes.loading')}</Text>
           </View>
         ) : (
           <>
             {/* Show folders section only at root level */}
             {currentFolder === null && folders.length > 0 && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Folders</Text>
+                <Text style={styles.sectionTitle}>{t('notes.foldersTitle')}</Text>
                 {folders
                   .filter(folder => folder.folderID !== undefined)
                   .map(folder => (
@@ -786,7 +784,7 @@ export default function NotesScreen() {
             {notes.length > 0 ? (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>
-                  {currentFolder === null ? 'Notes' : 'Notes in this folder'}
+                  {currentFolder === null ? t('notes.notesTitle') : t('notes.notesInFolder')}
                 </Text>
         {notes.map(note => (
                   <View key={note.noteID} style={styles.noteCard}>
@@ -844,10 +842,10 @@ export default function NotesScreen() {
                 <View style={styles.emptyState}>
                   <FileText size={48} color="#9333ea" opacity={0.5} />
                   <Text style={styles.emptyStateTitle}>
-                    {currentFolder === null ? 'No Notes Yet' : 'No Notes in this folder'}
+                    {currentFolder === null ? t('notes.noNotes') : t('notes.noNotesInFolder')}
                   </Text>
                   <Text style={styles.emptyStateText}>
-                    Create your first note to start organizing your thoughts
+                    {currentFolder === null ? t('notes.createNote') : ''}
                   </Text>
                 </View>
               )
@@ -1141,30 +1139,10 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     marginBottom: 12,
   },
-  contentInputHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
   contentInputLabel: {
     fontSize: 16,
     fontWeight: '500',
     color: '#4b5563',
-  },
-  addCheckboxButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(147, 51, 234, 0.1)',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-  },
-  addCheckboxText: {
-    color: '#9333ea',
-    fontWeight: '500',
-    fontSize: 14,
-    marginLeft: 6,
   },
   contentInput: {
     backgroundColor: '#f9fafb',
@@ -1362,5 +1340,25 @@ const styles = StyleSheet.create({
   checkedText: {
     textDecorationLine: 'line-through',
     color: '#9ca3af',
+  },
+  contentHeaderContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  addCheckboxButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+  addCheckboxText: {
+    color: '#22c55e',
+    fontWeight: '500',
+    fontSize: 12,
+    marginLeft: 4,
   },
 });

@@ -8,8 +8,10 @@ import { DatabaseService } from '@/services/database';
 import type { Appointment } from '@/types/database';
 import { useFocusEffect, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTranslation } from 'react-i18next';
 
 export default function AppointmentsScreen() {
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const { user } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -335,8 +337,19 @@ export default function AppointmentsScreen() {
       day: 'numeric',
     };
     
-    // Use the user's locale for display
-    return date.toLocaleDateString('en-US', options);
+    // Use the current language from i18n instead of hardcoded 'en-US'
+    const currentLanguage = i18n.language;
+    let locale = currentLanguage;
+    
+    // Map languages to locales if needed
+    if (currentLanguage === 'fr') locale = 'fr-FR';
+    else if (currentLanguage === 'en') locale = 'en-US';
+    else if (currentLanguage === 'nl') locale = 'nl-NL';
+    else if (currentLanguage === 'es') locale = 'es-ES';
+    else if (currentLanguage === 'pt') locale = 'pt-PT';
+    else if (currentLanguage === 'it') locale = 'it-IT';
+    
+    return date.toLocaleDateString(locale, options);
   };
 
   const formatShortDate = (date: Date) => {
@@ -347,7 +360,19 @@ export default function AppointmentsScreen() {
       day: 'numeric'
     };
     
-    return date.toLocaleDateString('en-US', options);
+    // Use the current language from i18n instead of hardcoded 'en-US'
+    const currentLanguage = i18n.language;
+    let locale = currentLanguage;
+    
+    // Map languages to locales if needed
+    if (currentLanguage === 'fr') locale = 'fr-FR';
+    else if (currentLanguage === 'en') locale = 'en-US';
+    else if (currentLanguage === 'nl') locale = 'nl-NL';
+    else if (currentLanguage === 'es') locale = 'es-ES';
+    else if (currentLanguage === 'pt') locale = 'pt-PT';
+    else if (currentLanguage === 'it') locale = 'it-IT';
+    
+    return date.toLocaleDateString(locale, options);
   };
 
   const formatTime = (time: string) => {
@@ -464,8 +489,8 @@ export default function AppointmentsScreen() {
         colors={['#1a1a1a', '#2a1a2a']}
         style={styles.header}
       >
-        <Text style={styles.headerTitle}>Appointments</Text>
-        <Text style={styles.headerSubtitle}>Manage your schedule</Text>
+        <Text style={styles.headerTitle}>{t('appointments.title')}</Text>
+        <Text style={styles.headerSubtitle}>{t('appointments.subtitle')}</Text>
 
         <TouchableOpacity 
           style={styles.calendarButton}
@@ -476,7 +501,7 @@ export default function AppointmentsScreen() {
           }}
         >
           <CalendarIcon size={24} color="#9333ea" />
-          <Text style={styles.calendarButtonText}>View Calendar</Text>
+          <Text style={styles.calendarButtonText}>{t('appointments.selectDate')}</Text>
           <ChevronRight size={20} color="#9333ea" />
         </TouchableOpacity>
       </LinearGradient>
@@ -537,7 +562,7 @@ export default function AppointmentsScreen() {
       {/* Upcoming Appointments List */}
       <View style={styles.upcomingAppointmentsContainer}>
         <View style={styles.upcomingHeader}>
-          <Text style={styles.upcomingTitle}>Upcoming Appointments</Text>
+          <Text style={styles.upcomingTitle}>{t('appointments.upcomingAppointments')}</Text>
         </View>
         
         <ScrollView style={styles.upcomingList}>
@@ -595,7 +620,7 @@ export default function AppointmentsScreen() {
             ))
           ) : (
             <View style={styles.noUpcomingAppointments}>
-              <Text style={styles.noUpcomingText}>No upcoming appointments</Text>
+              <Text style={styles.noUpcomingText}>{t('appointments.noAppointments')}</Text>
             </View>
           )}
         </ScrollView>
@@ -618,7 +643,7 @@ export default function AppointmentsScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.calendarModalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Date</Text>
+              <Text style={styles.modalTitle}>{t('appointments.selectDate')}</Text>
               <TouchableOpacity
                 style={styles.closeButton}
                 onPress={() => {
@@ -678,7 +703,7 @@ export default function AppointmentsScreen() {
             {/* Display appointments for the selected date */}
             <View style={styles.calendarDayAppointments}>
               <Text style={styles.calendarDayTitle}>
-                Appointments for {formatDate(selectedDate)}
+                {t('appointments.appointmentsFor', { date: formatDate(selectedDate) })}
               </Text>
 
               <ScrollView 
@@ -717,7 +742,7 @@ export default function AppointmentsScreen() {
                 ) : (
                   <View style={styles.noAppointmentsMessage}>
                     <Text style={styles.noAppointmentsText}>
-                      No appointments for this day
+                      {t('appointments.noAppointmentsForDate')}
                     </Text>
                   </View>
                 )}
@@ -738,7 +763,7 @@ export default function AppointmentsScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                {isEditMode ? 'Edit Appointment' : 'New Appointment'}
+                {isEditMode ? t('appointments.editAppointment') : t('appointments.createAppointment')}
               </Text>
               <TouchableOpacity
                 style={styles.closeButton}
@@ -749,19 +774,19 @@ export default function AppointmentsScreen() {
             </View>
 
             <ScrollView style={styles.modalScrollContent}>
-              <Text style={styles.inputLabel}>Title</Text>
+              <Text style={styles.inputLabel}>{t('appointments.appointmentName')}</Text>
               <TextInput
                 style={styles.textInput}
-                placeholder="Appointment title"
+                placeholder={t('appointments.appointmentName')}
                 placeholderTextColor="#999999"
                 value={appointmentName}
                 onChangeText={setAppointmentName}
               />
 
-              <Text style={styles.inputLabel}>Description</Text>
+              <Text style={styles.inputLabel}>{t('appointments.description')}</Text>
               <TextInput
                 style={styles.textAreaInput}
-                placeholder="Description (optional)"
+                placeholder={t('appointments.description')}
                 placeholderTextColor="#999999"
                 value={appointmentDescription}
                 onChangeText={setAppointmentDescription}
@@ -769,7 +794,7 @@ export default function AppointmentsScreen() {
                 textAlignVertical="top"
               />
 
-              <Text style={styles.inputLabel}>Date <Text style={styles.inputFormat}>(Format: YYYY-MM-DD)</Text></Text>
+              <Text style={styles.inputLabel}>{t('appointments.date')}</Text>
               <View style={styles.datePickerContainer}>
                 <TextInput
                   style={styles.dateInput}
@@ -793,7 +818,7 @@ export default function AppointmentsScreen() {
 
               <View style={styles.timeInputRow}>
                 <View style={styles.timeInputContainer}>
-                  <Text style={styles.inputLabel}>Start Time</Text>
+                  <Text style={styles.inputLabel}>{t('appointments.startTime')}</Text>
                   <TextInput
                     style={styles.timeInput}
                     placeholder="HH:MM"
@@ -804,7 +829,7 @@ export default function AppointmentsScreen() {
                 </View>
 
                 <View style={styles.timeInputContainer}>
-                  <Text style={styles.inputLabel}>End Time</Text>
+                  <Text style={styles.inputLabel}>{t('appointments.endTime')}</Text>
                   <TextInput
                     style={styles.timeInput}
                     placeholder="HH:MM"
@@ -815,10 +840,10 @@ export default function AppointmentsScreen() {
                 </View>
               </View>
 
-              <Text style={styles.inputLabel}>Location (optional)</Text>
+              <Text style={styles.inputLabel}>{t('appointments.address')}</Text>
               <TextInput
                 style={styles.textInput}
-                placeholder="Address"
+                placeholder={t('appointments.address')}
                 placeholderTextColor="#999999"
                 value={appointmentAddress}
                 onChangeText={setAppointmentAddress}
@@ -886,9 +911,7 @@ export default function AppointmentsScreen() {
                 {isSubmitting ? (
                   <ActivityIndicator size="small" color="#ffffff" />
                 ) : (
-                  <Text style={styles.saveButtonText}>
-                    {isEditMode ? 'Update Appointment' : 'Create Appointment'}
-                  </Text>
+                  <Text style={styles.saveButtonText}>{t('appointments.save')}</Text>
                 )}
               </TouchableOpacity>
             </ScrollView>
@@ -906,7 +929,7 @@ export default function AppointmentsScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Appointment Details</Text>
+              <Text style={styles.modalTitle}>{t('appointments.appointmentDetails')}</Text>
               <TouchableOpacity
                 style={styles.closeButton}
                 onPress={() => setShowAppointmentDetails(false)}
@@ -956,7 +979,7 @@ export default function AppointmentsScreen() {
                     }}
                   >
                     <Edit size={18} color="#9333ea" />
-                    <Text style={styles.actionButtonText}>Edit</Text>
+                    <Text style={styles.actionButtonText}>{t('appointments.edit')}</Text>
                   </TouchableOpacity>
                   
                   <TouchableOpacity
@@ -966,7 +989,7 @@ export default function AppointmentsScreen() {
                     }}
                   >
                     <Trash2 size={18} color="#ef4444" />
-                    <Text style={styles.deleteActionButtonText}>Delete</Text>
+                    <Text style={styles.deleteActionButtonText}>{t('appointments.delete')}</Text>
                   </TouchableOpacity>
                   </View>
               </View>
@@ -984,17 +1007,15 @@ export default function AppointmentsScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.confirmModalContent}>
-            <Text style={styles.confirmModalTitle}>Delete Appointment</Text>
-            <Text style={styles.confirmModalText}>
-              Are you sure you want to delete this appointment?
-            </Text>
+            <Text style={styles.confirmModalTitle}>{t('appointments.deleteConfirmationTitle')}</Text>
+            <Text style={styles.confirmModalText}>{t('appointments.deleteConfirmation')}</Text>
             
             <View style={styles.confirmModalButtons}>
               <TouchableOpacity
                 style={[styles.confirmModalButton, styles.confirmModalCancelButton]}
                 onPress={() => setShowDeleteConfirmation(false)}
               >
-                <Text style={styles.confirmModalCancelText}>Cancel</Text>
+                <Text style={styles.confirmModalCancelText}>{t('appointments.cancel')}</Text>
           </TouchableOpacity>
               
               <TouchableOpacity
@@ -1026,7 +1047,7 @@ export default function AppointmentsScreen() {
                   }
                 }}
               >
-                <Text style={styles.confirmModalDeleteText}>Delete</Text>
+                <Text style={styles.confirmModalDeleteText}>{t('appointments.delete')}</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -9,6 +9,7 @@ import type { Reminder } from '@/types/database';
 import { useFocusEffect } from 'expo-router';
 import { parseLocalDate, formatLocalDate } from '@/utils/dateUtils';
 import * as Notifications from 'expo-notifications';
+import { useTranslation } from 'react-i18next';
 
 // Register for push notifications
 Notifications.setNotificationHandler({
@@ -22,6 +23,7 @@ Notifications.setNotificationHandler({
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function RemindersScreen() {
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -282,7 +284,19 @@ export default function RemindersScreen() {
       day: 'numeric',
     };
     
-    return date.toLocaleDateString('en-US', options);
+    // Use the current language from i18n instead of hardcoded 'en-US'
+    const currentLanguage = i18n.language;
+    let locale = currentLanguage;
+    
+    // Map languages to locales if needed
+    if (currentLanguage === 'fr') locale = 'fr-FR';
+    else if (currentLanguage === 'en') locale = 'en-US';
+    else if (currentLanguage === 'nl') locale = 'nl-NL';
+    else if (currentLanguage === 'es') locale = 'es-ES';
+    else if (currentLanguage === 'pt') locale = 'pt-PT';
+    else if (currentLanguage === 'it') locale = 'it-IT';
+    
+    return date.toLocaleDateString(locale, options);
   };
 
   // Handle reminder submission (create or update)
@@ -445,15 +459,15 @@ export default function RemindersScreen() {
         colors={['#1a1a1a', '#2a1a2a']}
         style={styles.header}
       >
-        <Text style={styles.headerTitle}>Reminders</Text>
-        <Text style={styles.headerSubtitle}>Never miss what's important</Text>
+        <Text style={styles.headerTitle}>{t('reminders.title')}</Text>
+        <Text style={styles.headerSubtitle}>{t('reminders.subtitle')}</Text>
         
         <TouchableOpacity 
           style={styles.calendarButton}
           onPress={() => setShowCalendar(true)}
         >
           <CalendarIcon size={24} color="#9333ea" />
-          <Text style={styles.calendarButtonText}>Open Calendar</Text>
+          <Text style={styles.calendarButtonText}>{t('reminders.openCalendar')}</Text>
           <ChevronRight size={20} color="#9333ea" />
         </TouchableOpacity>
       </LinearGradient>
@@ -461,7 +475,7 @@ export default function RemindersScreen() {
       {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#9333ea" />
-          <Text style={styles.loadingText}>Loading reminders...</Text>
+          <Text style={styles.loadingText}>{t('reminders.loading')}</Text>
         </View>
       ) : (
       <ScrollView style={styles.content}>
@@ -530,7 +544,7 @@ export default function RemindersScreen() {
                     }}
                   >
                     <Edit size={16} color="#9333ea" />
-                    <Text style={styles.actionButtonText}>Edit</Text>
+                    <Text style={styles.actionButtonText}>{t('reminders.edit')}</Text>
                   </TouchableOpacity>
                   
                   <TouchableOpacity 
@@ -542,7 +556,7 @@ export default function RemindersScreen() {
                     }}
                   >
                     <Trash2 size={16} color="#ef4444" />
-                    <Text style={styles.deleteButtonText}>Delete</Text>
+                    <Text style={styles.deleteButtonText}>{t('reminders.delete')}</Text>
                   </TouchableOpacity>
                 </View>
               </TouchableOpacity>
@@ -550,7 +564,7 @@ export default function RemindersScreen() {
           ) : (
             <View style={styles.emptyStateContainer}>
               <Bell size={48} color="#9333ea" opacity={0.5} />
-              <Text style={styles.emptyStateText}>No reminders yet</Text>
+              <Text style={styles.emptyStateText}>{t('reminders.noReminders')}</Text>
               <Text style={styles.emptyStateSubtext}>
                 Tap the + button to create a reminder
               </Text>
@@ -569,7 +583,7 @@ export default function RemindersScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.calendarModalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Date</Text>
+              <Text style={styles.modalTitle}>{t('reminders.selectDate')}</Text>
               <TouchableOpacity
                 style={styles.closeButton}
                 onPress={() => setShowCalendar(false)}
@@ -613,7 +627,7 @@ export default function RemindersScreen() {
             {/* Display reminders for the selected date */}
             <View style={styles.calendarDayReminders}>
               <Text style={styles.calendarDayTitle}>
-                Reminders for {formatDate(selectedDate)}
+                {t('reminders.remindersFor', { date: formatDate(selectedDate) })}
               </Text>
 
               <ScrollView 
@@ -637,7 +651,7 @@ export default function RemindersScreen() {
                 ) : (
                   <View style={styles.noRemindersMessage}>
                     <Text style={styles.noRemindersText}>
-                      No reminders for this day
+                      {t('reminders.noReminders')}
                     </Text>
                   </View>
                 )}
@@ -658,7 +672,7 @@ export default function RemindersScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                {isEditMode ? 'Edit Reminder' : 'New Reminder'}
+                {isEditMode ? t('reminders.editReminder') : t('reminders.newReminder')}
               </Text>
               <TouchableOpacity
                 style={styles.closeButton}
@@ -669,17 +683,17 @@ export default function RemindersScreen() {
             </View>
 
             <ScrollView style={styles.modalScrollContent}>
-              <Text style={styles.inputLabel}>Title</Text>
+              <Text style={styles.inputLabel}>{t('reminders.reminderTitle')}</Text>
               <TextInput
                 style={styles.textInput}
-                placeholder="Reminder title"
+                placeholder={t('reminders.reminderTitle')}
                 placeholderTextColor="#999999"
                 value={reminderName}
                 onChangeText={setReminderName}
               />
 
               <View style={styles.switchContainer}>
-                <Text style={styles.switchLabel}>Recurring reminder?</Text>
+                <Text style={styles.switchLabel}>{t('reminders.recurringReminder')}</Text>
                 <Switch
                   value={isRecurring}
                   onValueChange={setIsRecurring}
@@ -690,8 +704,7 @@ export default function RemindersScreen() {
 
               {/* Always show date field, for both recurring and non-recurring reminders */}
               <Text style={styles.inputLabel}>
-                {isRecurring ? 'Start Date ' : 'Date '}
-                <Text style={styles.inputFormat}>(Format: YYYY-MM-DD)</Text>
+                {isRecurring ? t('reminders.date') : t('reminders.date')}
               </Text>
               <TextInput
                 style={styles.dateInput}
@@ -711,7 +724,7 @@ export default function RemindersScreen() {
 
               {isRecurring && (
                 <View style={styles.recurringContainer}>
-                  <Text style={styles.inputLabel}>Select days</Text>
+                  <Text style={styles.inputLabel}>{t('reminders.selectDays')}</Text>
                   <View style={styles.daysContainer}>
                     {DAYS.map((day, index) => (
                       <TouchableOpacity
@@ -734,7 +747,7 @@ export default function RemindersScreen() {
                 </View>
               )}
 
-              <Text style={styles.inputLabel}>Time <Text style={styles.inputFormat}>(24-hour format: HH:MM)</Text></Text>
+              <Text style={styles.inputLabel}>{t('reminders.time')}</Text>
               <TextInput
                 style={styles.timeInput}
                 placeholder="HH:MM"
@@ -743,7 +756,7 @@ export default function RemindersScreen() {
                 onChangeText={setReminderTime}
               />
 
-              <Text style={styles.inputLabel}>Notification Times</Text>
+              <Text style={styles.inputLabel}>{t('reminders.notificationTimes')}</Text>
               {notificationTimes.map((time, index) => (
                 <View key={index} style={styles.notificationTimeRow}>
                   <TextInput
@@ -768,11 +781,11 @@ export default function RemindersScreen() {
                 onPress={addNotificationTime}
               >
                 <Plus size={16} color="#9333ea" />
-                <Text style={styles.addTimeButtonText}>Add notification time</Text>
+                <Text style={styles.addTimeButtonText}>{t('reminders.addNotificationTime')}</Text>
               </TouchableOpacity>
 
               <View style={styles.switchContainer}>
-                <Text style={styles.switchLabel}>Active</Text>
+                <Text style={styles.switchLabel}>{t('reminders.active')}</Text>
                 <Switch
                   value={isActive}
                   onValueChange={setIsActive}
@@ -795,7 +808,7 @@ export default function RemindersScreen() {
                   <>
                     <Save size={18} color="#ffffff" />
                     <Text style={styles.saveButtonText}>
-                      {isEditMode ? 'Update Reminder' : 'Create Reminder'}
+                      {isEditMode ? t('reminders.save') : t('reminders.save')}
                     </Text>
                   </>
                 )}
@@ -814,9 +827,9 @@ export default function RemindersScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.confirmModalContent}>
-            <Text style={styles.confirmModalTitle}>Delete Reminder</Text>
+            <Text style={styles.confirmModalTitle}>{t('reminders.deleteConfirmationTitle')}</Text>
             <Text style={styles.confirmModalText}>
-              Are you sure you want to delete this reminder?
+              {t('reminders.deleteConfirmation')}
             </Text>
             
             <View style={styles.confirmModalButtons}>
@@ -824,14 +837,14 @@ export default function RemindersScreen() {
                 style={[styles.confirmModalButton, styles.confirmModalCancelButton]}
                 onPress={() => setShowDeleteConfirmation(false)}
               >
-                <Text style={styles.confirmModalCancelText}>Cancel</Text>
+                <Text style={styles.confirmModalCancelText}>{t('reminders.cancel')}</Text>
               </TouchableOpacity>
               
               <TouchableOpacity
                 style={[styles.confirmModalButton, styles.confirmModalDeleteButton]}
                 onPress={handleDeleteReminder}
               >
-                <Text style={styles.confirmModalDeleteText}>Delete</Text>
+                <Text style={styles.confirmModalDeleteText}>{t('reminders.delete')}</Text>
               </TouchableOpacity>
             </View>
           </View>

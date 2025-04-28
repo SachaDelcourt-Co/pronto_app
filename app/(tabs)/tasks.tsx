@@ -209,7 +209,7 @@ export default function TasksScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Create New Task</Text>
+              <Text style={styles.modalTitle}>{t('tasks.createTask')}</Text>
               <TouchableOpacity
                 style={styles.modalCloseButton}
                 onPress={() => setIsModalVisible(false)}
@@ -219,23 +219,23 @@ export default function TasksScreen() {
             </View>
 
             <View style={styles.formField}>
-              <Text style={styles.formLabel}>Task Name</Text>
+              <Text style={styles.formLabel}>{t('tasks.taskName')}</Text>
               <TextInput
                 style={styles.formInput}
                 value={newTaskName}
                 onChangeText={setNewTaskName}
-                placeholder="Enter task name"
+                placeholder={t('tasks.taskName')}
                 placeholderTextColor="#666666"
               />
             </View>
 
             <View style={styles.formField}>
-              <Text style={styles.formLabel}>Description (Optional)</Text>
+              <Text style={styles.formLabel}>{t('tasks.description')}</Text>
               <TextInput
                 style={[styles.formInput, styles.textArea]}
                 value={newTaskDescription}
                 onChangeText={setNewTaskDescription}
-                placeholder="Enter description"
+                placeholder={t('tasks.description')}
                 placeholderTextColor="#666666"
                 multiline
                 numberOfLines={3}
@@ -243,7 +243,7 @@ export default function TasksScreen() {
             </View>
 
             <View style={styles.formField}>
-              <Text style={styles.formLabel}>How many days?</Text>
+              <Text style={styles.formLabel}>{t('tasks.howManyDays')}</Text>
               <View style={styles.daysSelector}>
                 {[...Array(7)].map((_, index) => (
                   <TouchableOpacity
@@ -274,7 +274,7 @@ export default function TasksScreen() {
               disabled={loading || !newTaskName.trim()}
             >
               <Text style={styles.createButtonText}>
-                {loading ? 'Creating...' : 'Create Task'}
+                {loading ? t('tasks.creating') : t('tasks.create')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -293,9 +293,9 @@ export default function TasksScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.confirmModalContent}>
-            <Text style={styles.confirmModalTitle}>Delete Task</Text>
+            <Text style={styles.confirmModalTitle}>{t('tasks.deleteConfirmationTitle')}</Text>
             <Text style={styles.confirmModalText}>
-              Are you sure you want to delete this task?
+              {t('tasks.deleteConfirmation')}
             </Text>
             
             <View style={styles.confirmModalButtons}>
@@ -303,14 +303,14 @@ export default function TasksScreen() {
                 style={[styles.confirmModalButton, styles.confirmModalCancelButton]}
                 onPress={cancelDeleteTask}
               >
-                <Text style={styles.confirmModalCancelText}>Cancel</Text>
+                <Text style={styles.confirmModalCancelText}>{t('tasks.cancel')}</Text>
               </TouchableOpacity>
               
               <TouchableOpacity
                 style={[styles.confirmModalButton, styles.confirmModalDeleteButton]}
                 onPress={confirmDeleteTask}
               >
-                <Text style={styles.confirmModalDeleteText}>Delete</Text>
+                <Text style={styles.confirmModalDeleteText}>{t('tasks.delete')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -329,9 +329,12 @@ export default function TasksScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.confirmModalContent}>
-            <Text style={styles.confirmModalTitle}>Reset Task</Text>
+            <Text style={styles.confirmModalTitle}>{t('tasks.resetConfirmationTitle')}</Text>
             <Text style={styles.confirmModalText}>
-              Are you sure you want to reset progress for "{taskToReset?.taskName}"? This will set your progress back to 0/{taskToReset?.daysSelected} days.
+              {t('tasks.resetConfirmation', { 
+                taskName: taskToReset?.taskName || '',
+                daysSelected: taskToReset?.daysSelected || 0
+              })}
             </Text>
             
             <View style={styles.confirmModalButtons}>
@@ -339,14 +342,14 @@ export default function TasksScreen() {
                 style={[styles.confirmModalButton, styles.confirmModalCancelButton]}
                 onPress={cancelResetTask}
               >
-                <Text style={styles.confirmModalCancelText}>Cancel</Text>
+                <Text style={styles.confirmModalCancelText}>{t('tasks.cancel')}</Text>
               </TouchableOpacity>
               
               <TouchableOpacity
                 style={[styles.confirmModalButton, styles.confirmModalResetButton]}
                 onPress={confirmResetTask}
               >
-                <Text style={styles.confirmModalResetText}>Reset</Text>
+                <Text style={styles.confirmModalResetText}>{t('tasks.reset')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -361,22 +364,22 @@ export default function TasksScreen() {
         colors={['#1a1a1a', '#2a1a2a']}
         style={styles.header}
       >
-        <Text style={styles.headerTitle}>Daily Tasks</Text>
-        <Text style={styles.headerSubtitle}>Create and track your tasks</Text>
+        <Text style={styles.headerTitle}>{t('tasks.title')}</Text>
+        <Text style={styles.headerSubtitle}>{t('tasks.subtitle')}</Text>
       </LinearGradient>
 
       <ScrollView style={styles.content}>
         {loadingTasks ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#9333ea" />
-            <Text style={styles.loadingText}>Loading tasks...</Text>
+            <Text style={styles.loadingText}>{t('tasks.loading')}</Text>
           </View>
         ) : tasks.length === 0 ? (
           <View style={styles.emptyState}>
             <Calendar size={48} color="#9333ea" />
-            <Text style={styles.emptyStateTitle}>No Tasks Yet</Text>
+            <Text style={styles.emptyStateTitle}>{t('tasks.noTasksYet')}</Text>
             <Text style={styles.emptyStateText}>
-              Create your first task to start building healthy habits
+              {t('tasks.createFirstTask')}
             </Text>
           </View>
         ) : (
@@ -465,7 +468,7 @@ export default function TasksScreen() {
                     styles.progressText,
                     isCompletedToday && styles.progressTextCompleted
                   ]}>
-                    {`Progress: ${task.daysDone || 0} / ${task.daysSelected || 1} days`}
+                    {`${t('tasks.progress')}: ${task.daysDone || 0} / ${task.daysSelected || 1} ${t('tasks.days')}`}
                   </Text>
                   <View style={styles.progressBar}>
                     <View

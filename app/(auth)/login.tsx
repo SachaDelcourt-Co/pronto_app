@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, Modal } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
-import { ChevronDown } from 'lucide-react-native';
+import { ChevronDown, X } from 'lucide-react-native';
+import { saveLanguagePreference, SUPPORTED_LANGUAGES } from '@/utils/i18n';
 
 const MOTIVATION_CATEGORIES = [
   'Sport',
@@ -25,6 +26,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [selectedMotivations, setSelectedMotivations] = useState<MotivationCategory[]>([]);
   const [showMotivationPicker, setShowMotivationPicker] = useState(false);
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [error, setError] = useState('');
 
   const handleLogin = async () => {
@@ -47,6 +49,60 @@ export default function Login() {
       }
       return prev;
     });
+  };
+
+  const changeLanguage = async (lang: string) => {
+    await saveLanguagePreference(lang as 'fr' | 'en');
+    setShowLanguagePicker(false);
+  };
+
+  const renderLanguagePicker = () => {
+    return (
+      <Modal
+        visible={showLanguagePicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLanguagePicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{t('login.selectLanguage')}</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowLanguagePicker(false)}
+              >
+                <X size={20} color="#ffffff" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.languageOptions}>
+              <TouchableOpacity
+                style={[
+                  styles.languageOption,
+                  i18n.language === 'fr' && styles.languageOptionSelected
+                ]}
+                onPress={() => changeLanguage('fr')}
+              >
+                <Text style={styles.languageOptionText}>
+                  {SUPPORTED_LANGUAGES.fr}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.languageOption,
+                  i18n.language === 'en' && styles.languageOptionSelected
+                ]}
+                onPress={() => changeLanguage('en')}
+              >
+                <Text style={styles.languageOptionText}>
+                  {SUPPORTED_LANGUAGES.en}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
   };
 
   return (
@@ -82,12 +138,10 @@ export default function Login() {
             <>
               <TouchableOpacity
                 style={styles.languageSelector}
-                onPress={() => {
-                  // Language selection logic
-                }}
+                onPress={() => setShowLanguagePicker(true)}
               >
                 <Text style={styles.languageSelectorText}>
-                  {i18n.language.toUpperCase()}
+                  {i18n.language === 'fr' ? SUPPORTED_LANGUAGES.fr : SUPPORTED_LANGUAGES.en}
                 </Text>
                 <ChevronDown size={20} color="#ffffff" />
               </TouchableOpacity>
@@ -171,7 +225,7 @@ export default function Login() {
               {/* Checkbox implementation */}
             </TouchableOpacity>
             <Text style={styles.termsText}>
-              {t('login.acceptTerms')}{' '}
+              {t('login.termsAgreement')}{' '}
               <Link href="/privacy-policy" style={styles.termsLink}>
                 <Text style={styles.termsLinkText}>{t('login.privacyPolicy')}</Text>
               </Link>{' '}
@@ -192,6 +246,8 @@ export default function Login() {
           </Link>
         </View>
       </View>
+
+      {renderLanguagePicker()}
     </LinearGradient>
   );
 }
@@ -257,6 +313,55 @@ const styles = StyleSheet.create({
   languageSelectorText: {
     color: '#ffffff',
     fontFamily: 'Inter-Regular',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  modalContent: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 16,
+    width: '80%',
+    maxWidth: 400,
+    padding: 16,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    color: '#ffffff',
+    fontFamily: 'Inter-SemiBold',
+  },
+  modalCloseButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  languageOptions: {
+    gap: 8,
+  },
+  languageOption: {
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  languageOptionSelected: {
+    backgroundColor: '#9333ea',
+  },
+  languageOptionText: {
+    color: '#ffffff',
+    fontFamily: 'Inter-Regular',
+    fontSize: 16,
   },
   motivationSelector: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
