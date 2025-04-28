@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, TextInput, Modal, ActivityIndicator, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { CircleCheck as CheckCircle2, Plus, X, Calendar, Edit3, Trash2 } from 'lucide-react-native';
+import { CircleCheck as CheckCircle2, Plus, X, Calendar, Edit3, Trash2, RefreshCw } from 'lucide-react-native';
 import { DatabaseService } from '@/services/database';
 import type { Task } from '@/types/database';
 import { useAuth } from '@/utils/AuthContext';
 import { useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { getDoc, doc, updateDoc } from 'firebase/firestore';
+import { db } from '@/utils/firebase';
 
 export default function TasksScreen() {
   const { t } = useTranslation();
@@ -19,8 +21,11 @@ export default function TasksScreen() {
   const [loading, setLoading] = useState(false);
   const [loadingTasks, setLoadingTasks] = useState(true);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
+  const [resettingTaskId, setResettingTaskId] = useState<string | null>(null);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [showResetConfirmation, setShowResetConfirmation] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  const [taskToReset, setTaskToReset] = useState<Task | null>(null);
 
   // Refresh tasks when the tab is focused
   useFocusEffect(
@@ -146,6 +151,53 @@ export default function TasksScreen() {
     setTaskToDelete(null);
   };
 
+  const handleResetTask = async (task: Task) => {
+    console.log('handleResetTask called for task:', task.taskName);
+    // Show confirmation modal
+    setTaskToReset(task);
+    setShowResetConfirmation(true);
+  };
+
+  const confirmResetTask = async () => {
+    console.log("Reset confirmed, proceeding with reset");
+    if (taskToReset && taskToReset.taskID) {
+      try {
+        setResettingTaskId(taskToReset.taskID);
+        
+        // Since there's no direct updateTask method, we'll use the same pattern 
+        // as in the markTaskCompletedForToday method but with our own values
+        const taskDoc = await getDoc(doc(db, 'tasks', taskToReset.taskID));
+        if (!taskDoc.exists()) {
+          throw new Error('Task not found');
+        }
+        
+        // Update the database directly
+        await updateDoc(doc(db, 'tasks', taskToReset.taskID), {
+          daysDone: 0,
+          status: 'active',
+          lastCompletedDate: null
+        });
+        
+        console.log("Task successfully reset, reloading tasks");
+        // Reload tasks after successful reset
+        await loadTasks();
+      } catch (error) {
+        console.error('Error resetting task:', error);
+        Alert.alert("Error", "Failed to reset task. Please try again.");
+      } finally {
+        setResettingTaskId(null);
+        setShowResetConfirmation(false);
+        setTaskToReset(null);
+      }
+    }
+  };
+
+  const cancelResetTask = () => {
+    console.log("Reset canceled");
+    setShowResetConfirmation(false);
+    setTaskToReset(null);
+  };
+
   const renderTaskModal = () => {
     return (
       <Modal
@@ -267,6 +319,42 @@ export default function TasksScreen() {
     );
   };
 
+  const renderResetConfirmationModal = () => {
+    return (
+      <Modal
+        visible={showResetConfirmation}
+        transparent
+        animationType="fade"
+        onRequestClose={cancelResetTask}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.confirmModalContent}>
+            <Text style={styles.confirmModalTitle}>Reset Task</Text>
+            <Text style={styles.confirmModalText}>
+              Are you sure you want to reset progress for "{taskToReset?.taskName}"? This will set your progress back to 0/{taskToReset?.daysSelected} days.
+            </Text>
+            
+            <View style={styles.confirmModalButtons}>
+              <TouchableOpacity
+                style={[styles.confirmModalButton, styles.confirmModalCancelButton]}
+                onPress={cancelResetTask}
+              >
+                <Text style={styles.confirmModalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.confirmModalButton, styles.confirmModalResetButton]}
+                onPress={confirmResetTask}
+              >
+                <Text style={styles.confirmModalResetText}>Reset</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -303,6 +391,9 @@ export default function TasksScreen() {
             const today = new Date().toISOString().split('T')[0];
             const isCompletedToday = task.lastCompletedDate === today;
             
+            // Check if task is fully completed (progress at 100%)
+            const isFullyCompleted = task.daysDone === task.daysSelected;
+            
             return (
               <View
                 key={task.taskID}
@@ -333,24 +424,40 @@ export default function TasksScreen() {
                       </Text>
                     ) : null}
                   </View>
-                  <TouchableOpacity 
-                    style={styles.deleteButton}
-                    onPress={() => {
-                      console.log('Delete button pressed for task:', task.taskID);
-                      if (task.taskID) {
-                        handleDeleteTask(task.taskID);
-                      } else {
-                        console.error('Task ID is undefined');
-                      }
-                    }}
-                    disabled={deletingTaskId === task.taskID}
-                  >
-                    {deletingTaskId === task.taskID ? (
-                      <ActivityIndicator size="small" color="#ef4444" />
-                    ) : (
-                      <Trash2 size={18} color="#ef4444" />
+                  <View style={styles.taskActions}>
+                    {/* Only show reset button for fully completed tasks */}
+                    {isFullyCompleted && (
+                      <TouchableOpacity
+                        style={styles.resetButton}
+                        onPress={() => handleResetTask(task)}
+                        disabled={resettingTaskId === task.taskID}
+                      >
+                        {resettingTaskId === task.taskID ? (
+                          <ActivityIndicator size="small" color="#3b82f6" />
+                        ) : (
+                          <RefreshCw size={18} color="#3b82f6" />
+                        )}
+                      </TouchableOpacity>
                     )}
-                  </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.deleteButton}
+                      onPress={() => {
+                        console.log('Delete button pressed for task:', task.taskID);
+                        if (task.taskID) {
+                          handleDeleteTask(task.taskID);
+                        } else {
+                          console.error('Task ID is undefined');
+                        }
+                      }}
+                      disabled={deletingTaskId === task.taskID}
+                    >
+                      {deletingTaskId === task.taskID ? (
+                        <ActivityIndicator size="small" color="#ef4444" />
+                      ) : (
+                        <Trash2 size={18} color="#ef4444" />
+                      )}
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
                 <View style={styles.taskProgress}>
@@ -384,6 +491,7 @@ export default function TasksScreen() {
 
       {renderTaskModal()}
       {renderDeleteConfirmationModal()}
+      {renderResetConfirmationModal()}
     </View>
   );
 }
@@ -702,6 +810,31 @@ const styles = StyleSheet.create({
     color: '#4b5563',
   },
   confirmModalDeleteText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: '#ffffff',
+  },
+  taskActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  resetButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.3)',
+  },
+  confirmModalResetButton: {
+    backgroundColor: '#3b82f6', // Blue color for reset button
+  },
+  confirmModalResetText: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
     color: '#ffffff',
