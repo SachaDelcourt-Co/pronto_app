@@ -1,7 +1,10 @@
 import { Tabs } from 'expo-router';
 import { Home, SquareCheck as CheckSquare, Calendar, Bell, FileText } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
 export default function TabLayout() {
+  const { t } = useTranslation();
+  
   return (
     <Tabs
       screenOptions={{
@@ -25,35 +28,35 @@ export default function TabLayout() {
       <Tabs.Screen
         name="home"
         options={{
-          tabBarLabel: "Home",
+          tabBarLabel: t('navigation.home'),
           tabBarIcon: ({ color }) => <Home size={20} color={color} />,
         }}
       />
       <Tabs.Screen
         name="tasks"
         options={{
-          tabBarLabel: "Tasks",
+          tabBarLabel: t('navigation.tasks'),
           tabBarIcon: ({ color }) => <CheckSquare size={20} color={color} />,
         }}
       />
       <Tabs.Screen
         name="appointments"
         options={{
-          tabBarLabel: "Appt",
+          tabBarLabel: t('navigation.appointments'),
           tabBarIcon: ({ color }) => <Calendar size={20} color={color} />,
         }}
       />
       <Tabs.Screen
         name="reminders"
         options={{
-          tabBarLabel: "Remind",
+          tabBarLabel: t('navigation.reminders'),
           tabBarIcon: ({ color }) => <Bell size={20} color={color} />,
         }}
       />
       <Tabs.Screen
         name="notes"
         options={{
-          tabBarLabel: "Notes",
+          tabBarLabel: t('navigation.notes'),
           tabBarIcon: ({ color }) => <FileText size={20} color={color} />,
         }}
       />

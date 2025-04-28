@@ -18,6 +18,13 @@ export type SupportedLanguage = keyof typeof SUPPORTED_LANGUAGES;
 const resources = {
   fr: {
     translation: {
+      navigation: {
+        home: 'Accueil',
+        tasks: 'Tâches',
+        appointments: 'RDV',
+        reminders: 'Rappels',
+        notes: 'Notes'
+      },
       login: {
         title: 'PRONTO',
         subtitle: 'Votre Assistant Personnel',
@@ -262,6 +269,13 @@ const resources = {
   },
   en: {
     translation: {
+      navigation: {
+        home: 'Home',
+        tasks: 'Tasks',
+        appointments: 'Appt',
+        reminders: 'Remind',
+        notes: 'Notes'
+      },
       login: {
         title: 'PRONTO',
         subtitle: 'Your Personal Assistant',
@@ -506,6 +520,13 @@ const resources = {
   },
   nl: {
     translation: {
+      navigation: {
+        home: 'Home',
+        tasks: 'Taken',
+        appointments: 'Afsprk',
+        reminders: 'Herinn',
+        notes: 'Notities'
+      },
       login: {
         title: 'PRONTO',
         subtitle: 'Uw Persoonlijke Assistent',

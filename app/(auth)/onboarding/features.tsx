@@ -32,7 +32,7 @@ export default function Features() {
   const { t } = useTranslation();
 
   const handleContinue = () => {
-    router.push('/(tabs)/');
+    router.push('/(tabs)/home');
   };
 
   return (
