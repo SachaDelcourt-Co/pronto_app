@@ -9,26 +9,25 @@ import { saveLanguagePreference, SUPPORTED_LANGUAGES, SupportedLanguage } from '
 import { DatabaseService } from '@/services/database';
 import { User } from '@/types/database';
 
-// Map UI-friendly motivation categories to database values
+// Motivation categories directly map to database values
 const MOTIVATION_CATEGORIES: { [key: string]: 'sport' | 'business' | 'studies' | 'wellbeing' | 'parenting' | 'personalDevelopment' | 'financialManagement' } = {
-  'Sport': 'sport',
-  'Business': 'business',
-  'Studies': 'studies',
-  'Well-being': 'wellbeing',
-  'Parenting': 'parenting',
-  'Personal Development': 'personalDevelopment',
-  'Financial Management': 'financialManagement'
+  'sport': 'sport',
+  'business': 'business',
+  'studies': 'studies',
+  'wellbeing': 'wellbeing',
+  'parenting': 'parenting',
+  'personalDevelopment': 'personalDevelopment',
+  'financialManagement': 'financialManagement'
 };
 
-type MotivationCategoryUI = keyof typeof MOTIVATION_CATEGORIES;
-type MotivationCategoryDB = typeof MOTIVATION_CATEGORIES[MotivationCategoryUI];
+type MotivationCategoryDB = keyof typeof MOTIVATION_CATEGORIES;
 
 export default function Login() {
   const { t, i18n } = useTranslation();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [selectedMotivations, setSelectedMotivations] = useState<MotivationCategoryUI[]>([]);
+  const [selectedMotivations, setSelectedMotivations] = useState<MotivationCategoryDB[]>([]);
   const [showMotivationPicker, setShowMotivationPicker] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [error, setError] = useState('');
@@ -67,15 +66,15 @@ export default function Login() {
       const auth = getAuth();
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
-      // Map UI motivations to DB motivations
-      const dbMotivations = selectedMotivations.map(m => MOTIVATION_CATEGORIES[m]);
+      // No need to map motivations since they're already in the correct DB format
       
       // Create user profile in database
       try {
+        // The DatabaseService.createUser expects parameters without userID and createdAt
         await DatabaseService.createUser({
           email,
           name: email.split('@')[0], // Default name from email
-          motivations: dbMotivations,
+          motivations: selectedMotivations as ('sport' | 'business' | 'studies' | 'wellbeing' | 'parenting' | 'personalDevelopment' | 'financialManagement')[],
           language: i18n.language as SupportedLanguage,
         });
         
@@ -100,7 +99,7 @@ export default function Login() {
     }
   };
 
-  const toggleMotivation = (category: MotivationCategoryUI) => {
+  const toggleMotivation = (category: MotivationCategoryDB) => {
     setSelectedMotivations(prev => {
       if (prev.includes(category)) {
         return prev.filter(c => c !== category);
@@ -217,7 +216,7 @@ export default function Login() {
               >
                 <Text style={styles.motivationSelectorText}>
                   {selectedMotivations.length > 0
-                    ? selectedMotivations.join(', ')
+                    ? selectedMotivations.map(m => t(`motivations.${m}`)).join(', ')
                     : t('login.selectMotivations')}
                 </Text>
                 <ChevronDown size={20} color="#ffffff" />
@@ -230,15 +229,15 @@ export default function Login() {
                       key={category}
                       style={[
                         styles.motivationItem,
-                        selectedMotivations.includes(category as MotivationCategoryUI) && styles.motivationItemSelected
+                        selectedMotivations.includes(category as MotivationCategoryDB) && styles.motivationItemSelected
                       ]}
-                      onPress={() => toggleMotivation(category as MotivationCategoryUI)}
+                      onPress={() => toggleMotivation(category as MotivationCategoryDB)}
                     >
                       <Text style={[
                         styles.motivationItemText,
-                        selectedMotivations.includes(category as MotivationCategoryUI) && styles.motivationItemTextSelected
+                        selectedMotivations.includes(category as MotivationCategoryDB) && styles.motivationItemTextSelected
                       ]}>
-                        {category}
+                        {t(`motivations.${category}`)}
                       </Text>
                     </TouchableOpacity>
                   ))}
