@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Platform, Modal, ActivityIndicator, Dimensions, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
-import { Menu, Calendar, Bell, FileText, SquareCheck as CheckSquare, X, Clock, MapPin, Edit, ChevronUp, ChevronDown } from 'lucide-react-native';
+import { Menu, Calendar, Bell, FileText, SquareCheck as CheckSquare, X, Clock, MapPin, Edit, ChevronUp, ChevronDown, ArrowRight } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { getAuth } from 'firebase/auth';
 import { DatabaseService } from '@/services/database';
@@ -11,6 +11,13 @@ import { useAuth } from '@/utils/AuthContext';
 import { useFocusEffect, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { saveLanguagePreference } from '@/utils/i18n';
+
+// Add Badge component at the top after imports
+const Badge = ({ children }: { children: React.ReactNode }) => (
+  <View style={styles.badge}>
+    <Text style={styles.badgeText}>{children}</Text>
+  </View>
+);
 
 export default function HomePage() {
   const router = useRouter();
@@ -137,14 +144,14 @@ export default function HomePage() {
     
     // Clean up the interval on component unmount
     return () => clearInterval(intervalId);
-  }, [authUser, expandedAppointments]);
+  }, [authUser, expandedAppointments, showAppointments]);
 
   // Add effect for reminders that triggers on expandedReminders change
   useEffect(() => {
     if (authUser) {
       loadReminders();
     }
-  }, [authUser, expandedReminders]);
+  }, [authUser, expandedReminders, showReminders]);
 
   const handleCompleteTask = async (taskId: string) => {
     if (!taskId || !authUser) return;
@@ -192,162 +199,143 @@ export default function HomePage() {
   const renderSchedule = () => (
     <View style={styles.scheduleSection}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>{t('home.todaySchedule')}</Text>
-        <TouchableOpacity 
+        <Text style={styles.sectionTitle}>{t('home.schedule')}</Text>
+        <TouchableOpacity
           style={styles.weekViewButton}
           onPress={() => router.push('/appointments')}
         >
-          <Calendar size={18} color="#9333ea" />
+          <ArrowRight size={16} color="#9333ea" />
         </TouchableOpacity>
       </View>
-      
+
       <View style={styles.scheduleBanners}>
         {/* Appointments Banner */}
-        <View 
-          style={[
-            styles.scheduleBanner,
-            expandedAppointments && appointments.length > 0
-              ? { 
-                  height: 'auto', 
-                  maxHeight: undefined,
-                  marginBottom: 24 // Add more space when expanded
-                }
-              : null
-          ]}
-        >
+        <View style={[
+          styles.scheduleBanner,
+          { height: 260 } // Fixed height instead of dynamic
+        ]}>
           <View style={styles.bannerHeader}>
-            <Calendar size={18} color="#9333ea" />
+            <Calendar size={16} color="#9333ea" />
             <Text style={styles.bannerTitle}>{t('home.appointments')}</Text>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{totalAppointmentCount}</Text>
-            </View>
+            <Badge>{totalAppointmentCount}</Badge>
           </View>
-          
-          <View style={{ flex: 1, justifyContent: 'space-between' }}>
-            {appointments.length > 0 ? (
+
+          <View style={styles.bannerContent}>
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#9333ea" />
+            ) : appointments.length > 0 ? (
               <>
-                <View style={{ 
-                  maxHeight: expandedAppointments ? undefined : 180, // Remove max height limit when expanded
-                  overflow: expandedAppointments ? 'visible' : 'hidden' // Allow content to be fully visible when expanded
-                }}>
-                  {appointments.map((appointment, index) => {
-                    // Check if appointment is today or a future date
-                    const appointmentDate = new Date(appointment.date);
-                    const today = new Date();
-                    const isToday = 
-                      appointmentDate.getDate() === today.getDate() &&
-                      appointmentDate.getMonth() === today.getMonth() &&
-                      appointmentDate.getFullYear() === today.getFullYear();
-                    
-                    return (
-                      <TouchableOpacity 
-                        key={index} 
-                        style={styles.eventItem}
-                        onPress={() => {
-                          setSelectedAppointment(appointment);
-                          setShowAppointmentDetails(true);
-                        }}
-                      >
-                        <Text style={styles.eventTime}>
-                          {appointment.startTime}
-                          {!isToday && ` - ${appointmentDate.toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric'
-                          })}`}
-                        </Text>
-                        <Text style={styles.eventName} numberOfLines={1}>
-                          {appointment.appointmentName}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-                
-                {appointments.length > 0 && (
-                  <TouchableOpacity 
-                    style={styles.seeMoreButton}
-                    onPress={() => setExpandedAppointments(!expandedAppointments)}
+                {appointments.slice(0, 3).map((appointment, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.eventItem}
+                    onPress={() => {
+                      setSelectedAppointment(appointment);
+                      setShowAppointmentDetails(true);
+                    }}
                   >
-                    {expandedAppointments ? 
-                      <ChevronUp size={14} color="#9333ea" /> : 
-                      <ChevronDown size={14} color="#9333ea" />
-                    }
-                    <Text style={styles.seeMoreButtonText}>
-                      {expandedAppointments ? t('home.showLess') : t('home.seeMore')}
+                    <Text style={styles.eventTime}>
+                      {
+                        (() => {
+                          const appointmentDate = new Date(appointment.date);
+                          const today = new Date();
+                          const isToday = 
+                            appointmentDate.getDate() === today.getDate() &&
+                            appointmentDate.getMonth() === today.getMonth() &&
+                            appointmentDate.getFullYear() === today.getFullYear();
+                          
+                          return isToday
+                            ? appointment.startTime
+                            : `${appointmentDate.toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric'
+                              })} ${appointment.startTime}`;
+                        })()
+                      }
+                    </Text>
+                    <Text style={styles.eventTitle} numberOfLines={1}>
+                      {appointment.appointmentName}
                     </Text>
                   </TouchableOpacity>
-                )}
+                ))}
+
+                <TouchableOpacity 
+                  style={styles.seeMoreButton}
+                  onPress={() => {
+                    setExpandedAppointments(true);
+                    setShowAppointments(true);
+                  }}
+                >
+                  <Text style={styles.seeMoreText}>{t('home.seeAll')}</Text>
+                </TouchableOpacity>
               </>
             ) : (
               <View style={styles.emptyEventContainer}>
-                <Text style={styles.emptyEventText}>{t('home.noUpcomingAppointments')}</Text>
+                <Text style={styles.emptyEventText}>{t('home.noAppointments')}</Text>
               </View>
             )}
           </View>
         </View>
 
         {/* Reminders Banner */}
-        <View 
-          style={[
-            styles.scheduleBanner,
-            expandedReminders && reminders.length > 0
-              ? { 
-                  height: 'auto', 
-                  maxHeight: undefined,
-                  marginBottom: 24 // Add more space when expanded
-                }
-              : null
-          ]}
-        >
+        <View style={[
+          styles.scheduleBanner,
+          { height: 260 } // Fixed height instead of dynamic
+        ]}>
           <View style={styles.bannerHeader}>
-            <Bell size={18} color="#9333ea" />
+            <Bell size={16} color="#9333ea" />
             <Text style={styles.bannerTitle}>{t('home.reminders')}</Text>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{totalReminderCount}</Text>
-            </View>
+            <Badge>{totalReminderCount}</Badge>
           </View>
-          
-          <View style={{ flex: 1, justifyContent: 'space-between' }}>
-            {reminders.length > 0 ? (
+
+          <View style={styles.bannerContent}>
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#9333ea" />
+            ) : reminders.length > 0 ? (
               <>
-                <View style={{ 
-                  maxHeight: expandedReminders ? undefined : 180, // Remove max height limit when expanded
-                  overflow: expandedReminders ? 'visible' : 'hidden' // Allow content to be fully visible when expanded
-                }}>
-                  {reminders.map((reminder, index) => {
-                    // Use reminderID for key to avoid duplicates
-                    return (
-                      <TouchableOpacity 
-                        key={reminder.reminderID || index} 
-                        style={styles.eventItem}
-                        onPress={() => {
-                          setSelectedReminder(reminder);
-                          setShowReminderDetails(true);
-                        }}
-                      >
-                        <Text style={styles.eventTime}>{reminder.time}</Text>
-                        <Text style={styles.eventName} numberOfLines={1}>
-                          {reminder.reminderName}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-                
-                {reminders.length > 0 && (
-                  <TouchableOpacity 
-                    style={styles.seeMoreButton}
-                    onPress={() => setExpandedReminders(!expandedReminders)}
+                {reminders.slice(0, 3).map((reminder, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.eventItem}
+                    onPress={() => {
+                      setSelectedReminder(reminder);
+                      setShowReminderDetails(true);
+                    }}
                   >
-                    {expandedReminders ? 
-                      <ChevronUp size={14} color="#9333ea" /> : 
-                      <ChevronDown size={14} color="#9333ea" />
-                    }
-                    <Text style={styles.seeMoreButtonText}>
-                      {expandedReminders ? t('home.showLess') : t('home.seeMore')}
+                    <Text style={styles.eventTime}>
+                      {
+                        (() => {
+                          const reminderDate = new Date(reminder.date);
+                          const today = new Date();
+                          const isToday = 
+                            reminderDate.getDate() === today.getDate() &&
+                            reminderDate.getMonth() === today.getMonth() &&
+                            reminderDate.getFullYear() === today.getFullYear();
+                          
+                          return isToday
+                            ? reminder.time
+                            : `${reminderDate.toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric'
+                              })} ${reminder.time}`;
+                        })()
+                      }
+                    </Text>
+                    <Text style={styles.eventTitle} numberOfLines={1}>
+                      {reminder.reminderName}
                     </Text>
                   </TouchableOpacity>
-                )}
+                ))}
+
+                <TouchableOpacity 
+                  style={styles.seeMoreButton}
+                  onPress={() => {
+                    setExpandedReminders(true);
+                    setShowReminders(true);
+                  }}
+                >
+                  <Text style={styles.seeMoreText}>{t('home.seeAll')}</Text>
+                </TouchableOpacity>
               </>
             ) : (
               <View style={styles.emptyEventContainer}>
@@ -744,7 +732,7 @@ export default function HomePage() {
       // Get upcoming appointments with expanded limit if needed
       const upcomingAppointments = await DatabaseService.getUpcomingAppointments(
         authUser.uid, 
-        expandedAppointments ? 10 : 3,
+        expandedAppointments ? 50 : 3, // Increase limit to show more appointments
         today // Pass today's start time
       );
       
@@ -873,7 +861,7 @@ export default function HomePage() {
       // Get upcoming reminders
       const userReminders = await DatabaseService.getUpcomingReminders(
         authUser.uid, 
-        expandedReminders ? 10 : 3 // Show more when expanded
+        expandedReminders ? 50 : 3 // Show more when expanded
       );
       
       // Ensure no duplicates by using a Map with reminderID as key
@@ -1199,16 +1187,9 @@ const styles = StyleSheet.create({
     flex: 1,
     letterSpacing: 0.2,
   },
-  badge: {
-    backgroundColor: '#9333ea',
-    borderRadius: 10,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontFamily: 'Inter-SemiBold',
-    color: '#ffffff',
+  bannerContent: {
+    flex: 1,
+    justifyContent: 'space-between',
   },
   eventList: {
     flex: 1,
@@ -1230,13 +1211,11 @@ const styles = StyleSheet.create({
     width: 38,
     flexShrink: 0,
   },
-  eventName: {
-    fontSize: 11,
-    fontFamily: 'Inter-Regular',
+  eventTitle: {
+    fontSize: 14,
     color: '#ffffff',
+    fontWeight: '500',
     flex: 1,
-    marginLeft: 4,
-    flexShrink: 1,
   },
   dailyTasksSection: {
     flex: 1,
@@ -1540,11 +1519,10 @@ const styles = StyleSheet.create({
     position: 'relative',
     zIndex: 1,
   },
-  seeMoreButtonText: {
+  seeMoreText: {
     fontSize: 11,
     color: '#9333ea',
-    fontWeight: '600',
-    marginLeft: 4,
+    fontWeight: '500',
   },
   appointmentDetailContainer: {
     padding: 8,
@@ -1798,5 +1776,16 @@ const styles = StyleSheet.create({
   },
   languageOptionTextSelected: {
     color: '#ffffff',
+  },
+  badge: {
+    backgroundColor: '#9333ea',
+    borderRadius: 10,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  badgeText: {
+    fontSize: 10,
+    color: '#ffffff',
+    fontWeight: '500',
   },
 }); 
