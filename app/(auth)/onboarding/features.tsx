@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { router } from 'expo-router';
+import { router, Redirect } from 'expo-router';
 import { Calendar, Bell, CircleCheck as CheckCircle, Brain, ChartBar } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -30,10 +30,17 @@ const FEATURES = [
 
 export default function Features() {
   const { t } = useTranslation();
+  const [shouldRedirect, setShouldRedirect] = useState(false);
 
   const handleContinue = () => {
-    router.push('/(tabs)/home');
+    // Set state to trigger redirect
+    setShouldRedirect(true);
   };
+
+  // If redirect state is true, render the Redirect component
+  if (shouldRedirect) {
+    return <Redirect href="/(tabs)/home" />;
+  }
 
   return (
     <LinearGradient

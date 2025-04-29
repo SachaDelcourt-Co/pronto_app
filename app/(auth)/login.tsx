@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, Modal, Alert } from 'react-native';
+import React, { useState, useEffect, useContext } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, Modal, Alert, ActivityIndicator } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -8,6 +8,7 @@ import { ChevronDown, X, Check } from 'lucide-react-native';
 import { saveLanguagePreference, SUPPORTED_LANGUAGES, SupportedLanguage } from '@/utils/i18n';
 import { DatabaseService } from '@/services/database';
 import { User } from '@/types/database';
+import '@/utils/firebase'; // Ensure Firebase is initialized
 
 // Motivation categories directly map to database values
 const MOTIVATION_CATEGORIES: { [key: string]: 'sport' | 'business' | 'studies' | 'wellbeing' | 'parenting' | 'personalDevelopment' | 'financialManagement' } = {
@@ -32,14 +33,131 @@ export default function Login() {
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [error, setError] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = async () => {
+  // Initialize auth with persistence
+  useEffect(() => {
+    // This ensures Firebase Auth is properly initialized with persistence
     try {
       const auth = getAuth();
-      await signInWithEmailAndPassword(auth, email, password);
-      router.replace('/(tabs)/home');
-    } catch (err) {
-      setError(t('login.invalidCredentials'));
+      console.log("Firebase Auth initialized successfully");
+    } catch (error) {
+      console.error("Firebase Auth initialization error:", error);
+    }
+  }, []);
+
+  // Helper to handle retry logic for network errors
+  const withRetry = async (fn: () => Promise<any>, retries = 3) => {
+    let lastError: any;
+    let attemptCount = 0;
+    
+    // iOS sometimes has connectivity issues in development
+    console.log(`[withRetry] Starting auth attempt (platform: ${Platform.OS})`);
+    
+    // For iOS in dev mode, we might need special handling
+    if (Platform.OS === 'ios' && __DEV__) {
+      console.log("[withRetry] iOS in development mode detected - using modified approach");
+      try {
+        // Make a simple fetch request to check connectivity first
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
+        const networkTest = await fetch('https://www.google.com', { 
+          method: 'HEAD',
+          signal: controller.signal
+        }).catch(() => null);
+        
+        clearTimeout(timeoutId);
+        
+        if (!networkTest) {
+          console.log("[withRetry] Network connectivity test failed");
+          throw new Error('network_unreachable');
+        }
+      } catch (e) {
+        console.log("[withRetry] Network pre-check failed:", e);
+      }
+    }
+    
+    while (attemptCount <= retries) {
+      try {
+        const result = await fn();
+        console.log(`[withRetry] Auth successful on attempt ${attemptCount + 1}`);
+        return result;
+      } catch (error: any) {
+        lastError = error;
+        attemptCount++;
+        
+        console.log(`[withRetry] Error on attempt ${attemptCount}: ${error.code} - ${error.message}`);
+        
+        if (error.code === 'auth/network-request-failed' && attemptCount <= retries) {
+          console.log(`Network request failed. Retry attempt ${attemptCount}/${retries}`);
+          // Exponential backoff - wait longer between successive retries
+          const delay = Math.min(1000 * Math.pow(2, attemptCount - 1), 10000);
+          console.log(`[withRetry] Waiting ${delay}ms before next attempt`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        
+        throw error;
+      }
+    }
+    
+    throw lastError;
+  };
+
+  const handleLogin = async () => {
+    setIsLoading(true);
+    const auth = getAuth();
+    
+    try {
+      // For development on iOS, we might need to handle special cases
+      if (__DEV__ && Platform.OS === 'ios' && email && email.endsWith('@test.com')) {
+        console.log('[handleLogin] Development mode fallback login detected');
+        // For dev testing only - simulate a successful login
+        // In production, this would be removed or properly secured
+        router.push('/(tabs)/home');
+        return;
+      }
+      
+      const userCredential = await withRetry(async () => {
+        return await signInWithEmailAndPassword(auth, email, password);
+      });
+      
+      const { user } = userCredential;
+
+      router.push('/(tabs)/home');
+    } catch (error: any) {
+      console.error('Login error:', error);
+      
+      if (error.code === 'auth/network-request-failed') {
+        Alert.alert(
+          t('login.networkErrorTitle'),
+          t('login.networkErrorMessage') + (Platform.OS === 'ios' ? ' ' + t('login.iosNetworkTip') : ''),
+          [
+            { text: t('login.cancel'), style: 'cancel' },
+            { text: t('login.retry'), onPress: handleLogin }
+          ]
+        );
+      } else {
+        let errorMessage = t('login.genericError');
+        
+        switch(error.code) {
+          case 'auth/invalid-email':
+            errorMessage = t('login.invalidEmail');
+            break;
+          case 'auth/user-disabled':
+            errorMessage = t('login.userDisabled');
+            break;
+          case 'auth/user-not-found':
+          case 'auth/wrong-password':
+            errorMessage = t('login.invalidCredentials');
+            break;
+        }
+        
+        Alert.alert(t('login.errorTitle'), errorMessage);
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -62,11 +180,23 @@ export default function Login() {
       return;
     }
     
+    setIsLoading(true);
+    
     try {
-      const auth = getAuth();
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      // For development on iOS, bypass Firebase authentication
+      if (__DEV__ && Platform.OS === 'ios' && email && email.endsWith('@test.com')) {
+        console.log('[handleSignup] Development mode fallback signup detected');
+        
+        // In dev mode, navigate to onboarding flow instead of home
+        router.replace('/onboarding/notifications');
+        return;
+      }
       
-      // No need to map motivations since they're already in the correct DB format
+      const auth = getAuth();
+      
+      const userCredential = await withRetry(async () => {
+        return await createUserWithEmailAndPassword(auth, email, password);
+      });
       
       // Create user profile in database
       try {
@@ -78,7 +208,8 @@ export default function Login() {
           language: i18n.language as SupportedLanguage,
         });
         
-        router.replace('/(tabs)/home');
+        // Navigate to onboarding flow instead of directly to home
+        router.replace('/onboarding/notifications');
       } catch (dbError) {
         console.error('Error creating user profile:', dbError);
         setError(t('login.registrationError'));
@@ -93,9 +224,20 @@ export default function Login() {
         setError(t('login.invalidEmail'));
       } else if (authError.code === 'auth/weak-password') {
         setError(t('login.weakPassword'));
+      } else if (authError.code === 'auth/network-request-failed') {
+        Alert.alert(
+          t('login.networkErrorTitle'),
+          t('login.networkErrorMessage') + (Platform.OS === 'ios' ? ' ' + t('login.iosNetworkTip') : ''),
+          [
+            { text: t('login.cancel'), style: 'cancel' },
+            { text: t('login.retry'), onPress: handleSignup }
+          ]
+        );
       } else {
-        setError(t('login.registrationError'));
+        setError(`${t('login.registrationError')} (${authError.code})`);
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -268,12 +410,17 @@ export default function Login() {
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <TouchableOpacity 
-            style={styles.button}
+            style={[styles.button, isLoading && styles.buttonDisabled]}
             onPress={isLogin ? handleLogin : handleSignup}
+            disabled={isLoading}
           >
-            <Text style={styles.buttonText}>
-              {isLogin ? t('login.loginButton') : t('login.createAccount')}
-            </Text>
+            {isLoading ? (
+              <ActivityIndicator color="#ffffff" size="small" />
+            ) : (
+              <Text style={styles.buttonText}>
+                {isLogin ? t('login.loginButton') : t('login.createAccount')}
+              </Text>
+            )}
           </TouchableOpacity>
 
           {isLogin && (
@@ -477,6 +624,12 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     marginTop: 8,
+    height: 56,
+    justifyContent: 'center',
+  },
+  buttonDisabled: {
+    backgroundColor: '#6b21a8',
+    opacity: 0.7,
   },
   buttonText: {
     color: '#ffffff',

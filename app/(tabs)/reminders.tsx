@@ -58,6 +58,13 @@ export default function RemindersScreen() {
   // Delete confirmation
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
+  // Initialize component date state
+  useEffect(() => {
+    // Set selectedDate to today when component first mounts
+    const today = new Date();
+    setSelectedDate(today);
+  }, []);
+
   // Define a function to get localized day abbreviations based on current language
   const getDaysAbbreviations = () => {
     if (i18n.language === 'fr') {
@@ -83,21 +90,27 @@ export default function RemindersScreen() {
     setReminderDateInput(formatLocalDate(reminderDate));
   }, [reminderDate]);
 
-  // Load data when the screen is focused
+  // Load data when screen is focused
   useFocusEffect(
     React.useCallback(() => {
       if (user) {
         loadReminders();
         
-        // Load reminders for today
-        const today = new Date();
-        setSelectedDate(today);
-        loadDailyReminders(today);
+        // Load reminders for the current selected date
+        loadDailyReminders(selectedDate);
         
-        // Load marked dates for calendar
-        loadMarkedDates();
+        // Load marked dates for calendar if visible
+        if (showCalendar) {
+          loadMarkedDates(currentVisibleMonth);
+        }
+      } else {
+        // Make sure to stop loading if no user is available
+        setIsLoading(false);
       }
-    }, [user])
+      return () => {
+        // Cleanup
+      };
+    }, [user, selectedDate, currentVisibleMonth, showCalendar])
   );
 
   // Update the useEffect that loads marked dates when month changes
@@ -128,9 +141,9 @@ export default function RemindersScreen() {
       setIsLoading(true);
       const userReminders = await DatabaseService.getUserReminders(user.uid);
       setReminders(userReminders);
+      setIsLoading(false);
     } catch (error) {
       console.error('Error loading reminders:', error);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -563,43 +576,6 @@ export default function RemindersScreen() {
     }
   };
 
-  // Handle date change from DateTimePicker
-  const handleDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(false);
-    if (selectedDate) {
-      setReminderDate(selectedDate);
-      setReminderDateInput(formatLocalDate(selectedDate));
-      setPickerDate(selectedDate);
-    }
-  };
-
-  // Handle time change from DateTimePicker
-  const handleTimeChange = (event: any, selectedDate?: Date) => {
-    setShowTimePicker(false);
-    if (selectedDate) {
-      const hours = selectedDate.getHours();
-      const minutes = selectedDate.getMinutes();
-      setReminderTime(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`);
-      setPickerDate(selectedDate);
-    }
-  };
-
-  // Handle notification time change from DateTimePicker
-  const handleNotificationTimeChange = (event: any, selectedDate?: Date) => {
-    setShowNotificationTimePicker(false);
-    if (selectedDate && editingNotificationIndex >= 0) {
-      const hours = selectedDate.getHours();
-      const minutes = selectedDate.getMinutes();
-      const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-      
-      // Update the notification time at the specified index
-      const newTimes = [...notificationTimes];
-      newTimes[editingNotificationIndex] = timeString;
-      setNotificationTimes(newTimes);
-    }
-    setEditingNotificationIndex(-1);
-  };
-
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -888,7 +864,7 @@ export default function RemindersScreen() {
         onRequestClose={() => setShowReminderModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, Platform.OS === 'ios' && { height: 'auto' }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
                 {isEditMode ? t('reminders.editReminder') : t('reminders.newReminder')}
@@ -901,7 +877,7 @@ export default function RemindersScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalScrollContent}>
+            <ScrollView style={styles.modalScrollContent} contentContainerStyle={styles.modalScrollContentContainer}>
               <Text style={styles.inputLabel}>{t('reminders.reminderTitle')}</Text>
               <TextInput
                 style={styles.textInput}
@@ -926,7 +902,6 @@ export default function RemindersScreen() {
               <TouchableOpacity 
                 style={styles.datePickerButton}
                 onPress={() => {
-                  // Set pickDate to reminderDate first
                   setPickerDate(reminderDate);
                   setShowDatePicker(true);
                 }}
@@ -936,14 +911,41 @@ export default function RemindersScreen() {
                   {formatLocalDate(reminderDate)}
                 </Text>
               </TouchableOpacity>
+              
               {showDatePicker && (
-                <DateTimePicker
-                  value={pickerDate}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={handleDateChange}
-                  minimumDate={new Date()}
-                />
+                <View>
+                  <DateTimePicker
+                    testID="dateTimePicker"
+                    value={pickerDate}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={(event, date) => {
+                      setShowDatePicker(false);
+                      if (date && event.type !== 'dismissed') {
+                        setReminderDate(date);
+                        setReminderDateInput(formatLocalDate(date));
+                        setPickerDate(date);
+                      }
+                    }}
+                    minimumDate={new Date()}
+                  />
+                  {Platform.OS === 'ios' && (
+                    <View style={styles.iosPickerButtonRow}>
+                      <TouchableOpacity 
+                        style={styles.iosPickerCancelButton}
+                        onPress={() => setShowDatePicker(false)}
+                      >
+                        <Text style={styles.iosPickerButtonText}>{t('reminders.cancel')}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={styles.iosPickerDoneButton}
+                        onPress={() => setShowDatePicker(false)}
+                      >
+                        <Text style={styles.iosPickerButtonText}>{t('common.ok')}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
               )}
 
               {isRecurring && (
@@ -975,9 +977,7 @@ export default function RemindersScreen() {
               <TouchableOpacity 
                 style={styles.timePickerButton}
                 onPress={() => {
-                  // Create a new date with current time
                   const timeDate = new Date();
-                  // Parse the reminderTime string to set hours and minutes
                   const [hours, minutes] = reminderTime.split(':').map(Number);
                   timeDate.setHours(hours, minutes, 0, 0);
                   setPickerDate(timeDate);
@@ -989,13 +989,41 @@ export default function RemindersScreen() {
                   {reminderTime}
                 </Text>
               </TouchableOpacity>
+              
               {showTimePicker && (
-                <DateTimePicker
-                  value={pickerDate}
-                  mode="time"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={handleTimeChange}
-                />
+                <View>
+                  <DateTimePicker
+                    testID="timeTimePicker"
+                    value={pickerDate}
+                    mode="time"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={(event, date) => {
+                      setShowTimePicker(false);
+                      if (date && event.type !== 'dismissed') {
+                        const hours = date.getHours();
+                        const minutes = date.getMinutes();
+                        setReminderTime(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`);
+                        setPickerDate(date);
+                      }
+                    }}
+                  />
+                  {Platform.OS === 'ios' && (
+                    <View style={styles.iosPickerButtonRow}>
+                      <TouchableOpacity 
+                        style={styles.iosPickerCancelButton}
+                        onPress={() => setShowTimePicker(false)}
+                      >
+                        <Text style={styles.iosPickerButtonText}>{t('reminders.cancel')}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={styles.iosPickerDoneButton}
+                        onPress={() => setShowTimePicker(false)}
+                      >
+                        <Text style={styles.iosPickerButtonText}>{t('common.ok')}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
               )}
 
               <Text style={styles.inputLabel}>{t('reminders.notificationTimes')}</Text>
@@ -1004,7 +1032,6 @@ export default function RemindersScreen() {
                   <TouchableOpacity 
                     style={styles.notificationTimeButton}
                     onPress={() => {
-                      // Create a new date with the notification time
                       const timeDate = new Date();
                       const [hours, minutes] = time.split(':').map(Number);
                       timeDate.setHours(hours, minutes, 0, 0);
@@ -1027,13 +1054,51 @@ export default function RemindersScreen() {
                   )}
                 </View>
               ))}
+              
               {showNotificationTimePicker && (
-                <DateTimePicker
-                  value={pickerDate}
-                  mode="time"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={handleNotificationTimeChange}
-                />
+                <View>
+                  <DateTimePicker
+                    testID="notificationTimePicker"
+                    value={pickerDate}
+                    mode="time"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={(event, date) => {
+                      setShowNotificationTimePicker(false);
+                      if (date && event.type !== 'dismissed' && editingNotificationIndex >= 0) {
+                        const hours = date.getHours();
+                        const minutes = date.getMinutes();
+                        const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                        
+                        // Update the notification time at the specified index
+                        const newTimes = [...notificationTimes];
+                        newTimes[editingNotificationIndex] = timeString;
+                        setNotificationTimes(newTimes);
+                      }
+                      setEditingNotificationIndex(-1);
+                    }}
+                  />
+                  {Platform.OS === 'ios' && (
+                    <View style={styles.iosPickerButtonRow}>
+                      <TouchableOpacity 
+                        style={styles.iosPickerCancelButton}
+                        onPress={() => {
+                          setShowNotificationTimePicker(false);
+                          setEditingNotificationIndex(-1);
+                        }}
+                      >
+                        <Text style={styles.iosPickerButtonText}>{t('reminders.cancel')}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={styles.iosPickerDoneButton}
+                        onPress={() => {
+                          setShowNotificationTimePicker(false);
+                        }}
+                      >
+                        <Text style={styles.iosPickerButtonText}>{t('common.ok')}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
               )}
 
               <TouchableOpacity
@@ -1372,7 +1437,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: Platform.OS === 'ios' ? 10 : 20,
   },
   calendarModalContent: {
     backgroundColor: '#ffffff',
@@ -1456,7 +1521,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     width: '100%',
     maxWidth: 500,
-    maxHeight: '90%',
+    height: Platform.OS === 'ios' ? '80%' : 'auto',
+    maxHeight: Platform.OS === 'ios' ? '80%' : '90%',
     padding: 20,
     shadowColor: '#000',
     shadowOffset: {
@@ -1466,9 +1532,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+    overflow: 'hidden',
   },
   modalScrollContent: {
-    flex: 1,
+    flex: Platform.OS === 'ios' ? 1 : undefined,
+    maxHeight: Platform.OS === 'ios' ? undefined : '100%',
+  },
+  modalScrollContentContainer: {
+    flexGrow: 1,
+    paddingBottom: 20,
   },
   inputLabel: {
     fontSize: 14,
@@ -1665,6 +1737,23 @@ const styles = StyleSheet.create({
   },
   addTimeButtonText: {
     fontSize: 12,
+    fontWeight: '600',
+    color: '#9333ea',
+  },
+  iosPickerButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+  },
+  iosPickerCancelButton: {
+    padding: 8,
+  },
+  iosPickerDoneButton: {
+    padding: 8,
+  },
+  iosPickerButtonText: {
+    fontSize: 16,
     fontWeight: '600',
     color: '#9333ea',
   },

@@ -957,86 +957,169 @@ export default function AppointmentsScreen() {
                 textAlignVertical="top"
               />
 
-              <Text style={styles.inputLabel}>{t('appointments.date')}</Text>
-              <TouchableOpacity 
-                style={styles.datePickerButton}
-                onPress={() => {
-                  // Set pickDate to appointmentDate first
-                  setPickerDate(appointmentDate);
-                  setShowDatePicker(true);
-                }}
-              >
-                <CalendarIcon size={18} color="#9333ea" />
-                <Text style={styles.datePickerButtonText}>
-                  {formatLocalDate(appointmentDate)}
-                </Text>
-              </TouchableOpacity>
-              {showDatePicker && (
-                <DateTimePicker
-                  value={pickerDate}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={handleDateChange}
-                  minimumDate={new Date()}
-                />
-              )}
-
-              <View style={styles.timeInputRow}>
-                <View style={styles.timeInputContainer}>
-                  <Text style={styles.inputLabel}>{t('appointments.startTime')}</Text>
-                  <TouchableOpacity 
-                    style={styles.timePickerButton}
-                    onPress={() => {
-                      // Create a new date with start time
-                      const timeDate = new Date(appointmentDate);
-                      const [hours, minutes] = appointmentStartTime.split(':').map(Number);
-                      timeDate.setHours(hours, minutes, 0, 0);
-                      setPickerDate(timeDate);
-                      setShowStartTimePicker(true);
-                    }}
-                  >
-                    <Clock size={18} color="#9333ea" />
-                    <Text style={styles.timePickerButtonText}>
-                      {appointmentStartTime}
-                    </Text>
-                  </TouchableOpacity>
-                  {showStartTimePicker && (
+              {/* Date Picker Field */}
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>{t('appointments.date')}</Text>
+                <TouchableOpacity 
+                  style={styles.dateInput}
+                  onPress={() => {
+                    setPickerDate(appointmentDate);
+                    setShowDatePicker(true);
+                  }}
+                >
+                  <CalendarIcon size={18} color="#9333ea" />
+                  <Text style={styles.dateInputText}>
+                    {appointmentDateInput}
+                  </Text>
+                </TouchableOpacity>
+                
+                {showDatePicker && (
+                  <View>
                     <DateTimePicker
+                      testID="dateTimePicker"
+                      value={pickerDate}
+                      mode="date"
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      onChange={(event, date) => {
+                        setShowDatePicker(false);
+                        if (date && event.type !== 'dismissed') {
+                          setAppointmentDate(date);
+                          setAppointmentDateInput(formatLocalDate(date));
+                          setPickerDate(date);
+                        }
+                      }}
+                      minimumDate={new Date()}
+                    />
+                    {Platform.OS === 'ios' && (
+                      <View style={styles.iosPickerButtonRow}>
+                        <TouchableOpacity 
+                          style={styles.iosPickerCancelButton}
+                          onPress={() => setShowDatePicker(false)}
+                        >
+                          <Text style={styles.iosPickerButtonText}>{t('appointments.cancel')}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={styles.iosPickerDoneButton}
+                          onPress={() => setShowDatePicker(false)}
+                        >
+                          <Text style={styles.iosPickerButtonText}>{t('common.ok')}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                )}
+              </View>
+
+              {/* Start Time Picker Field */}
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>{t('appointments.startTime')}</Text>
+                <TouchableOpacity 
+                  style={styles.timeInput}
+                  onPress={() => {
+                    const timeDate = new Date();
+                    const [hours, minutes] = appointmentStartTime.split(':').map(Number);
+                    timeDate.setHours(hours, minutes, 0, 0);
+                    setPickerDate(timeDate);
+                    setShowStartTimePicker(true);
+                  }}
+                >
+                  <Clock size={18} color="#9333ea" />
+                  <Text style={styles.timeInputText}>
+                    {appointmentStartTime}
+                  </Text>
+                </TouchableOpacity>
+                
+                {showStartTimePicker && (
+                  <View>
+                    <DateTimePicker
+                      testID="startTimePicker"
                       value={pickerDate}
                       mode="time"
                       display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                      onChange={handleStartTimeChange}
+                      onChange={(event, date) => {
+                        setShowStartTimePicker(false);
+                        if (date && event.type !== 'dismissed') {
+                          const hours = date.getHours();
+                          const minutes = date.getMinutes();
+                          setAppointmentStartTime(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`);
+                          setPickerDate(date);
+                        }
+                      }}
                     />
-                  )}
-                </View>
+                    {Platform.OS === 'ios' && (
+                      <View style={styles.iosPickerButtonRow}>
+                        <TouchableOpacity 
+                          style={styles.iosPickerCancelButton}
+                          onPress={() => setShowStartTimePicker(false)}
+                        >
+                          <Text style={styles.iosPickerButtonText}>{t('appointments.cancel')}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={styles.iosPickerDoneButton}
+                          onPress={() => setShowStartTimePicker(false)}
+                        >
+                          <Text style={styles.iosPickerButtonText}>{t('common.ok')}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                )}
+              </View>
 
-                <View style={styles.timeInputContainer}>
-                  <Text style={styles.inputLabel}>{t('appointments.endTime')}</Text>
-                  <TouchableOpacity 
-                    style={styles.timePickerButton}
-                    onPress={() => {
-                      // Create a new date with end time
-                      const timeDate = new Date(appointmentDate);
-                      const [hours, minutes] = appointmentEndTime.split(':').map(Number);
-                      timeDate.setHours(hours, minutes, 0, 0);
-                      setPickerDate(timeDate);
-                      setShowEndTimePicker(true);
-                    }}
-                  >
-                    <Clock size={18} color="#9333ea" />
-                    <Text style={styles.timePickerButtonText}>
-                      {appointmentEndTime}
-                    </Text>
-                  </TouchableOpacity>
-                  {showEndTimePicker && (
+              {/* End Time Picker Field */}
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>{t('appointments.endTime')}</Text>
+                <TouchableOpacity 
+                  style={styles.timeInput}
+                  onPress={() => {
+                    const timeDate = new Date();
+                    const [hours, minutes] = appointmentEndTime.split(':').map(Number);
+                    timeDate.setHours(hours, minutes, 0, 0);
+                    setPickerDate(timeDate);
+                    setShowEndTimePicker(true);
+                  }}
+                >
+                  <Clock size={18} color="#9333ea" />
+                  <Text style={styles.timeInputText}>
+                    {appointmentEndTime}
+                  </Text>
+                </TouchableOpacity>
+                
+                {showEndTimePicker && (
+                  <View>
                     <DateTimePicker
+                      testID="endTimePicker"
                       value={pickerDate}
                       mode="time"
                       display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                      onChange={handleEndTimeChange}
+                      onChange={(event, date) => {
+                        setShowEndTimePicker(false);
+                        if (date && event.type !== 'dismissed') {
+                          const hours = date.getHours();
+                          const minutes = date.getMinutes();
+                          setAppointmentEndTime(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`);
+                          setPickerDate(date);
+                        }
+                      }}
                     />
-                  )}
-                </View>
+                    {Platform.OS === 'ios' && (
+                      <View style={styles.iosPickerButtonRow}>
+                        <TouchableOpacity 
+                          style={styles.iosPickerCancelButton}
+                          onPress={() => setShowEndTimePicker(false)}
+                        >
+                          <Text style={styles.iosPickerButtonText}>{t('appointments.cancel')}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={styles.iosPickerDoneButton}
+                          onPress={() => setShowEndTimePicker(false)}
+                        >
+                          <Text style={styles.iosPickerButtonText}>{t('common.ok')}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                )}
               </View>
 
               <Text style={styles.inputLabel}>{t('appointments.address')}</Text>
@@ -1594,7 +1677,7 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     height: 100,
   },
-  datePickerButton: {
+  dateInput: {
     backgroundColor: '#f9fafb',
     borderWidth: 1,
     borderColor: '#e5e7eb',
@@ -1603,7 +1686,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  datePickerButtonText: {
+  dateInputText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginLeft: 8,
+  },
+  timeInput: {
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 8,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  timeInputText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1f2937',
@@ -1617,20 +1715,25 @@ const styles = StyleSheet.create({
   timeInputContainer: {
     flex: 1,
   },
-  timePickerButton: {
-    backgroundColor: '#f9fafb',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 8,
-    padding: 12,
+  iosPickerButtonRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
   },
-  timePickerButtonText: {
+  iosPickerCancelButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#f3f4f6',
+  },
+  iosPickerDoneButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#9333ea',
+  },
+  iosPickerButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1f2937',
-    marginLeft: 8,
   },
   saveButton: {
     backgroundColor: '#9333ea',
@@ -1834,5 +1937,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'normal',
     color: '#6b7280',
+  },
+  formGroup: {
+    marginBottom: 16,
+  },
+  formLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4b5563',
+    marginBottom: 6,
   },
 });

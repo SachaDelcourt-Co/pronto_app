@@ -101,6 +101,9 @@ export default function NotesScreen() {
     React.useCallback(() => {
       if (user) {
         loadData();
+      } else {
+        // Immediately stop loading if no user is available
+        setIsLoading(false);
       }
       return () => {
         // Cleanup
@@ -112,7 +115,10 @@ export default function NotesScreen() {
     try {
       setIsLoading(true);
       
-      if (!user) return;
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
       
       // Load folders
       const userFolders = await DatabaseService.getUserFolders(user.uid);
@@ -122,9 +128,10 @@ export default function NotesScreen() {
       const userNotes = await DatabaseService.getUserNotes(user.uid, currentFolder);
       console.log(`Loaded ${userNotes.length} notes for current folder:`, currentFolder);
       setNotes(userNotes);
+      
+      setIsLoading(false);
     } catch (error) {
       console.error('Error loading notes data:', error);
-    } finally {
       setIsLoading(false);
     }
   };
