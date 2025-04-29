@@ -251,7 +251,10 @@ const resources = {
         notificationTimes: 'Heures de notification',
         addNotificationTime: 'Ajouter une heure de notification',
         active: 'Actif',
-        openCalendar: 'Ouvrir le calendrier'
+        openCalendar: 'Ouvrir le calendrier',
+        filterAll: 'Tous',
+        filterRecurring: 'Récurrents',
+        filterNonRecurring: 'Ponctuels'
       },
       tasks: {
         title: 'Tâches quotidiennes',
@@ -520,7 +523,10 @@ const resources = {
           friday: 'Fri',
           saturday: 'Sat'
         },
-        remindersFor: 'Reminders for {{date}}'
+        remindersFor: 'Reminders for {{date}}',
+        filterAll: 'All',
+        filterRecurring: 'Recurring',
+        filterNonRecurring: 'One-time'
       },
       tasks: {
         title: 'Daily Tasks',

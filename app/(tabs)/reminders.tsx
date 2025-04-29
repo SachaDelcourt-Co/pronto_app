@@ -24,6 +24,8 @@ export default function RemindersScreen() {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [filteredReminders, setFilteredReminders] = useState<Reminder[]>([]);
+  const [activeFilter, setActiveFilter] = useState<'all' | 'recurring' | 'nonRecurring'>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showCalendar, setShowCalendar] = useState(false);
@@ -100,6 +102,15 @@ export default function RemindersScreen() {
       return () => clearTimeout(timer);
     }
   }, [currentVisibleMonth, user, showCalendar]);
+
+  // Add effect to filter reminders when active filter or reminders array changes
+  useEffect(() => {
+    if (reminders.length > 0) {
+      filterReminders();
+    } else {
+      setFilteredReminders([]);
+    }
+  }, [activeFilter, reminders]);
 
   // Load all reminders
   const loadReminders = async () => {
@@ -471,6 +482,26 @@ export default function RemindersScreen() {
     }
   };
 
+  // Filter reminders based on the active filter
+  const filterReminders = () => {
+    switch (activeFilter) {
+      case 'recurring':
+        setFilteredReminders(reminders.filter(reminder => reminder.isRecurring));
+        break;
+      case 'nonRecurring':
+        setFilteredReminders(reminders.filter(reminder => !reminder.isRecurring));
+        break;
+      case 'all':
+      default:
+        setFilteredReminders(reminders);
+    }
+  };
+
+  // Handle filter change
+  const handleFilterChange = (filter: 'all' | 'recurring' | 'nonRecurring') => {
+    setActiveFilter(filter);
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -488,6 +519,60 @@ export default function RemindersScreen() {
           <Text style={styles.calendarButtonText}>{t('reminders.openCalendar')}</Text>
           <ChevronRight size={20} color="#9333ea" />
         </TouchableOpacity>
+
+        {/* Filter Buttons */}
+        <View style={styles.filterContainer}>
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              activeFilter === 'all' && styles.filterButtonActive
+            ]}
+            onPress={() => handleFilterChange('all')}
+          >
+            <Text 
+              style={[
+                styles.filterButtonText,
+                activeFilter === 'all' && styles.filterButtonTextActive
+              ]}
+            >
+              {t('reminders.filterAll')}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              activeFilter === 'recurring' && styles.filterButtonActive
+            ]}
+            onPress={() => handleFilterChange('recurring')}
+          >
+            <Text 
+              style={[
+                styles.filterButtonText,
+                activeFilter === 'recurring' && styles.filterButtonTextActive
+              ]}
+            >
+              {t('reminders.filterRecurring')}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              activeFilter === 'nonRecurring' && styles.filterButtonActive
+            ]}
+            onPress={() => handleFilterChange('nonRecurring')}
+          >
+            <Text 
+              style={[
+                styles.filterButtonText,
+                activeFilter === 'nonRecurring' && styles.filterButtonTextActive
+              ]}
+            >
+              {t('reminders.filterNonRecurring')}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </LinearGradient>
 
       {isLoading ? (
@@ -497,8 +582,8 @@ export default function RemindersScreen() {
         </View>
       ) : (
       <ScrollView style={styles.content}>
-          {reminders.length > 0 ? (
-            reminders.map(reminder => (
+          {filteredReminders.length > 0 ? (
+            filteredReminders.map(reminder => (
               <TouchableOpacity 
                 key={reminder.reminderID} 
                 style={styles.reminderCard}
@@ -508,47 +593,47 @@ export default function RemindersScreen() {
                   setShowReminderModal(true);
                 }}
               >
-            <View style={styles.reminderHeader}>
-              <Bell size={20} color="#9333ea" />
+                <View style={styles.reminderHeader}>
+                  <Bell size={20} color="#9333ea" />
                   <Text style={styles.reminderName}>{reminder.reminderName}</Text>
-              <View style={[
-                styles.activeIndicator,
-                reminder.active && styles.activeIndicatorOn
-              ]} />
-            </View>
+                  <View style={[
+                    styles.activeIndicator,
+                    reminder.active && styles.activeIndicatorOn
+                  ]} />
+                </View>
 
                 {reminder.isRecurring ? (
-              <View style={styles.daysContainer}>
-                {getDaysAbbreviations().map((day, index) => (
-                  <View
-                    key={day}
-                    style={[
-                      styles.dayChip,
+                  <View style={styles.daysContainer}>
+                    {getDaysAbbreviations().map((day, index) => (
+                      <View
+                        key={day}
+                        style={[
+                          styles.dayChip,
                           reminder.daysOfWeek?.includes(index) && styles.dayChipSelected
-                    ]}
-                  >
-                    <Text style={[
-                      styles.dayChipText,
+                        ]}
+                      >
+                        <Text style={[
+                          styles.dayChipText,
                           reminder.daysOfWeek?.includes(index) && styles.dayChipTextSelected
-                    ]}>
-                      {day}
-                    </Text>
+                        ]}>
+                          {day}
+                        </Text>
+                      </View>
+                    ))}
                   </View>
-                ))}
-              </View>
-            ) : (
-              <Text style={styles.dateText}>
+                ) : (
+                  <Text style={styles.dateText}>
                     {new Date(reminder.date).toLocaleDateString()} {t('common.at')} {reminder.time}
-              </Text>
-            )}
+                  </Text>
+                )}
 
-            <View style={styles.notificationsContainer}>
+                <View style={styles.notificationsContainer}>
                   {reminder.notificationTimes.map((time, index) => (
-                <View key={index} style={styles.notificationChip}>
-                  <Bell size={14} color="#9333ea" />
-                  <Text style={styles.notificationTime}>{time}</Text>
-                </View>
-              ))}
+                    <View key={index} style={styles.notificationChip}>
+                      <Bell size={14} color="#9333ea" />
+                      <Text style={styles.notificationTime}>{time}</Text>
+                    </View>
+                  ))}
                 </View>
                 
                 <View style={styles.reminderActions}>
@@ -1333,5 +1418,35 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginTop: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 6,
+  },
+  filterButton: {
+    flex: 1,
+    padding: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  filterButtonActive: {
+    backgroundColor: 'rgba(147, 51, 234, 0.4)',
+    borderColor: 'rgba(147, 51, 234, 0.6)',
+    borderWidth: 1,
+  },
+  filterButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#ffffff',
+    opacity: 0.7,
+  },
+  filterButtonTextActive: {
+    color: '#ffffff',
+    opacity: 1,
   },
 });
