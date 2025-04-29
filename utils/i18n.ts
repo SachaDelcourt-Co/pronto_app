@@ -98,6 +98,8 @@ const resources = {
           appInfo: 'Infos de l\'app',
           version: 'Version:',
           contactSupport: 'Contacter le support',
+          supportEmail: 'Pour toute assistance, contactez: prontoapp.info@gmail.com',
+          editMotivations: 'Modifier mes motivations',
           logOut: 'Se déconnecter'
         }
       },
@@ -360,6 +362,8 @@ const resources = {
           appInfo: 'App Info',
           version: 'Version:',
           contactSupport: 'Contact Support',
+          supportEmail: 'For any assistance, contact: prontoapp.info@gmail.com',
+          editMotivations: 'Edit my motivations',
           logOut: 'Log Out'
         }
       },

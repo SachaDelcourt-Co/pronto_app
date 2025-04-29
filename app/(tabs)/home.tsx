@@ -11,6 +11,8 @@ import { useAuth } from '@/utils/AuthContext';
 import { useFocusEffect, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { saveLanguagePreference } from '@/utils/i18n';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '@/utils/firebase';
 
 // Add Badge component at the top after imports
 const Badge = ({ children }: { children: React.ReactNode }) => (
@@ -42,6 +44,9 @@ export default function HomePage() {
   const [expandedReminders, setExpandedReminders] = useState(false);
   const [showReminderDetails, setShowReminderDetails] = useState(false);
   const [selectedReminder, setSelectedReminder] = useState<Reminder | null>(null);
+  const [showEditMotivations, setShowEditMotivations] = useState(false);
+  const [selectedMotivations, setSelectedMotivations] = useState<("sport" | "business" | "studies" | "wellbeing" | "parenting" | "personalDevelopment" | "financialManagement")[]>([]);
+  const [isSavingMotivations, setIsSavingMotivations] = useState(false);
 
   // Add a more aggressive refresh when tab is focused
   useFocusEffect(
@@ -573,10 +578,6 @@ export default function HomePage() {
 
               {/* Profile Section */}
               <View style={styles.profileSection}>
-                <Image
-                  source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=80' }}
-                  style={styles.profileImage}
-                />
                 <Text style={styles.profileName}>{user?.name || 'User'}</Text>
                 <Text style={styles.profileEmail}>{user?.email}</Text>
               </View>
@@ -666,6 +667,12 @@ export default function HomePage() {
                     </View>
                   </View>
                 )}
+                <TouchableOpacity 
+                  style={styles.editMotivationsButton}
+                  onPress={handleOpenEditMotivations}
+                >
+                  <Text style={styles.editMotivationsButtonText}>{t('home.menu.editMotivations')}</Text>
+                </TouchableOpacity>
               </View>
 
               {/* App Version and Support */}
@@ -675,17 +682,7 @@ export default function HomePage() {
                   <Text style={styles.infoLabel}>{t('home.menu.version')}:</Text>
                   <Text style={styles.infoValue}>1.0.0</Text>
                 </View>
-                <TouchableOpacity 
-                  style={styles.supportButton}
-                  onPress={() => {
-                    setShowMenu(false);
-                    // Navigate to support or open support chat
-                    // router.push('/support');
-                    alert('Support feature coming soon!');
-                  }}
-                >
-                  <Text style={styles.supportButtonText}>{t('home.menu.contactSupport')}</Text>
-                </TouchableOpacity>
+                <Text style={styles.supportEmailText}>{t('home.menu.supportEmail')}</Text>
               </View>
 
               {/* Logout Button */}
@@ -986,6 +983,147 @@ export default function HomePage() {
     );
   };
 
+  // Add a function to handle opening the edit motivations modal
+  const handleOpenEditMotivations = () => {
+    if (user && user.motivations) {
+      setSelectedMotivations(user.motivations);
+    } else {
+      setSelectedMotivations([]);
+    }
+    setShowEditMotivations(true);
+    setShowMenu(false);
+  };
+  
+  // Add a function to save updated motivations
+  const handleSaveMotivations = async () => {
+    if (!authUser || !user) return;
+    
+    try {
+      setIsSavingMotivations(true);
+      
+      // Update user in database with new motivations
+      const updatedUser = {
+        ...user,
+        motivations: selectedMotivations
+      };
+      
+      // Using Firebase directly since we don't have an update method in DatabaseService
+      const userDocRef = doc(db, 'users', authUser.uid);
+      await updateDoc(userDocRef, { motivations: selectedMotivations });
+      
+      // Update local user state
+      setUser(updatedUser);
+      
+      // Close the modal
+      setShowEditMotivations(false);
+    } catch (error) {
+      console.error('Error saving motivations:', error);
+      // Show an alert to inform the user about the error
+      alert('Failed to save motivations. Please try again.');
+    } finally {
+      setIsSavingMotivations(false);
+    }
+  };
+  
+  // Add a function to toggle a motivation
+  const toggleMotivation = (motivation: "sport" | "business" | "studies" | "wellbeing" | "parenting" | "personalDevelopment" | "financialManagement") => {
+    setSelectedMotivations(prev => {
+      // If already selected, remove it
+      if (prev.includes(motivation)) {
+        return prev.filter(m => m !== motivation);
+      }
+      
+      // If we already have 2 motivations and trying to add another, limit to 2
+      if (prev.length >= 2) {
+        return [...prev.slice(0, 1), motivation]; // Keep first and add new one
+      }
+      
+      // Otherwise add it
+      return [...prev, motivation];
+    });
+  };
+  
+  // Add the Motivations editing modal
+  const renderEditMotivationsModal = () => {
+    if (!showEditMotivations) return null;
+    
+    const motivationOptions = [
+      { key: 'sport', icon: '🏃‍♂️' },
+      { key: 'business', icon: '💼' },
+      { key: 'studies', icon: '📚' },
+      { key: 'wellbeing', icon: '🧘‍♀️' },
+      { key: 'parenting', icon: '👨‍👩‍👧‍👦' },
+      { key: 'personalDevelopment', icon: '🌱' },
+      { key: 'financialManagement', icon: '💰' },
+    ] as const;
+    
+    return (
+      <Modal
+        visible={showEditMotivations}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowEditMotivations(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[
+            styles.modalContent,
+            dimensions.width > 768 ? { maxWidth: 600 } : { width: '92%' }
+          ]}>
+            <View style={styles.modalHeader}>
+              <View style={styles.modalHeaderLeft}>
+                <Text style={styles.modalTitle}>{t('login.selectMotivations')}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowEditMotivations(false)}
+              >
+                <X size={20} color="#ffffff" />
+              </TouchableOpacity>
+            </View>
+            
+            <Text style={styles.motivationsHint}>({t('login.selectMotivationsRequired')})</Text>
+            
+            <View style={styles.motivationsGrid}>
+              {motivationOptions.map(({ key, icon }) => (
+                <TouchableOpacity
+                  key={key}
+                  style={[
+                    styles.motivationOption,
+                    selectedMotivations.includes(key) && styles.motivationOptionSelected
+                  ]}
+                  onPress={() => toggleMotivation(key)}
+                >
+                  <Text style={styles.motivationOptionIcon}>{icon}</Text>
+                  <Text style={[
+                    styles.motivationOptionText,
+                    selectedMotivations.includes(key) && styles.motivationOptionTextSelected
+                  ]}>
+                    {t(`motivations.${key}`)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            
+            <TouchableOpacity
+              style={[
+                styles.saveMotivationsButton,
+                selectedMotivations.length === 0 && styles.disabledButton
+              ]}
+              disabled={selectedMotivations.length === 0 || isSavingMotivations}
+              onPress={handleSaveMotivations}
+            >
+              {isSavingMotivations ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <Text style={styles.saveMotivationsButtonText}>{t('common.save')}</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -1046,6 +1184,7 @@ export default function HomePage() {
         {renderMenu()}
         {renderAppointmentDetail()}
         {renderReminderDetail()}
+        {renderEditMotivationsModal()}
       </LinearGradient>
     </View>
   );
@@ -1726,17 +1865,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 12,
   },
-  supportButton: {
-    backgroundColor: '#9333ea',
-    borderRadius: 8,
-    padding: 12,
+  supportEmailText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#d1d5db',
     marginTop: 12,
-  },
-  supportButtonText: {
-    color: '#ffffff',
-    fontWeight: '600',
-    fontSize: 16,
-    textAlign: 'center',
   },
   logoutButton: {
     backgroundColor: '#9333ea',
@@ -1762,7 +1895,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.3)',
     borderRadius: 8,
-    flex: 1,
+    minWidth: '45%', 
+    marginBottom: 8,
     alignItems: 'center',
   },
   languageOptionSelected: {
@@ -1787,5 +1921,68 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#ffffff',
     fontWeight: '500',
+  },
+  editMotivationsButton: {
+    backgroundColor: '#9333ea',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 12,
+  },
+  editMotivationsButtonText: {
+    color: '#ffffff',
+    fontWeight: '600',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  motivationsHint: {
+    fontSize: 12,
+    color: '#d1d5db',
+    marginBottom: 16,
+  },
+  motivationsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  motivationOption: {
+    padding: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 8,
+    minWidth: '45%', 
+    marginBottom: 8,
+    alignItems: 'center',
+  },
+  motivationOptionSelected: {
+    backgroundColor: '#9333ea',
+    borderColor: '#9333ea',
+  },
+  motivationOptionIcon: {
+    fontSize: 18,
+    marginBottom: 4,
+  },
+  motivationOptionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  motivationOptionTextSelected: {
+    color: '#ffffff',
+  },
+  saveMotivationsButton: {
+    backgroundColor: '#9333ea',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 16,
+  },
+  disabledButton: {
+    backgroundColor: 'rgba(147, 51, 234, 0.3)',
+  },
+  saveMotivationsButtonText: {
+    color: '#ffffff',
+    fontWeight: '600',
+    fontSize: 16,
+    textAlign: 'center',
   },
 }); 
