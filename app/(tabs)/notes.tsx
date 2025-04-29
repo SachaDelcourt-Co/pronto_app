@@ -357,20 +357,28 @@ export default function NotesScreen() {
     setShowViewNoteModal(true);
   };
 
-  const handleToggleCheckbox = (line: string) => {
+  const handleToggleCheckbox = async (line: string) => {
     if (viewingNote && viewingNote.noteID) {
       const updatedContent = toggleCheckbox(viewingNote.content, line);
       
-      // Update note in database
-      DatabaseService.updateNote(viewingNote.noteID, {
-        content: updatedContent
-      });
-      
-      // Update local state
-      setViewingNote({
-        ...viewingNote,
-        content: updatedContent
-      });
+      try {
+        // Update note in database
+        await DatabaseService.updateNote(viewingNote.noteID, {
+          content: updatedContent
+        });
+        
+        // Update local state with the updated note and current timestamp
+        setViewingNote({
+          ...viewingNote,
+          content: updatedContent,
+          updatedAt: new Date() // Update the timestamp to reflect the change
+        });
+        
+        // Refresh notes list to show updated content in the note preview
+        loadData();
+      } catch (error) {
+        console.error('Error updating checkbox state:', error);
+      }
     }
   };
 
