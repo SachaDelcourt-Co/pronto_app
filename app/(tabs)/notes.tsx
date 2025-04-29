@@ -67,6 +67,51 @@ const toggleCheckbox = (text: string, line: string): string => {
   );
 };
 
+// Add a helper function to render note preview with checkboxes near the renderNoteWithCheckboxes function
+const renderNotePreview = (content: string) => {
+  if (!content) return null;
+  
+  // Split content by lines
+  const lines = content.split('\n');
+  
+  // Join first 3 lines with properly rendered checkboxes
+  return lines.slice(0, 3).map((line, index) => {
+    // Check if the line matches checkbox pattern
+    const match = /^(\s*)- \[([ x])\] (.*)$/.exec(line);
+    
+    if (match) {
+      const [_, indentation, checkState, text] = match;
+      const isChecked = checkState === 'x';
+      
+      return (
+        <View key={index} style={styles.previewCheckboxLine}>
+          {isChecked ? (
+            <CheckSquare size={14} color="#9333ea" />
+          ) : (
+            <Square size={14} color="#9333ea" />
+          )}
+          <Text 
+            style={[
+              styles.previewCheckboxText,
+              isChecked && styles.previewCheckedText
+            ]}
+            numberOfLines={1}
+          >
+            {text}
+          </Text>
+        </View>
+      );
+    } else {
+      // Return regular text for non-checkbox lines
+      return (
+        <Text key={index} style={styles.noteContent} numberOfLines={1}>
+          {line}
+        </Text>
+      );
+    }
+  });
+};
+
 export default function NotesScreen() {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
@@ -379,6 +424,7 @@ export default function NotesScreen() {
               multiline
               textAlignVertical="top"
             />
+            <Text style={styles.markdownHint}>* {t('notes.markdownHint')}</Text>
 
             <View style={styles.folderSelector}>
               <Text style={styles.folderSelectorLabel}>{t('notes.selectFolder')}:</Text>
@@ -484,6 +530,7 @@ export default function NotesScreen() {
               multiline
               textAlignVertical="top"
             />
+            <Text style={styles.markdownHint}>* {t('notes.markdownHint')}</Text>
 
             <View style={styles.folderSelector}>
               <Text style={styles.folderSelectorLabel}>{t('notes.selectFolder')}:</Text>
@@ -804,9 +851,9 @@ export default function NotesScreen() {
               <Text style={styles.noteTitle}>{note.title}</Text>
             </View>
 
-            <Text style={styles.noteContent} numberOfLines={3}>
-              {note.content}
-            </Text>
+            <View style={styles.noteContentPreview}>
+              {renderNotePreview(note.content)}
+            </View>
 
             <View style={styles.noteFooter}>
               <View style={styles.timestampContainer}>
@@ -1367,5 +1414,30 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     fontSize: 12,
     marginLeft: 4,
+  },
+  markdownHint: {
+    fontSize: 12,
+    color: '#6b7280',
+    fontStyle: 'italic',
+    marginBottom: 16,
+    marginTop: -10,
+  },
+  previewCheckboxLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 2,
+  },
+  previewCheckboxText: {
+    fontSize: 14,
+    color: '#4b5563',
+    marginLeft: 6,
+    flex: 1,
+  },
+  previewCheckedText: {
+    textDecorationLine: 'line-through',
+    color: '#9ca3af',
+  },
+  noteContentPreview: {
+    marginBottom: 12,
   },
 });
