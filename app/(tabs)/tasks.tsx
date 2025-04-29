@@ -26,6 +26,8 @@ export default function TasksScreen() {
   const [showResetConfirmation, setShowResetConfirmation] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const [taskToReset, setTaskToReset] = useState<Task | null>(null);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   // Refresh tasks when the tab is focused
   useFocusEffect(
@@ -96,26 +98,53 @@ export default function TasksScreen() {
         return;
       }
       
-      await DatabaseService.createTask({
-        userID: user.uid,
-        taskName: newTaskName.trim(),
-        description: newTaskDescription.trim() || null,
-        daysSelected: selectedDays,
-      });
+      if (isEditMode && editingTask && editingTask.taskID) {
+        // Update existing task
+        await updateDoc(doc(db, 'tasks', editingTask.taskID), {
+          taskName: newTaskName.trim(),
+          description: newTaskDescription.trim() || null,
+          daysSelected: selectedDays,
+          updatedAt: new Date()
+        });
+      } else {
+        // Create new task
+        await DatabaseService.createTask({
+          userID: user.uid,
+          taskName: newTaskName.trim(),
+          description: newTaskDescription.trim() || null,
+          daysSelected: selectedDays,
+        });
+      }
       
       // Reset form and close modal
       setNewTaskName('');
       setNewTaskDescription('');
       setSelectedDays(3);
       setIsModalVisible(false);
+      setIsEditMode(false);
+      setEditingTask(null);
       
       // Reload tasks
       await loadTasks();
     } catch (error) {
-      console.error('Error creating task:', error);
+      console.error('Error with task:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEditTask = (task: Task) => {
+    // Set form values
+    setNewTaskName(task.taskName);
+    setNewTaskDescription(task.description || '');
+    setSelectedDays(task.daysSelected);
+    
+    // Set editing state
+    setEditingTask(task);
+    setIsEditMode(true);
+    
+    // Show modal
+    setIsModalVisible(true);
   };
 
   const handleDeleteTask = async (taskId: string) => {
@@ -204,15 +233,31 @@ export default function TasksScreen() {
         visible={isModalVisible}
         transparent
         animationType="fade"
-        onRequestClose={() => setIsModalVisible(false)}
+        onRequestClose={() => {
+          setIsModalVisible(false);
+          setIsEditMode(false);
+          setEditingTask(null);
+          setNewTaskName('');
+          setNewTaskDescription('');
+          setSelectedDays(3);
+        }}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t('tasks.createTask')}</Text>
+              <Text style={styles.modalTitle}>
+                {isEditMode ? t('tasks.editTask') : t('tasks.createTask')}
+              </Text>
               <TouchableOpacity
                 style={styles.modalCloseButton}
-                onPress={() => setIsModalVisible(false)}
+                onPress={() => {
+                  setIsModalVisible(false);
+                  setIsEditMode(false);
+                  setEditingTask(null);
+                  setNewTaskName('');
+                  setNewTaskDescription('');
+                  setSelectedDays(3);
+                }}
               >
                 <X size={20} color="#ffffff" />
               </TouchableOpacity>
@@ -274,7 +319,7 @@ export default function TasksScreen() {
               disabled={loading || !newTaskName.trim()}
             >
               <Text style={styles.createButtonText}>
-                {loading ? t('tasks.creating') : t('tasks.create')}
+                {loading ? t('tasks.loading') : isEditMode ? t('tasks.save') : t('tasks.create')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -428,6 +473,14 @@ export default function TasksScreen() {
                     ) : null}
                   </View>
                   <View style={styles.taskActions}>
+                    {/* Edit button */}
+                    <TouchableOpacity
+                      style={styles.editButton}
+                      onPress={() => handleEditTask(task)}
+                    >
+                      <Edit3 size={18} color="#9333ea" />
+                    </TouchableOpacity>
+                  
                     {/* Only show reset button for fully completed tasks */}
                     {isFullyCompleted && (
                       <TouchableOpacity
@@ -841,5 +894,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
     color: '#ffffff',
+  },
+  editButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(147, 51, 234, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(147, 51, 234, 0.3)',
   },
 }); 
