@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal, TextInput, ActivityIndicator, Switch } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Bell, Calendar as CalendarIcon, Plus, ChevronRight, X, Edit, Trash2, Save, Check } from 'lucide-react-native';
+import { Bell, Calendar as CalendarIcon, Plus, ChevronRight, X, Edit, Trash2, Save, Check, Clock } from 'lucide-react-native';
 import { Calendar } from 'react-native-calendars';
 import { useAuth } from '@/utils/AuthContext';
 import { DatabaseService } from '@/services/database';
@@ -10,6 +10,7 @@ import { useFocusEffect } from 'expo-router';
 import { parseLocalDate, formatLocalDate } from '@/utils/dateUtils';
 import * as Notifications from 'expo-notifications';
 import { useTranslation } from 'react-i18next';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 // Register for push notifications
 Notifications.setNotificationHandler({
@@ -46,6 +47,13 @@ export default function RemindersScreen() {
   const [notificationTimes, setNotificationTimes] = useState<string[]>(['09:00']);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isActive, setIsActive] = useState(true);
+  
+  // Date and time picker states
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showNotificationTimePicker, setShowNotificationTimePicker] = useState(false);
+  const [editingNotificationIndex, setEditingNotificationIndex] = useState(-1);
+  const [pickerDate, setPickerDate] = useState(new Date());
   
   // Delete confirmation
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
@@ -268,6 +276,15 @@ export default function RemindersScreen() {
     const date = reminder?.date ? new Date(reminder.date) : new Date();
     setReminderDate(date);
     setReminderDateInput(formatLocalDate(date));
+    setPickerDate(date);
+    
+    // Parse the time string to set the pickerDate's hours and minutes
+    if (reminder?.time) {
+      const [hours, minutes] = reminder.time.split(':').map(Number);
+      const timeDate = new Date();
+      timeDate.setHours(hours, minutes, 0, 0);
+      setPickerDate(timeDate);
+    }
     
     setReminderTime(reminder?.time || '09:00');
     setIsRecurring(reminder?.isRecurring || false);
@@ -544,6 +561,43 @@ export default function RemindersScreen() {
     } catch (error) {
       console.error('Error toggling reminder active state:', error);
     }
+  };
+
+  // Handle date change from DateTimePicker
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      setReminderDate(selectedDate);
+      setReminderDateInput(formatLocalDate(selectedDate));
+      setPickerDate(selectedDate);
+    }
+  };
+
+  // Handle time change from DateTimePicker
+  const handleTimeChange = (event: any, selectedDate?: Date) => {
+    setShowTimePicker(false);
+    if (selectedDate) {
+      const hours = selectedDate.getHours();
+      const minutes = selectedDate.getMinutes();
+      setReminderTime(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`);
+      setPickerDate(selectedDate);
+    }
+  };
+
+  // Handle notification time change from DateTimePicker
+  const handleNotificationTimeChange = (event: any, selectedDate?: Date) => {
+    setShowNotificationTimePicker(false);
+    if (selectedDate && editingNotificationIndex >= 0) {
+      const hours = selectedDate.getHours();
+      const minutes = selectedDate.getMinutes();
+      const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+      
+      // Update the notification time at the specified index
+      const newTimes = [...notificationTimes];
+      newTimes[editingNotificationIndex] = timeString;
+      setNotificationTimes(newTimes);
+    }
+    setEditingNotificationIndex(-1);
   };
 
   return (
@@ -868,24 +922,29 @@ export default function RemindersScreen() {
               </View>
 
               {/* Always show date field, for both recurring and non-recurring reminders */}
-              <Text style={styles.inputLabel}>
-                {isRecurring ? t('reminders.date') : t('reminders.date')}
-              </Text>
-              <TextInput
-                style={styles.dateInput}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor="#999999"
-                value={reminderDateInput}
-                onChangeText={(text) => {
-                  setReminderDateInput(text);
-                  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
-                    const date = parseLocalDate(text);
-                    if (!isNaN(date.getTime())) {
-                      setReminderDate(date);
-                    }
-                  }
+              <Text style={styles.inputLabel}>{t('reminders.date')}</Text>
+              <TouchableOpacity 
+                style={styles.datePickerButton}
+                onPress={() => {
+                  // Set pickDate to reminderDate first
+                  setPickerDate(reminderDate);
+                  setShowDatePicker(true);
                 }}
-              />
+              >
+                <CalendarIcon size={18} color="#9333ea" />
+                <Text style={styles.datePickerButtonText}>
+                  {formatLocalDate(reminderDate)}
+                </Text>
+              </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={pickerDate}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={handleDateChange}
+                  minimumDate={new Date()}
+                />
+              )}
 
               {isRecurring && (
                 <View style={styles.recurringContainer}>
@@ -913,24 +972,51 @@ export default function RemindersScreen() {
               )}
 
               <Text style={styles.inputLabel}>{t('reminders.time')}</Text>
-              <TextInput
-                style={styles.timeInput}
-                placeholder="HH:MM"
-                placeholderTextColor="#999999"
-                value={reminderTime}
-                onChangeText={setReminderTime}
-              />
+              <TouchableOpacity 
+                style={styles.timePickerButton}
+                onPress={() => {
+                  // Create a new date with current time
+                  const timeDate = new Date();
+                  // Parse the reminderTime string to set hours and minutes
+                  const [hours, minutes] = reminderTime.split(':').map(Number);
+                  timeDate.setHours(hours, minutes, 0, 0);
+                  setPickerDate(timeDate);
+                  setShowTimePicker(true);
+                }}
+              >
+                <Clock size={18} color="#9333ea" />
+                <Text style={styles.timePickerButtonText}>
+                  {reminderTime}
+                </Text>
+              </TouchableOpacity>
+              {showTimePicker && (
+                <DateTimePicker
+                  value={pickerDate}
+                  mode="time"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={handleTimeChange}
+                />
+              )}
 
               <Text style={styles.inputLabel}>{t('reminders.notificationTimes')}</Text>
               {notificationTimes.map((time, index) => (
                 <View key={index} style={styles.notificationTimeRow}>
-                  <TextInput
-                    style={styles.notificationTimeInput}
-                    placeholder="HH:MM"
-                    placeholderTextColor="#999999"
-                    value={time}
-                    onChangeText={(newTime) => updateNotificationTime(index, newTime)}
-                  />
+                  <TouchableOpacity 
+                    style={styles.notificationTimeButton}
+                    onPress={() => {
+                      // Create a new date with the notification time
+                      const timeDate = new Date();
+                      const [hours, minutes] = time.split(':').map(Number);
+                      timeDate.setHours(hours, minutes, 0, 0);
+                      setPickerDate(timeDate);
+                      setEditingNotificationIndex(index);
+                      setShowNotificationTimePicker(true);
+                    }}
+                  >
+                    <Clock size={18} color="#9333ea" />
+                    <Text style={styles.notificationTimeText}>{time}</Text>
+                  </TouchableOpacity>
+                  
                   {notificationTimes.length > 1 && (
                     <TouchableOpacity
                       style={styles.removeTimeButton}
@@ -941,6 +1027,15 @@ export default function RemindersScreen() {
                   )}
                 </View>
               ))}
+              {showNotificationTimePicker && (
+                <DateTimePicker
+                  value={pickerDate}
+                  mode="time"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={handleNotificationTimeChange}
+                />
+              )}
+
               <TouchableOpacity
                 style={styles.addTimeButton}
                 onPress={addNotificationTime}
@@ -1405,56 +1500,56 @@ const styles = StyleSheet.create({
   recurringContainer: {
     marginTop: 12,
   },
-  dateInput: {
+  datePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#f9fafb',
     borderWidth: 1,
     borderColor: '#e5e7eb',
     borderRadius: 8,
     padding: 12,
-    fontSize: 16,
-    color: '#1f2937',
   },
-  timeInput: {
+  datePickerButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginLeft: 8,
+  },
+  timePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#f9fafb',
     borderWidth: 1,
     borderColor: '#e5e7eb',
     borderRadius: 8,
     padding: 12,
+  },
+  timePickerButtonText: {
     fontSize: 16,
+    fontWeight: '600',
     color: '#1f2937',
+    marginLeft: 8,
   },
   notificationTimeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
   },
-  notificationTimeInput: {
-    backgroundColor: '#f9fafb',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: '#1f2937',
-    flex: 1,
-  },
-  removeTimeButton: {
-    padding: 8,
-    marginLeft: 8,
-  },
-  addTimeButton: {
+  notificationTimeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: 'rgba(147, 51, 234, 0.1)',
     padding: 12,
     borderRadius: 8,
-    marginTop: 8,
+    gap: 4,
   },
-  addTimeButtonText: {
-    fontSize: 14,
+  notificationTimeText: {
+    fontSize: 16,
     fontWeight: '600',
     color: '#9333ea',
+  },
+  removeTimeButton: {
+    padding: 8,
     marginLeft: 8,
   },
   saveButton: {
@@ -1559,5 +1654,18 @@ const styles = StyleSheet.create({
   filterButtonTextActive: {
     color: '#ffffff',
     opacity: 1,
+  },
+  addTimeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(147, 51, 234, 0.1)',
+    padding: 12,
+    borderRadius: 8,
+    gap: 4,
+  },
+  addTimeButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#9333ea',
   },
 });

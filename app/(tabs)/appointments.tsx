@@ -9,6 +9,7 @@ import type { Appointment } from '@/types/database';
 import { useFocusEffect, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function AppointmentsScreen() {
   const { t, i18n } = useTranslation();
@@ -41,6 +42,12 @@ export default function AppointmentsScreen() {
   const [appointmentEndTime, setAppointmentEndTime] = useState('10:00');
   const [appointmentAddress, setAppointmentAddress] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Date and time picker states
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
+  const [showEndTimePicker, setShowEndTimePicker] = useState(false);
+  const [pickerDate, setPickerDate] = useState(new Date());
   
   // Delete confirmation
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
@@ -87,6 +94,15 @@ export default function AppointmentsScreen() {
     const date = appointment?.date ? new Date(appointment.date) : new Date();
     setAppointmentDate(date);
     setAppointmentDateInput(formatLocalDate(date));
+    setPickerDate(date);
+    
+    // Parse start time
+    if (appointment?.startTime) {
+      const [hours, minutes] = appointment.startTime.split(':').map(Number);
+      const timeDate = new Date(date);
+      timeDate.setHours(hours, minutes, 0, 0);
+      setPickerDate(timeDate);
+    }
     
     setAppointmentStartTime(appointment?.startTime || '09:00');
     setAppointmentEndTime(appointment?.endTime || '10:00');
@@ -547,6 +563,37 @@ export default function AppointmentsScreen() {
            date.getFullYear() === today.getFullYear();
   };
 
+  // Handle date change from DateTimePicker
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      setAppointmentDate(selectedDate);
+      setAppointmentDateInput(formatLocalDate(selectedDate));
+      setPickerDate(selectedDate);
+    }
+  };
+
+  // Handle start time change from DateTimePicker
+  const handleStartTimeChange = (event: any, selectedDate?: Date) => {
+    setShowStartTimePicker(false);
+    if (selectedDate) {
+      const hours = selectedDate.getHours();
+      const minutes = selectedDate.getMinutes();
+      setAppointmentStartTime(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`);
+      setPickerDate(selectedDate);
+    }
+  };
+
+  // Handle end time change from DateTimePicker
+  const handleEndTimeChange = (event: any, selectedDate?: Date) => {
+    setShowEndTimePicker(false);
+    if (selectedDate) {
+      const hours = selectedDate.getHours();
+      const minutes = selectedDate.getMinutes();
+      setAppointmentEndTime(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -911,48 +958,84 @@ export default function AppointmentsScreen() {
               />
 
               <Text style={styles.inputLabel}>{t('appointments.date')}</Text>
-              <View style={styles.datePickerContainer}>
-                <TextInput
-                  style={styles.dateInput}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor="#999999"
-                  value={appointmentDateInput}
-                  onChangeText={(text) => {
-                    // Always update the text input
-                    setAppointmentDateInput(text);
-                    
-                    // Only try to parse complete dates with the right format
-                    if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
-                      const date = parseLocalDate(text);
-                      if (!isNaN(date.getTime())) {
-                        setAppointmentDate(date);
-                      }
-                    }
-                  }}
+              <TouchableOpacity 
+                style={styles.datePickerButton}
+                onPress={() => {
+                  // Set pickDate to appointmentDate first
+                  setPickerDate(appointmentDate);
+                  setShowDatePicker(true);
+                }}
+              >
+                <CalendarIcon size={18} color="#9333ea" />
+                <Text style={styles.datePickerButtonText}>
+                  {formatLocalDate(appointmentDate)}
+                </Text>
+              </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={pickerDate}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={handleDateChange}
+                  minimumDate={new Date()}
                 />
-              </View>
+              )}
 
               <View style={styles.timeInputRow}>
                 <View style={styles.timeInputContainer}>
                   <Text style={styles.inputLabel}>{t('appointments.startTime')}</Text>
-                  <TextInput
-                    style={styles.timeInput}
-                    placeholder="HH:MM"
-                    placeholderTextColor="#999999"
-                    value={appointmentStartTime}
-                    onChangeText={setAppointmentStartTime}
-                  />
+                  <TouchableOpacity 
+                    style={styles.timePickerButton}
+                    onPress={() => {
+                      // Create a new date with start time
+                      const timeDate = new Date(appointmentDate);
+                      const [hours, minutes] = appointmentStartTime.split(':').map(Number);
+                      timeDate.setHours(hours, minutes, 0, 0);
+                      setPickerDate(timeDate);
+                      setShowStartTimePicker(true);
+                    }}
+                  >
+                    <Clock size={18} color="#9333ea" />
+                    <Text style={styles.timePickerButtonText}>
+                      {appointmentStartTime}
+                    </Text>
+                  </TouchableOpacity>
+                  {showStartTimePicker && (
+                    <DateTimePicker
+                      value={pickerDate}
+                      mode="time"
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      onChange={handleStartTimeChange}
+                    />
+                  )}
                 </View>
 
                 <View style={styles.timeInputContainer}>
                   <Text style={styles.inputLabel}>{t('appointments.endTime')}</Text>
-                  <TextInput
-                    style={styles.timeInput}
-                    placeholder="HH:MM"
-                    placeholderTextColor="#999999"
-                    value={appointmentEndTime}
-                    onChangeText={setAppointmentEndTime}
-                  />
+                  <TouchableOpacity 
+                    style={styles.timePickerButton}
+                    onPress={() => {
+                      // Create a new date with end time
+                      const timeDate = new Date(appointmentDate);
+                      const [hours, minutes] = appointmentEndTime.split(':').map(Number);
+                      timeDate.setHours(hours, minutes, 0, 0);
+                      setPickerDate(timeDate);
+                      setShowEndTimePicker(true);
+                    }}
+                  >
+                    <Clock size={18} color="#9333ea" />
+                    <Text style={styles.timePickerButtonText}>
+                      {appointmentEndTime}
+                    </Text>
+                  </TouchableOpacity>
+                  {showEndTimePicker && (
+                    <DateTimePicker
+                      value={pickerDate}
+                      mode="time"
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      onChange={handleEndTimeChange}
+                    />
+                  )}
                 </View>
               </View>
 
@@ -1511,17 +1594,20 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     height: 100,
   },
-  datePickerContainer: {
+  datePickerButton: {
     backgroundColor: '#f9fafb',
     borderWidth: 1,
     borderColor: '#e5e7eb',
     borderRadius: 8,
-    overflow: 'hidden',
-  },
-  dateInput: {
     padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  datePickerButtonText: {
     fontSize: 16,
+    fontWeight: '600',
     color: '#1f2937',
+    marginLeft: 8,
   },
   timeInputRow: {
     flexDirection: 'row',
@@ -1531,14 +1617,20 @@ const styles = StyleSheet.create({
   timeInputContainer: {
     flex: 1,
   },
-  timeInput: {
+  timePickerButton: {
     backgroundColor: '#f9fafb',
     borderWidth: 1,
     borderColor: '#e5e7eb',
     borderRadius: 8,
     padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  timePickerButtonText: {
     fontSize: 16,
+    fontWeight: '600',
     color: '#1f2937',
+    marginLeft: 8,
   },
   saveButton: {
     backgroundColor: '#9333ea',
