@@ -502,6 +502,50 @@ export default function RemindersScreen() {
     setActiveFilter(filter);
   };
 
+  // Add a function to toggle reminder active status
+  const toggleReminderActive = async (reminder: Reminder, e: any) => {
+    // Stop event propagation to prevent opening the reminder edit modal
+    e.stopPropagation();
+    
+    if (!reminder.reminderID) return;
+    
+    try {
+      // Toggle the active state
+      const newActiveState = !reminder.active;
+      
+      // Update in database
+      await DatabaseService.updateReminder(reminder.reminderID, {
+        active: newActiveState
+      });
+      
+      // Update local state by creating a new array with the updated reminder
+      setReminders(prevReminders => 
+        prevReminders.map(r => 
+          r.reminderID === reminder.reminderID 
+            ? { ...r, active: newActiveState } 
+            : r
+        )
+      );
+      
+      // Handle notifications based on the new state
+      if (newActiveState) {
+        // If activating, schedule notifications
+        await scheduleNotifications(reminder);
+      } else {
+        // If deactivating, cancel notifications
+        try {
+          if (reminder.reminderID) {
+            await Notifications.cancelScheduledNotificationAsync(reminder.reminderID);
+          }
+        } catch (error) {
+          console.log('Error canceling notifications:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling reminder active state:', error);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -594,12 +638,30 @@ export default function RemindersScreen() {
                 }}
               >
                 <View style={styles.reminderHeader}>
-                  <Bell size={20} color="#9333ea" />
-                  <Text style={styles.reminderName}>{reminder.reminderName}</Text>
-                  <View style={[
-                    styles.activeIndicator,
-                    reminder.active && styles.activeIndicatorOn
-                  ]} />
+                  <View style={styles.reminderTitleContainer}>
+                    <Bell size={20} color="#9333ea" />
+                    <Text style={styles.reminderName}>{reminder.reminderName}</Text>
+                  </View>
+                  
+                  <TouchableOpacity
+                    style={[
+                      styles.activeIndicatorContainer,
+                      reminder.active ? styles.activeContainerOn : styles.activeContainerOff
+                    ]}
+                    onPress={(e) => toggleReminderActive(reminder, e)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[
+                      styles.activeIndicator,
+                      reminder.active ? styles.activeIndicatorOn : styles.activeIndicatorOff
+                    ]} />
+                    <Text style={[
+                      styles.activeText,
+                      reminder.active ? styles.activeTextOn : styles.activeTextOff
+                    ]}>
+                      {reminder.active ? t('reminders.active') : t('reminders.inactive')}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
 
                 {reminder.isRecurring ? (
@@ -1023,14 +1085,41 @@ const styles = StyleSheet.create({
   reminderHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 12,
+  },
+  reminderTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
   },
   reminderName: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1f2937',
     flex: 1,
-    marginLeft: 12,
+  },
+  activeIndicatorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
+    minWidth: 100,
+    justifyContent: 'center',
   },
   activeIndicator: {
     width: 12,
@@ -1040,6 +1129,28 @@ const styles = StyleSheet.create({
   },
   activeIndicatorOn: {
     backgroundColor: '#22c55e',
+  },
+  activeIndicatorOff: {
+    backgroundColor: '#ef4444',
+  },
+  activeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#9ca3af',
+  },
+  activeTextOn: {
+    color: '#22c55e',
+  },
+  activeTextOff: {
+    color: '#ef4444',
+  },
+  activeContainerOn: {
+    backgroundColor: 'rgba(34, 197, 94, 0.12)',
+    borderColor: 'rgba(34, 197, 94, 0.4)',
+  },
+  activeContainerOff: {
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    borderColor: 'rgba(239, 68, 68, 0.4)',
   },
   daysContainer: {
     flexDirection: 'row',
