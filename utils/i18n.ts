@@ -95,6 +95,8 @@ const resources = {
         editReminder: 'Modifier le rappel',
         notifications: 'Notifications',
         recurringOn: 'Récurrent le :',
+        calendar: 'Calendrier',
+        noItemsForDate: 'Aucun élément pour cette date',
         menu: {
           activitySummary: 'Résumé d\'activité',
           tasks: 'Tâches',
@@ -372,6 +374,8 @@ const resources = {
         editReminder: 'Edit Reminder',
         notifications: 'Notifications',
         recurringOn: 'Recurring on:',
+        calendar: 'Calendar',
+        noItemsForDate: 'No items for this date',
         menu: {
           activitySummary: 'Activity Summary',
           tasks: 'Tasks',
