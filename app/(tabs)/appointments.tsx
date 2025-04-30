@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal, TextInput, ActivityIndicator, FlatList } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Calendar as CalendarIcon, Clock, MapPin, Bell, Plus, ChevronRight, X, Edit, Trash2, ChevronLeft, Calendar as TodayIcon } from 'lucide-react-native';
+import { Calendar as CalendarIcon, Clock, MapPin, Bell, Plus, ChevronRight, X, Edit, Trash2, ChevronLeft, Calendar as TodayIcon, ChevronDown, Check } from 'lucide-react-native';
 import { Calendar } from 'react-native-calendars';
 import { useAuth } from '@/utils/AuthContext';
 import { DatabaseService } from '@/services/database';
@@ -48,6 +48,19 @@ export default function AppointmentsScreen() {
   // Show more in home
   const [expandedInHome, setExpandedInHome] = useState(false);
 
+  // New state for notification times
+  const [selectedNotifications, setSelectedNotifications] = useState<string[]>([]);
+  const [showNotificationPicker, setShowNotificationPicker] = useState(false);
+  
+  // Predefined notification options
+  const notificationOptions = [
+    { label: t('appointments.notificationOptions.fifteenMinutes'), value: '15min' },
+    { label: t('appointments.notificationOptions.oneHour'), value: '1h' },
+    { label: t('appointments.notificationOptions.threeHours'), value: '3h' },
+    { label: t('appointments.notificationOptions.oneDay'), value: '1d' },
+    { label: t('appointments.notificationOptions.twoDays'), value: '2d' },
+  ];
+
   // 1. Add state to track the visible month
   const formatLocalDate = (date: Date): string => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -91,6 +104,14 @@ export default function AppointmentsScreen() {
     setAppointmentStartTime(appointment?.startTime || '09:00');
     setAppointmentEndTime(appointment?.endTime || '10:00');
     setAppointmentAddress(appointment?.address || '');
+    
+    // Reset notification times
+    setSelectedNotifications(
+      appointment?.notificationTimes 
+        ? convertNotificationTimesToOptions(appointment.notificationTimes, appointment.date) 
+        : []
+    );
+    
     setIsEditMode(!!appointment);
   };
 
@@ -547,6 +568,94 @@ export default function AppointmentsScreen() {
            date.getFullYear() === today.getFullYear();
   };
 
+  // Helper function to convert Date objects to option values
+  const convertNotificationTimesToOptions = (notificationTimes: Date[], appointmentDate: Date): string[] => {
+    if (!notificationTimes || notificationTimes.length === 0) return [];
+    
+    // The appointment date/time
+    const appointmentDateTime = new Date(appointmentDate);
+    const [hours, minutes] = appointmentStartTime.split(':').map(Number);
+    appointmentDateTime.setHours(hours, minutes, 0, 0);
+    
+    return notificationTimes.map(notifTime => {
+      // Calculate time difference in minutes
+      const diffMs = appointmentDateTime.getTime() - notifTime.getTime();
+      const diffMinutes = Math.round(diffMs / 60000);
+      
+      if (diffMinutes === 15) return '15min';
+      if (diffMinutes === 60) return '1h';
+      if (diffMinutes === 180) return '3h';
+      if (diffMinutes === 1440) return '1d';
+      if (diffMinutes === 2880) return '2d';
+      
+      // Default fallback
+      return '1h';
+    });
+  };
+  
+  // Function to convert option values to Date objects
+  const convertOptionsToNotificationTimes = (options: string[], appointmentDate: Date): Date[] => {
+    // Create a date object with the appointment date and time
+    const appointmentDateTime = new Date(appointmentDate);
+    const [hours, minutes] = appointmentStartTime.split(':').map(Number);
+    appointmentDateTime.setHours(hours, minutes, 0, 0);
+    
+    return options.map(option => {
+      const notifTime = new Date(appointmentDateTime);
+      
+      // Subtract the appropriate amount of time based on the option
+      switch (option) {
+        case '15min':
+          notifTime.setMinutes(notifTime.getMinutes() - 15);
+          break;
+        case '1h':
+          notifTime.setHours(notifTime.getHours() - 1);
+          break;
+        case '3h':
+          notifTime.setHours(notifTime.getHours() - 3);
+          break;
+        case '1d':
+          notifTime.setDate(notifTime.getDate() - 1);
+          break;
+        case '2d':
+          notifTime.setDate(notifTime.getDate() - 2);
+          break;
+      }
+      
+      return notifTime;
+    });
+  };
+
+  // Toggle a notification option
+  const toggleNotificationOption = (value: string) => {
+    setSelectedNotifications(prevSelected => {
+      // If already selected, remove it
+      if (prevSelected.includes(value)) {
+        return prevSelected.filter(option => option !== value);
+      } 
+      
+      // If we already have 3 selected, don't add more
+      if (prevSelected.length >= 3) {
+        return prevSelected;
+      }
+      
+      // Add the new option
+      return [...prevSelected, value];
+    });
+  };
+
+  // Function to get display text for selected notifications
+  const getNotificationDisplayText = () => {
+    if (selectedNotifications.length === 0) {
+      return t('appointments.noNotifications');
+    }
+    
+    return selectedNotifications.map(value => {
+      const option = notificationOptions.find(opt => opt.value === value);
+      return option?.label || value;
+    }).join(', ');
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -965,6 +1074,74 @@ export default function AppointmentsScreen() {
                 onChangeText={setAppointmentAddress}
               />
 
+              <Text style={styles.inputLabel}>{t('appointments.notifications')}</Text>
+              <TouchableOpacity
+                style={styles.notificationSelector}
+                onPress={() => setShowNotificationPicker(true)}
+              >
+                <View style={styles.notificationSelectorContent}>
+                  <Bell size={18} color="#9333ea" />
+                  <Text style={styles.notificationSelectorText}>
+                    {getNotificationDisplayText()}
+                  </Text>
+                </View>
+                <ChevronDown size={18} color="#6b7280" />
+              </TouchableOpacity>
+              
+              {/* Notification picker modal */}
+              <Modal
+                visible={showNotificationPicker}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowNotificationPicker(false)}
+              >
+                <View style={styles.modalOverlay}>
+                  <View style={styles.notificationPickerContent}>
+                    <View style={styles.notificationPickerHeader}>
+                      <Text style={styles.notificationPickerTitle}>{t('appointments.selectNotifications')}</Text>
+                      <TouchableOpacity
+                        style={styles.closeButton}
+                        onPress={() => setShowNotificationPicker(false)}
+                      >
+                        <X size={20} color="#666666" />
+                      </TouchableOpacity>
+                    </View>
+                    
+                    <Text style={styles.notificationPickerSubtitle}>
+                      {t('appointments.selectUpToThree')}
+                    </Text>
+                    
+                    <FlatList
+                      data={notificationOptions}
+                      keyExtractor={(item) => item.value}
+                      renderItem={({ item }) => (
+                        <TouchableOpacity
+                          style={styles.notificationOption}
+                          onPress={() => toggleNotificationOption(item.value)}
+                        >
+                          <Text style={styles.notificationOptionText}>
+                            {item.label}
+                          </Text>
+                          {selectedNotifications.includes(item.value) && (
+                            <Check size={18} color="#9333ea" />
+                          )}
+                        </TouchableOpacity>
+                      )}
+                      ItemSeparatorComponent={() => <View style={styles.notificationSeparator} />}
+                    />
+                    
+                    <TouchableOpacity
+                      style={styles.notificationDoneButton}
+                      onPress={() => setShowNotificationPicker(false)}
+                    >
+                      <Text style={styles.notificationDoneButtonText}>
+                        {t('common.done')}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </Modal>
+
               <TouchableOpacity
                 style={[
                   styles.saveButton, 
@@ -986,6 +1163,12 @@ export default function AppointmentsScreen() {
                     // Parse the date from the input text to ensure it's correct
                     const date = parseLocalDate(appointmentDateInput);
                     
+                    // Convert notification options to actual Date objects
+                    const notificationTimes = convertOptionsToNotificationTimes(
+                      selectedNotifications,
+                      date
+                    );
+                    
                     const appointmentData = {
                       userID: user.uid,
                       appointmentName: appointmentName.trim(),
@@ -995,7 +1178,7 @@ export default function AppointmentsScreen() {
                       endTime: appointmentEndTime,
                       // Only include address if it's not empty
                       ...(appointmentAddress.trim() ? { address: appointmentAddress.trim() } : {}),
-                      notificationTimes: [],
+                      notificationTimes: notificationTimes,
                       allDay: false,
                     };
                     
@@ -1082,6 +1265,21 @@ export default function AppointmentsScreen() {
                       {selectedAppointment.address}
                     </Text>
                 </View>
+                )}
+                
+                {selectedAppointment.notificationTimes && selectedAppointment.notificationTimes.length > 0 && (
+                  <View style={styles.detailItem}>
+                    <Bell size={18} color="#9333ea" />
+                    <Text style={styles.detailText}>
+                      {convertNotificationTimesToOptions(
+                        selectedAppointment.notificationTimes, 
+                        selectedAppointment.date
+                      ).map(option => {
+                        const notifOption = notificationOptions.find(opt => opt.value === option);
+                        return notifOption?.label || option;
+                      }).join(', ')}
+                    </Text>
+                  </View>
                 )}
                 
                 <View style={styles.appointmentActions}>
@@ -1742,5 +1940,75 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'normal',
     color: '#6b7280',
+  },
+  notificationSelector: {
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 8,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  notificationSelectorContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  notificationSelectorText: {
+    fontSize: 16,
+    color: '#1f2937',
+    marginLeft: 10,
+  },
+  notificationPickerContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    width: '90%',
+    maxWidth: 350,
+    padding: 20,
+    maxHeight: '60%',
+  },
+  notificationPickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  notificationPickerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1f2937',
+  },
+  notificationPickerSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 16,
+  },
+  notificationOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  notificationOptionText: {
+    fontSize: 16,
+    color: '#1f2937',
+  },
+  notificationSeparator: {
+    height: 1,
+    backgroundColor: '#e5e7eb',
+  },
+  notificationDoneButton: {
+    backgroundColor: '#9333ea',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  notificationDoneButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

@@ -30,7 +30,8 @@ const resources = {
         edit: 'Modifier',
         create: 'Créer',
         loading: 'Chargement...',
-        today: 'Aujourd\'hui'
+        today: 'Aujourd\'hui',
+        done: 'Terminé'
       },
       navigation: {
         home: 'Accueil',
@@ -188,7 +189,18 @@ const resources = {
         appointmentsFor: 'Rendez-vous pour {{date}}',
         upcomingAppointments: 'Rendez-vous à venir',
         edit: 'Modifier',
-        appointmentDetails: 'Détails du rendez-vous'
+        appointmentDetails: 'Détails du rendez-vous',
+        notifications: 'Notifications',
+        noNotifications: 'Aucune notification',
+        selectNotifications: 'Sélectionner les notifications',
+        selectUpToThree: 'Sélectionnez jusqu\'à 3 rappels',
+        notificationOptions: {
+          fifteenMinutes: '15 minutes avant',
+          oneHour: '1 heure avant',
+          threeHours: '3 heures avant',
+          oneDay: '1 jour avant',
+          twoDays: '2 jours avant'
+        }
       },
       notes: {
         title: 'Notes',
@@ -299,7 +311,8 @@ const resources = {
         edit: 'Edit',
         create: 'Create',
         loading: 'Loading...',
-        today: 'Today'
+        today: 'Today',
+        done: 'Done'
       },
       navigation: {
         home: 'Home',
@@ -457,7 +470,18 @@ const resources = {
         appointmentsFor: 'Appointments for {{date}}',
         upcomingAppointments: 'Upcoming appointments',
         edit: 'Edit',
-        appointmentDetails: 'Appointment details'
+        appointmentDetails: 'Appointment details',
+        notifications: 'Notifications',
+        noNotifications: 'No notifications',
+        selectNotifications: 'Select notifications',
+        selectUpToThree: 'Select up to 3 reminders',
+        notificationOptions: {
+          fifteenMinutes: '15 minutes before',
+          oneHour: '1 hour before',
+          threeHours: '3 hours before',
+          oneDay: '1 day before',
+          twoDays: '2 days before'
+        }
       },
       notes: {
         title: 'Notes',
@@ -561,6 +585,21 @@ const resources = {
   },
   nl: {
     translation: {
+      common: {
+        at: 'om',
+        on: 'op',
+        yes: 'Ja',
+        no: 'Nee',
+        ok: 'OK',
+        cancel: 'Annuleren',
+        save: 'Opslaan',
+        delete: 'Verwijderen',
+        edit: 'Bewerken',
+        create: 'Aanmaken',
+        loading: 'Laden...',
+        today: 'Vandaag',
+        done: 'Klaar'
+      },
       navigation: {
         home: 'Home',
         tasks: 'Taken',
@@ -678,7 +717,18 @@ const resources = {
         appointmentsFor: 'Afspraken voor {{date}}',
         upcomingAppointments: 'Aankomende afspraken',
         edit: 'Wijzigen',
-        appointmentDetails: 'Afspraakdetails'
+        appointmentDetails: 'Afspraakdetails',
+        notifications: 'Notificaties',
+        noNotifications: 'Geen notificaties',
+        selectNotifications: 'Selecteer notificaties',
+        selectUpToThree: 'Selecteer maximaal 3 herinneringen',
+        notificationOptions: {
+          fifteenMinutes: '15 minuten vooraf',
+          oneHour: '1 uur vooraf',
+          threeHours: '3 uur vooraf',
+          oneDay: '1 dag vooraf',
+          twoDays: '2 dagen vooraf'
+        }
       },
       notes: {
         title: 'Notities',
