@@ -67,6 +67,51 @@ const toggleCheckbox = (text: string, line: string): string => {
   );
 };
 
+// Add a helper function to render note preview with checkboxes near the renderNoteWithCheckboxes function
+const renderNotePreview = (content: string) => {
+  if (!content) return null;
+  
+  // Split content by lines
+  const lines = content.split('\n');
+  
+  // Join first 3 lines with properly rendered checkboxes
+  return lines.slice(0, 3).map((line, index) => {
+    // Check if the line matches checkbox pattern
+    const match = /^(\s*)- \[([ x])\] (.*)$/.exec(line);
+    
+    if (match) {
+      const [_, indentation, checkState, text] = match;
+      const isChecked = checkState === 'x';
+      
+      return (
+        <View key={index} style={styles.previewCheckboxLine}>
+          {isChecked ? (
+            <CheckSquare size={14} color="#9333ea" />
+          ) : (
+            <Square size={14} color="#9333ea" />
+          )}
+          <Text 
+            style={[
+              styles.previewCheckboxText,
+              isChecked && styles.previewCheckedText
+            ]}
+            numberOfLines={1}
+          >
+            {text}
+          </Text>
+        </View>
+      );
+    } else {
+      // Return regular text for non-checkbox lines
+      return (
+        <Text key={index} style={styles.noteContent} numberOfLines={1}>
+          {line}
+        </Text>
+      );
+    }
+  });
+};
+
 export default function NotesScreen() {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
@@ -101,6 +146,9 @@ export default function NotesScreen() {
     React.useCallback(() => {
       if (user) {
         loadData();
+      } else {
+        // Immediately stop loading if no user is available
+        setIsLoading(false);
       }
       return () => {
         // Cleanup
@@ -112,7 +160,10 @@ export default function NotesScreen() {
     try {
       setIsLoading(true);
       
-      if (!user) return;
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
       
       // Load folders
       const userFolders = await DatabaseService.getUserFolders(user.uid);
@@ -122,9 +173,10 @@ export default function NotesScreen() {
       const userNotes = await DatabaseService.getUserNotes(user.uid, currentFolder);
       console.log(`Loaded ${userNotes.length} notes for current folder:`, currentFolder);
       setNotes(userNotes);
+      
+      setIsLoading(false);
     } catch (error) {
       console.error('Error loading notes data:', error);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -305,20 +357,28 @@ export default function NotesScreen() {
     setShowViewNoteModal(true);
   };
 
-  const handleToggleCheckbox = (line: string) => {
+  const handleToggleCheckbox = async (line: string) => {
     if (viewingNote && viewingNote.noteID) {
       const updatedContent = toggleCheckbox(viewingNote.content, line);
       
-      // Update note in database
-      DatabaseService.updateNote(viewingNote.noteID, {
-        content: updatedContent
-      });
-      
-      // Update local state
-      setViewingNote({
-        ...viewingNote,
-        content: updatedContent
-      });
+      try {
+        // Update note in database
+        await DatabaseService.updateNote(viewingNote.noteID, {
+          content: updatedContent
+        });
+        
+        // Update local state with the updated note and current timestamp
+        setViewingNote({
+          ...viewingNote,
+          content: updatedContent,
+          updatedAt: new Date() // Update the timestamp to reflect the change
+        });
+        
+        // Refresh notes list to show updated content in the note preview
+        loadData();
+      } catch (error) {
+        console.error('Error updating checkbox state:', error);
+      }
     }
   };
 
@@ -372,6 +432,7 @@ export default function NotesScreen() {
               multiline
               textAlignVertical="top"
             />
+            <Text style={styles.markdownHint}>* {t('notes.markdownHint')}</Text>
 
             <View style={styles.folderSelector}>
               <Text style={styles.folderSelectorLabel}>{t('notes.selectFolder')}:</Text>
@@ -477,6 +538,7 @@ export default function NotesScreen() {
               multiline
               textAlignVertical="top"
             />
+            <Text style={styles.markdownHint}>* {t('notes.markdownHint')}</Text>
 
             <View style={styles.folderSelector}>
               <Text style={styles.folderSelectorLabel}>{t('notes.selectFolder')}:</Text>
@@ -715,6 +777,9 @@ export default function NotesScreen() {
           <TouchableOpacity 
             style={styles.actionButton}
             onPress={() => {
+              setNewNoteTitle('');
+              setNewNoteContent('');
+              setEditingNote(null);
               setSelectedFolderForNote(currentFolder);
               setShowCreateNoteModal(true);
             }}
@@ -797,9 +862,9 @@ export default function NotesScreen() {
               <Text style={styles.noteTitle}>{note.title}</Text>
             </View>
 
-            <Text style={styles.noteContent} numberOfLines={3}>
-              {note.content}
-            </Text>
+            <View style={styles.noteContentPreview}>
+              {renderNotePreview(note.content)}
+            </View>
 
             <View style={styles.noteFooter}>
               <View style={styles.timestampContainer}>
@@ -857,6 +922,9 @@ export default function NotesScreen() {
       <TouchableOpacity 
         style={styles.addButton}
         onPress={() => {
+          setNewNoteTitle('');
+          setNewNoteContent('');
+          setEditingNote(null);
           setSelectedFolderForNote(currentFolder);
           setShowCreateNoteModal(true);
         }}
@@ -1360,5 +1428,30 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     fontSize: 12,
     marginLeft: 4,
+  },
+  markdownHint: {
+    fontSize: 12,
+    color: '#6b7280',
+    fontStyle: 'italic',
+    marginBottom: 16,
+    marginTop: -10,
+  },
+  previewCheckboxLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 2,
+  },
+  previewCheckboxText: {
+    fontSize: 14,
+    color: '#4b5563',
+    marginLeft: 6,
+    flex: 1,
+  },
+  previewCheckedText: {
+    textDecorationLine: 'line-through',
+    color: '#9ca3af',
+  },
+  noteContentPreview: {
+    marginBottom: 12,
   },
 });

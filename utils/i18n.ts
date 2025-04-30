@@ -221,7 +221,8 @@ const resources = {
         edit: 'Modifier',
         noteDetails: 'Détails de la note',
         lastUpdated: 'Dernière mise à jour',
-        addCheckbox: 'Ajouter une case à cocher'
+        addCheckbox: 'Ajouter une case à cocher',
+        markdownHint: 'Les notes prennent en charge le Markdown'
       },
       reminders: {
         title: 'Rappels',
@@ -489,7 +490,8 @@ const resources = {
         edit: 'Edit',
         noteDetails: 'Note Details',
         lastUpdated: 'Last updated',
-        addCheckbox: 'Add Checkbox'
+        addCheckbox: 'Add Checkbox',
+        markdownHint: 'Notes support Markdown'
       },
       reminders: {
         title: 'Reminders',
@@ -709,7 +711,8 @@ const resources = {
         edit: 'Bewerken',
         noteDetails: 'Notitie details',
         lastUpdated: 'Laatst bijgewerkt',
-        addCheckbox: 'Checkbox toevoegen'
+        addCheckbox: 'Checkbox toevoegen',
+        markdownHint: 'Notities ondersteunen Markdown'
       },
       reminders: {
         title: 'Herinneringen',

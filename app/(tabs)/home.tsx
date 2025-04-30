@@ -2,17 +2,39 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Platform, Modal, ActivityIndicator, Dimensions, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
-import { Menu, Calendar, Bell, FileText, SquareCheck as CheckSquare, X, Clock, MapPin, Edit, ChevronUp, ChevronDown, ArrowRight } from 'lucide-react-native';
+import { 
+  Menu, 
+  Calendar, 
+  Bell, 
+  FileText, 
+  SquareCheck as CheckSquare, 
+  X, 
+  Clock, 
+  MapPin, 
+  Edit, 
+  ChevronUp, 
+  ChevronDown, 
+  ArrowRight,
+  Trash2,
+  Languages,
+  CheckCircle,
+  CheckCircle2,
+  Circle,
+  LogOut,
+  User as UserIcon
+} from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { getAuth } from 'firebase/auth';
 import { DatabaseService } from '@/services/database';
-import type { User, Appointment, Reminder, Task } from '@/types/database';
+import type { User as UserType, Appointment, Reminder, Task } from '@/types/database';
 import { useAuth } from '@/utils/AuthContext';
 import { useFocusEffect, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { saveLanguagePreference } from '@/utils/i18n';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/utils/firebase';
+import { formatLocalDate, parseLocalDate } from '@/utils/dateUtils';
+import { Calendar as RNCalendar } from 'react-native-calendars';
 
 // Add Badge component at the top after imports
 const Badge = ({ children }: { children: React.ReactNode }) => (
@@ -32,7 +54,7 @@ export default function HomePage() {
   const [showAppointmentDetails, setShowAppointmentDetails] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [expandedAppointments, setExpandedAppointments] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<UserType | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [motivationalPhrase, setMotivationalPhrase] = useState<string>('');
@@ -47,6 +69,12 @@ export default function HomePage() {
   const [showEditMotivations, setShowEditMotivations] = useState(false);
   const [selectedMotivations, setSelectedMotivations] = useState<("sport" | "business" | "studies" | "wellbeing" | "parenting" | "personalDevelopment" | "financialManagement")[]>([]);
   const [isSavingMotivations, setIsSavingMotivations] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [markedDates, setMarkedDates] = useState<Record<string, any>>({});
+  const [currentVisibleMonth, setCurrentVisibleMonth] = useState(formatLocalDate(new Date()).substring(0, 7)); // YYYY-MM
+  const [dailyAppointments, setDailyAppointments] = useState<Appointment[]>([]);
+  const [dailyReminders, setDailyReminders] = useState<Reminder[]>([]);
 
   // Add a more aggressive refresh when tab is focused
   useFocusEffect(
@@ -207,9 +235,9 @@ export default function HomePage() {
         <Text style={styles.sectionTitle}>{t('home.schedule')}</Text>
         <TouchableOpacity
           style={styles.weekViewButton}
-          onPress={() => router.push('/appointments')}
+          onPress={() => setShowCalendar(true)}
         >
-          <ArrowRight size={16} color="#9333ea" />
+          <Calendar size={16} color="#9333ea" />
         </TouchableOpacity>
       </View>
 
@@ -1124,6 +1152,301 @@ export default function HomePage() {
     );
   };
 
+  // Add loadMarkedDates function
+  const loadMarkedDates = async (visibleMonth?: string) => {
+    if (!authUser) return;
+    
+    try {
+      // Use provided month or current visible month
+      const monthToLoad = visibleMonth || currentVisibleMonth;
+      
+      // Parse the month string (YYYY-MM) to create first and last day
+      const [year, month] = monthToLoad.split('-').map(Number);
+      const firstDay = new Date(year, month - 1, 1);
+      const lastDay = new Date(year, month, 0); // Last day of the month
+      
+      // Get all dates with reminders
+      const reminderDates = await DatabaseService.getDatesWithReminders(authUser.uid, firstDay, lastDay);
+      const appointmentDates = await DatabaseService.getDatesWithAppointments(authUser.uid, firstDay, lastDay);
+      
+      // Create a new object for marked dates
+      const markedDatesObj: Record<string, any> = {};
+      
+      // Mark dates with dots for reminders
+      reminderDates.forEach(date => {
+        const dateString = formatLocalDate(date);
+        markedDatesObj[dateString] = { 
+          dots: [{ key: 'reminder', color: '#ef4444' }],
+          marked: true
+        };
+      });
+      
+      // Add dots for appointments
+      appointmentDates.forEach(date => {
+        const dateString = formatLocalDate(date);
+        
+        if (markedDatesObj[dateString]) {
+          // If already marked for reminders, add appointment dot
+          markedDatesObj[dateString].dots.push({ key: 'appointment', color: '#9333ea' });
+        } else {
+          // Otherwise just mark it for appointments
+          markedDatesObj[dateString] = { 
+            dots: [{ key: 'appointment', color: '#9333ea' }],
+            marked: true
+          };
+        }
+      });
+      
+      // Mark the selected date
+      const selectedDateString = formatLocalDate(selectedDate);
+      if (markedDatesObj[selectedDateString]) {
+        // If the selected date already has markers, keep them while adding selection
+        markedDatesObj[selectedDateString] = {
+          ...markedDatesObj[selectedDateString],
+          selected: true,
+          selectedColor: '#9333ea',
+        };
+      } else {
+        // Otherwise just mark it as selected
+        markedDatesObj[selectedDateString] = { 
+          selected: true, 
+          selectedColor: '#9333ea',
+        };
+      }
+      
+      setMarkedDates(markedDatesObj);
+    } catch (error) {
+      console.error('Error loading marked dates:', error);
+    }
+  };
+
+  // Function to load daily items for selected date
+  const loadDailyItems = async (date: Date) => {
+    if (!authUser) return;
+    
+    try {
+      // Load appointments for the selected date
+      const appointments = await DatabaseService.getAppointmentsByDate(authUser.uid, date);
+      setDailyAppointments(appointments);
+      
+      // Load reminders for the selected date
+      const reminders = await DatabaseService.getRemindersByDate(authUser.uid, date);
+      setDailyReminders(reminders);
+    } catch (error) {
+      console.error('Error loading daily items:', error);
+    }
+  };
+
+  // Handle day press in calendar
+  const handleDayPress = (day: any) => {
+    // Convert the selected date string to a Date object
+    const newSelectedDate = parseLocalDate(day.dateString);
+    
+    // Update the selected date
+    setSelectedDate(newSelectedDate);
+    
+    // Update the current visible month if needed
+    const clickedMonth = day.dateString.substring(0, 7); // YYYY-MM format
+    if (clickedMonth !== currentVisibleMonth) {
+      setCurrentVisibleMonth(clickedMonth);
+    }
+    
+    // Load items for the selected date
+    if (authUser) {
+      loadDailyItems(newSelectedDate);
+    }
+    
+    // Update marked dates to show the new selection
+    const newMarkedDates = { ...markedDates };
+    
+    // Remove previous selection highlight (but keep the dots!)
+    Object.keys(newMarkedDates).forEach(dateString => {
+      if (newMarkedDates[dateString]?.selected) {
+        const { selected, selectedColor, ...rest } = newMarkedDates[dateString];
+        newMarkedDates[dateString] = rest;
+      }
+    });
+    
+    // Add new selection
+    newMarkedDates[day.dateString] = { 
+      ...(newMarkedDates[day.dateString] || {}),
+      selected: true, 
+      selectedColor: '#9333ea',
+    };
+    
+    setMarkedDates(newMarkedDates);
+  };
+
+  // Format a date for display
+  const formatCalendarDate = (date: Date) => {
+    const options: Intl.DateTimeFormatOptions = {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+    };
+    
+    // Use the current language from i18n
+    const currentLanguage = i18n.language;
+    let locale = currentLanguage;
+    
+    // Map languages to locales if needed
+    if (currentLanguage === 'fr') locale = 'fr-FR';
+    else if (currentLanguage === 'en') locale = 'en-US';
+    
+    return date.toLocaleDateString(locale, options);
+  };
+
+  // Initialize calendar when opened
+  useEffect(() => {
+    if (showCalendar && authUser) {
+      // Load marked dates when calendar is shown
+      loadMarkedDates(currentVisibleMonth);
+      // Load items for the selected date
+      loadDailyItems(selectedDate);
+    }
+  }, [showCalendar, authUser]);
+
+  // Update when month changes
+  useEffect(() => {
+    if (showCalendar && authUser) {
+      // Add a slight delay to prevent immediate refresh when navigating
+      const timer = setTimeout(() => {
+        loadMarkedDates(currentVisibleMonth);
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [currentVisibleMonth, authUser, showCalendar]);
+
+  const renderCalendarModal = () => (
+    <Modal
+      visible={showCalendar}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setShowCalendar(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.calendarModalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>{t('home.calendar')}</Text>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setShowCalendar(false)}
+            >
+              <X size={20} color="#666666" />
+            </TouchableOpacity>
+          </View>
+
+          <RNCalendar
+            onDayPress={handleDayPress}
+            markedDates={markedDates}
+            markingType="multi-dot"
+            theme={{
+              backgroundColor: '#ffffff',
+              calendarBackground: '#ffffff',
+              textSectionTitleColor: '#1f2937',
+              selectedDayBackgroundColor: '#9333ea',
+              selectedDayTextColor: '#ffffff',
+              todayTextColor: '#9333ea',
+              dayTextColor: '#1f2937',
+              textDisabledColor: '#d1d5db',
+              dotColor: '#ef4444',
+              selectedDotColor: '#ffffff',
+              arrowColor: '#9333ea',
+              monthTextColor: '#1f2937',
+              indicatorColor: '#9333ea',
+              textDayFontWeight: '400',
+              textMonthFontWeight: '700',
+              textDayHeaderFontWeight: '600',
+              textDayFontSize: 16,
+              textMonthFontSize: 18,
+              textDayHeaderFontSize: 14
+            }}
+            onMonthChange={(month: {year: number, month: number}) => {
+              const newVisibleMonth = `${month.year}-${String(month.month).padStart(2, '0')}`;
+              setCurrentVisibleMonth(newVisibleMonth);
+            }}
+            current={currentVisibleMonth}
+          />
+          
+          <View style={styles.calendarDayItems}>
+            <Text style={styles.calendarDayTitle}>
+              {formatCalendarDate(selectedDate)}
+            </Text>
+
+            <ScrollView 
+              style={styles.calendarDayItemsList}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Render appointments for the selected date */}
+              {dailyAppointments.length > 0 && (
+                <View style={styles.calendarDaySection}>
+                  <View style={styles.calendarDaySectionHeader}>
+                    <Calendar size={18} color="#9333ea" />
+                    <Text style={styles.calendarDaySectionTitle}>{t('home.appointments')}</Text>
+                  </View>
+                  
+                  {dailyAppointments.map((appointment, index) => (
+                    <View key={`apt-${index}`} style={styles.calendarDayItemCard}>
+                      <View style={styles.itemTimeBlock}>
+                        <Clock size={16} color="#9333ea" />
+                        <Text style={styles.itemTimeText}>
+                          {appointment.startTime} - {appointment.endTime}
+                        </Text>
+                      </View>
+                      <Text style={styles.calendarItemName}>
+                        {appointment.appointmentName}
+                      </Text>
+                      {appointment.address && (
+                        <View style={styles.itemAddressBlock}>
+                          <MapPin size={14} color="#6b7280" />
+                          <Text style={styles.itemAddressText}>
+                            {appointment.address}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {/* Render reminders for the selected date */}
+              {dailyReminders.length > 0 && (
+                <View style={styles.calendarDaySection}>
+                  <View style={styles.calendarDaySectionHeader}>
+                    <Bell size={18} color="#ef4444" />
+                    <Text style={styles.calendarDaySectionTitle}>{t('home.reminders')}</Text>
+                  </View>
+                  
+                  {dailyReminders.map((reminder, index) => (
+                    <View key={`rem-${index}`} style={styles.calendarDayItemCard}>
+                      <View style={styles.itemTimeBlock}>
+                        <Clock size={16} color="#ef4444" />
+                        <Text style={[styles.itemTimeText, { color: '#ef4444' }]}>
+                          {reminder.time}
+                        </Text>
+                      </View>
+                      <Text style={styles.calendarItemName}>
+                        {reminder.reminderName}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {dailyAppointments.length === 0 && dailyReminders.length === 0 && (
+                <View style={styles.noItemsMessage}>
+                  <Text style={styles.noItemsText}>
+                    {t('home.noItemsForDate')}
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+  
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -1184,7 +1507,8 @@ export default function HomePage() {
         {renderMenu()}
         {renderAppointmentDetail()}
         {renderReminderDetail()}
-        {renderEditMotivationsModal()}
+        {showEditMotivations && renderEditMotivationsModal()}
+        {showCalendar && renderCalendarModal()}
       </LinearGradient>
     </View>
   );
@@ -1983,6 +2307,94 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: '600',
     fontSize: 16,
+    textAlign: 'center',
+  },
+  calendarModalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    width: '100%',
+    maxWidth: 500,
+    maxHeight: '90%',
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  calendarDayItems: {
+    marginTop: 16,
+    maxHeight: 300,
+  },
+  calendarDayTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 12,
+  },
+  calendarDayItemsList: {
+    maxHeight: 250,
+  },
+  calendarDaySection: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+  },
+  calendarDaySectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  calendarDaySectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  calendarDayItemCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 6,
+    padding: 10,
+    marginBottom: 6,
+  },
+  itemTimeBlock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  itemTimeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#9333ea',
+  },
+  calendarItemName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 4,
+  },
+  itemAddressBlock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  itemAddressText: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  noItemsMessage: {
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noItemsText: {
+    fontSize: 14,
+    color: '#6b7280',
     textAlign: 'center',
   },
 }); 
