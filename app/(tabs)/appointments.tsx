@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal, TextInput, ActivityIndicator, FlatList } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal, TextInput, ActivityIndicator, FlatList, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Calendar as CalendarIcon, Clock, MapPin, Bell, Plus, ChevronRight, X, Edit, Trash2, ChevronLeft, Calendar as TodayIcon, ChevronDown, Check } from 'lucide-react-native';
 import { Calendar } from 'react-native-calendars';
@@ -96,14 +96,30 @@ export default function AppointmentsScreen() {
   const resetForm = (appointment?: Appointment | null) => {
     setAppointmentName(appointment?.appointmentName || '');
     setAppointmentDescription(appointment?.description || '');
+    setAppointmentAddress(appointment?.address || '');
     
     const date = appointment?.date ? new Date(appointment.date) : new Date();
     setAppointmentDate(date);
     setAppointmentDateInput(formatLocalDate(date));
     
-    setAppointmentStartTime(appointment?.startTime || '09:00');
-    setAppointmentEndTime(appointment?.endTime || '10:00');
-    setAppointmentAddress(appointment?.address || '');
+    // Set dropdown values for date
+    setSelectedDay(date.getDate());
+    setSelectedMonth(date.getMonth() + 1);
+    setSelectedYear(date.getFullYear());
+    
+    // Set dropdown values for start time
+    const startTime = appointment?.startTime || '09:00';
+    setAppointmentStartTime(startTime);
+    const [startHour, startMinute] = startTime.split(':');
+    setSelectedStartHour(startHour);
+    setSelectedStartMinute(startMinute);
+    
+    // Set dropdown values for end time
+    const endTime = appointment?.endTime || '10:00';
+    setAppointmentEndTime(endTime);
+    const [endHour, endMinute] = endTime.split(':');
+    setSelectedEndHour(endHour);
+    setSelectedEndMinute(endMinute);
     
     // Reset notification times
     setSelectedNotifications(
@@ -113,6 +129,12 @@ export default function AppointmentsScreen() {
     );
     
     setIsEditMode(!!appointment);
+    
+    if (appointment?.appointmentID) {
+      setSelectedAppointment(appointment);
+    } else {
+      setSelectedAppointment(null);
+    }
   };
 
   // Update the useEffect that sets appointmentDateInput
@@ -656,6 +678,143 @@ export default function AppointmentsScreen() {
     }).join(', ');
   };
 
+  // Add new state variables for the date dropdown
+  const [showDayPicker, setShowDayPicker] = useState(false);
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [showYearPicker, setShowYearPicker] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<number>(new Date().getDate());
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+
+  // Add measure position functionality for better dropdown positioning
+  const [dayButtonPosition, setDayButtonPosition] = useState({ pageY: 0, height: 0 });
+  const [monthButtonPosition, setMonthButtonPosition] = useState({ pageY: 0, height: 0 });
+  const [yearButtonPosition, setYearButtonPosition] = useState({ pageY: 0, height: 0 });
+  
+  const dayButtonRef = useRef<View>(null);
+  const monthButtonRef = useRef<View>(null);
+  const yearButtonRef = useRef<View>(null);
+  
+  const measureButtonPosition = (ref: React.RefObject<View>, setPosition: (position: {pageY: number, height: number}) => void) => {
+    if (ref.current) {
+      ref.current.measure((_x, _y, _width, height, _pageX, pageY) => {
+        setPosition({ pageY, height });
+      });
+    }
+  };
+
+  // Add helper functions for dropdown date selection
+  // Get array of days in the current month
+  const getDaysInMonth = (year: number, month: number) => {
+    return new Date(year, month, 0).getDate();
+  };
+
+  // Generate days array based on selected month and year
+  const getDaysArray = () => {
+    const daysInMonth = getDaysInMonth(selectedYear, selectedMonth);
+    return Array.from({ length: daysInMonth }, (_, i) => i + 1);
+  };
+
+  // Generate months array (1-12)
+  const getMonthsArray = () => {
+    return Array.from({ length: 12 }, (_, i) => i + 1);
+  };
+
+  // Get month name
+  const getMonthName = (monthNum: number) => {
+    const date = new Date();
+    date.setMonth(monthNum - 1);
+    
+    // Use the current language from i18n 
+    const currentLanguage = i18n.language;
+    let locale = currentLanguage;
+    
+    // Map languages to locales if needed
+    if (currentLanguage === 'fr') locale = 'fr-FR';
+    else if (currentLanguage === 'en') locale = 'en-US';
+    else if (currentLanguage === 'nl') locale = 'nl-NL';
+    
+    return date.toLocaleString(locale, { month: 'long' });
+  };
+
+  // Generate years array (current year - 1 to current year + 10)
+  const getYearsArray = () => {
+    const currentYear = new Date().getFullYear();
+    return Array.from({ length: 12 }, (_, i) => currentYear - 1 + i);
+  };
+
+  // Update appointmentDate when dropdowns change
+  useEffect(() => {
+    // Ensure the selected day is valid for the month/year
+    const daysInMonth = getDaysInMonth(selectedYear, selectedMonth);
+    const validDay = Math.min(selectedDay, daysInMonth);
+    
+    if (validDay !== selectedDay) {
+      setSelectedDay(validDay);
+    }
+    
+    // Update the full date with the selected values
+    const newDate = new Date(selectedYear, selectedMonth - 1, validDay);
+    setAppointmentDate(newDate);
+    setAppointmentDateInput(formatLocalDate(newDate));
+  }, [selectedDay, selectedMonth, selectedYear]);
+
+  // Add a reference to track if we're touching inside the picker
+  const pickerRef = useRef<View>(null);
+  
+  // Helper function to close all pickers
+  const closeAllPickers = () => {
+    setShowDayPicker(false);
+    setShowMonthPicker(false);
+    setShowYearPicker(false);
+    setShowStartHourPicker(false);
+    setShowStartMinutePicker(false);
+    setShowEndHourPicker(false);
+    setShowEndMinutePicker(false);
+  };
+
+  // Add new state variables for time pickers
+  const [showStartHourPicker, setShowStartHourPicker] = useState(false);
+  const [showStartMinutePicker, setShowStartMinutePicker] = useState(false);
+  const [selectedStartHour, setSelectedStartHour] = useState<string>('09');
+  const [selectedStartMinute, setSelectedStartMinute] = useState<string>('00');
+  const [startHourButtonPosition, setStartHourButtonPosition] = useState({ pageY: 0, height: 0 });
+  const [startMinuteButtonPosition, setStartMinuteButtonPosition] = useState({ pageY: 0, height: 0 });
+  
+  const [showEndHourPicker, setShowEndHourPicker] = useState(false);
+  const [showEndMinutePicker, setShowEndMinutePicker] = useState(false);
+  const [selectedEndHour, setSelectedEndHour] = useState<string>('10');
+  const [selectedEndMinute, setSelectedEndMinute] = useState<string>('00');
+  const [endHourButtonPosition, setEndHourButtonPosition] = useState({ pageY: 0, height: 0 });
+  const [endMinuteButtonPosition, setEndMinuteButtonPosition] = useState({ pageY: 0, height: 0 });
+  
+  const startHourButtonRef = useRef<View>(null);
+  const startMinuteButtonRef = useRef<View>(null);
+  const endHourButtonRef = useRef<View>(null);
+  const endMinuteButtonRef = useRef<View>(null);
+
+  // Add helper functions for time picker
+  // Generate hours array (00-23)
+  const getHoursArray = () => {
+    return Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
+  };
+
+  // Generate minutes array (00-55, increments of 5)
+  const getMinutesArray = () => {
+    return Array.from({ length: 12 }, (_, i) => (i * 5).toString().padStart(2, '0'));
+  };
+
+  // Add useEffect to update times when dropdown values change
+  useEffect(() => {
+    const newStartTime = `${selectedStartHour}:${selectedStartMinute}`;
+    setAppointmentStartTime(newStartTime);
+  }, [selectedStartHour, selectedStartMinute]);
+
+  useEffect(() => {
+    const newEndTime = `${selectedEndHour}:${selectedEndMinute}`;
+    setAppointmentEndTime(newEndTime);
+  }, [selectedEndHour, selectedEndMinute]);
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -1021,47 +1180,523 @@ export default function AppointmentsScreen() {
 
               <Text style={styles.inputLabel}>{t('appointments.date')}</Text>
               <View style={styles.datePickerContainer}>
-                <TextInput
-                  style={styles.dateInput}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor="#999999"
-                  value={appointmentDateInput}
-                  onChangeText={(text) => {
-                    // Always update the text input
-                    setAppointmentDateInput(text);
-                    
-                    // Only try to parse complete dates with the right format
-                    if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
-                      const date = parseLocalDate(text);
-                      if (!isNaN(date.getTime())) {
-                        setAppointmentDate(date);
-                      }
-                    }
-                  }}
-                />
+                {/* Day Dropdown */}
+                <View style={styles.datePickerColumn}>
+                  <Text style={styles.datePickerLabel}>{t('common.day')}</Text>
+                  <Pressable 
+                    ref={dayButtonRef}
+                    style={styles.datePickerButton}
+                    onPress={() => {
+                      measureButtonPosition(dayButtonRef, setDayButtonPosition);
+                      setShowDayPicker(true);
+                      setShowMonthPicker(false);
+                      setShowYearPicker(false);
+                    }}
+                  >
+                    <Text style={styles.datePickerButtonText}>{selectedDay}</Text>
+                    <ChevronDown size={16} color="#6b7280" />
+                  </Pressable>
+                  
+                  {showDayPicker && (
+                    <Modal
+                      transparent={true}
+                      visible={showDayPicker}
+                      animationType="none"
+                      onRequestClose={() => setShowDayPicker(false)}
+                    >
+                      <Pressable 
+                        style={styles.modalOverlay}
+                        onPress={() => setShowDayPicker(false)}
+                      >
+                        <View 
+                          style={[
+                            styles.pickerDropdown,
+                            {
+                              position: 'absolute',
+                              top: dayButtonPosition.pageY + dayButtonPosition.height + 5,
+                              left: 20,
+                              width: '28%',
+                            }
+                          ]}
+                        >
+                          <Pressable onPress={(e) => e.stopPropagation()}>
+                            <ScrollView style={styles.pickerScrollView}>
+                              {getDaysArray().map(day => (
+                                <Pressable
+                                  key={day}
+                                  style={[
+                                    styles.pickerItem,
+                                    selectedDay === day && styles.pickerItemSelected
+                                  ]}
+                                  onPress={() => {
+                                    setSelectedDay(day);
+                                    setShowDayPicker(false);
+                                  }}
+                                >
+                                  <Text style={[
+                                    styles.pickerItemText,
+                                    selectedDay === day && styles.pickerItemTextSelected
+                                  ]}>
+                                    {day}
+                                  </Text>
+                                </Pressable>
+                              ))}
+                            </ScrollView>
+                          </Pressable>
+                        </View>
+                      </Pressable>
+                    </Modal>
+                  )}
+                </View>
+                
+                {/* Month Dropdown */}
+                <View style={styles.datePickerColumn}>
+                  <Text style={styles.datePickerLabel}>{t('common.month')}</Text>
+                  <Pressable 
+                    ref={monthButtonRef}
+                    style={styles.datePickerButton}
+                    onPress={() => {
+                      measureButtonPosition(monthButtonRef, setMonthButtonPosition);
+                      setShowMonthPicker(true);
+                      setShowDayPicker(false);
+                      setShowYearPicker(false);
+                    }}
+                  >
+                    <Text style={styles.datePickerButtonText}>{getMonthName(selectedMonth)}</Text>
+                    <ChevronDown size={16} color="#6b7280" />
+                  </Pressable>
+                  
+                  {showMonthPicker && (
+                    <Modal
+                      transparent={true}
+                      visible={showMonthPicker}
+                      animationType="none"
+                      onRequestClose={() => setShowMonthPicker(false)}
+                    >
+                      <Pressable 
+                        style={styles.modalOverlay}
+                        onPress={() => setShowMonthPicker(false)}
+                      >
+                        <View 
+                          style={[
+                            styles.pickerDropdown,
+                            {
+                              position: 'absolute',
+                              top: monthButtonPosition.pageY + monthButtonPosition.height + 5,
+                              left: '36%',
+                              width: '28%',
+                            }
+                          ]}
+                        >
+                          <Pressable onPress={(e) => e.stopPropagation()}>
+                            <ScrollView style={styles.pickerScrollView}>
+                              {getMonthsArray().map(month => (
+                                <Pressable
+                                  key={month}
+                                  style={[
+                                    styles.pickerItem,
+                                    selectedMonth === month && styles.pickerItemSelected
+                                  ]}
+                                  onPress={() => {
+                                    setSelectedMonth(month);
+                                    setShowMonthPicker(false);
+                                  }}
+                                >
+                                  <Text style={[
+                                    styles.pickerItemText,
+                                    selectedMonth === month && styles.pickerItemTextSelected
+                                  ]}>
+                                    {getMonthName(month)}
+                                  </Text>
+                                </Pressable>
+                              ))}
+                            </ScrollView>
+                          </Pressable>
+                        </View>
+                      </Pressable>
+                    </Modal>
+                  )}
+                </View>
+                
+                {/* Year Dropdown */}
+                <View style={styles.datePickerColumn}>
+                  <Text style={styles.datePickerLabel}>{t('common.year')}</Text>
+                  <Pressable 
+                    ref={yearButtonRef}
+                    style={styles.datePickerButton}
+                    onPress={() => {
+                      measureButtonPosition(yearButtonRef, setYearButtonPosition);
+                      setShowYearPicker(true);
+                      setShowDayPicker(false);
+                      setShowMonthPicker(false);
+                    }}
+                  >
+                    <Text style={styles.datePickerButtonText}>{selectedYear}</Text>
+                    <ChevronDown size={16} color="#6b7280" />
+                  </Pressable>
+                  
+                  {showYearPicker && (
+                    <Modal
+                      transparent={true}
+                      visible={showYearPicker}
+                      animationType="none"
+                      onRequestClose={() => setShowYearPicker(false)}
+                    >
+                      <Pressable 
+                        style={styles.modalOverlay}
+                        onPress={() => setShowYearPicker(false)}
+                      >
+                        <View 
+                          style={[
+                            styles.pickerDropdown,
+                            {
+                              position: 'absolute',
+                              top: yearButtonPosition.pageY + yearButtonPosition.height + 5,
+                              right: 20,
+                              width: '28%',
+                            }
+                          ]}
+                        >
+                          <Pressable onPress={(e) => e.stopPropagation()}>
+                            <ScrollView style={styles.pickerScrollView}>
+                              {getYearsArray().map(year => (
+                                <Pressable
+                                  key={year}
+                                  style={[
+                                    styles.pickerItem,
+                                    selectedYear === year && styles.pickerItemSelected
+                                  ]}
+                                  onPress={() => {
+                                    setSelectedYear(year);
+                                    setShowYearPicker(false);
+                                  }}
+                                >
+                                  <Text style={[
+                                    styles.pickerItemText,
+                                    selectedYear === year && styles.pickerItemTextSelected
+                                  ]}>
+                                    {year}
+                                  </Text>
+                                </Pressable>
+                              ))}
+                            </ScrollView>
+                          </Pressable>
+                        </View>
+                      </Pressable>
+                    </Modal>
+                  )}
+                </View>
               </View>
 
               <View style={styles.timeInputRow}>
                 <View style={styles.timeInputContainer}>
                   <Text style={styles.inputLabel}>{t('appointments.startTime')}</Text>
-                  <TextInput
-                    style={styles.timeInput}
-                    placeholder="HH:MM"
-                    placeholderTextColor="#999999"
-                    value={appointmentStartTime}
-                    onChangeText={setAppointmentStartTime}
-                  />
+                  <View style={styles.timePickerContainer}>
+                    {/* Hour Dropdown */}
+                    <View style={styles.timePickerColumn}>
+                      <Text style={styles.datePickerLabel}>{t('common.hour')}</Text>
+                      <Pressable 
+                        ref={startHourButtonRef}
+                        style={styles.datePickerButton}
+                        onPress={() => {
+                          measureButtonPosition(startHourButtonRef, setStartHourButtonPosition);
+                          setShowStartHourPicker(true);
+                          setShowStartMinutePicker(false);
+                          setShowEndHourPicker(false);
+                          setShowEndMinutePicker(false);
+                          setShowDayPicker(false);
+                          setShowMonthPicker(false);
+                          setShowYearPicker(false);
+                        }}
+                      >
+                        <Text style={styles.datePickerButtonText}>{selectedStartHour}</Text>
+                        <ChevronDown size={16} color="#6b7280" />
+                      </Pressable>
+                      
+                      {showStartHourPicker && (
+                        <Modal
+                          transparent={true}
+                          visible={showStartHourPicker}
+                          animationType="none"
+                          onRequestClose={() => setShowStartHourPicker(false)}
+                        >
+                          <Pressable 
+                            style={styles.modalOverlay}
+                            onPress={() => setShowStartHourPicker(false)}
+                          >
+                            <View 
+                              style={[
+                                styles.pickerDropdown,
+                                {
+                                  position: 'absolute',
+                                  top: startHourButtonPosition.pageY + startHourButtonPosition.height + 5,
+                                  left: 20,
+                                  width: '40%',
+                                  height: 200,
+                                }
+                              ]}
+                            >
+                              <Pressable onPress={(e) => e.stopPropagation()}>
+                                <ScrollView style={styles.pickerScrollView}>
+                                  {getHoursArray().map(hour => (
+                                    <Pressable
+                                      key={hour}
+                                      style={[
+                                        styles.pickerItem,
+                                        selectedStartHour === hour && styles.pickerItemSelected
+                                      ]}
+                                      onPress={() => {
+                                        setSelectedStartHour(hour);
+                                        setShowStartHourPicker(false);
+                                      }}
+                                    >
+                                      <Text style={[
+                                        styles.pickerItemText,
+                                        selectedStartHour === hour && styles.pickerItemTextSelected
+                                      ]}>
+                                        {hour}
+                                      </Text>
+                                    </Pressable>
+                                  ))}
+                                </ScrollView>
+                              </Pressable>
+                            </View>
+                          </Pressable>
+                        </Modal>
+                      )}
+                    </View>
+                    
+                    <Text style={styles.timeSeparator}>:</Text>
+                    
+                    {/* Minute Dropdown */}
+                    <View style={styles.timePickerColumn}>
+                      <Text style={styles.datePickerLabel}>{t('common.minute')}</Text>
+                      <Pressable 
+                        ref={startMinuteButtonRef}
+                        style={styles.datePickerButton}
+                        onPress={() => {
+                          measureButtonPosition(startMinuteButtonRef, setStartMinuteButtonPosition);
+                          setShowStartMinutePicker(true);
+                          setShowStartHourPicker(false);
+                          setShowEndHourPicker(false);
+                          setShowEndMinutePicker(false);
+                          setShowDayPicker(false);
+                          setShowMonthPicker(false);
+                          setShowYearPicker(false);
+                        }}
+                      >
+                        <Text style={styles.datePickerButtonText}>{selectedStartMinute}</Text>
+                        <ChevronDown size={16} color="#6b7280" />
+                      </Pressable>
+                      
+                      {showStartMinutePicker && (
+                        <Modal
+                          transparent={true}
+                          visible={showStartMinutePicker}
+                          animationType="none"
+                          onRequestClose={() => setShowStartMinutePicker(false)}
+                        >
+                          <Pressable 
+                            style={styles.modalOverlay}
+                            onPress={() => setShowStartMinutePicker(false)}
+                          >
+                            <View 
+                              style={[
+                                styles.pickerDropdown,
+                                {
+                                  position: 'absolute',
+                                  top: startMinuteButtonPosition.pageY + startMinuteButtonPosition.height + 5,
+                                  right: 20,
+                                  width: '40%',
+                                  height: 200,
+                                }
+                              ]}
+                            >
+                              <Pressable onPress={(e) => e.stopPropagation()}>
+                                <ScrollView style={styles.pickerScrollView}>
+                                  {getMinutesArray().map(minute => (
+                                    <Pressable
+                                      key={minute}
+                                      style={[
+                                        styles.pickerItem,
+                                        selectedStartMinute === minute && styles.pickerItemSelected
+                                      ]}
+                                      onPress={() => {
+                                        setSelectedStartMinute(minute);
+                                        setShowStartMinutePicker(false);
+                                      }}
+                                    >
+                                      <Text style={[
+                                        styles.pickerItemText,
+                                        selectedStartMinute === minute && styles.pickerItemTextSelected
+                                      ]}>
+                                        {minute}
+                                      </Text>
+                                    </Pressable>
+                                  ))}
+                                </ScrollView>
+                              </Pressable>
+                            </View>
+                          </Pressable>
+                        </Modal>
+                      )}
+                    </View>
+                  </View>
                 </View>
 
                 <View style={styles.timeInputContainer}>
                   <Text style={styles.inputLabel}>{t('appointments.endTime')}</Text>
-                  <TextInput
-                    style={styles.timeInput}
-                    placeholder="HH:MM"
-                    placeholderTextColor="#999999"
-                    value={appointmentEndTime}
-                    onChangeText={setAppointmentEndTime}
-                  />
+                  <View style={styles.timePickerContainer}>
+                    {/* Hour Dropdown */}
+                    <View style={styles.timePickerColumn}>
+                      <Text style={styles.datePickerLabel}>{t('common.hour')}</Text>
+                      <Pressable 
+                        ref={endHourButtonRef}
+                        style={styles.datePickerButton}
+                        onPress={() => {
+                          measureButtonPosition(endHourButtonRef, setEndHourButtonPosition);
+                          setShowEndHourPicker(true);
+                          setShowEndMinutePicker(false);
+                          setShowStartHourPicker(false);
+                          setShowStartMinutePicker(false);
+                          setShowDayPicker(false);
+                          setShowMonthPicker(false);
+                          setShowYearPicker(false);
+                        }}
+                      >
+                        <Text style={styles.datePickerButtonText}>{selectedEndHour}</Text>
+                        <ChevronDown size={16} color="#6b7280" />
+                      </Pressable>
+                      
+                      {showEndHourPicker && (
+                        <Modal
+                          transparent={true}
+                          visible={showEndHourPicker}
+                          animationType="none"
+                          onRequestClose={() => setShowEndHourPicker(false)}
+                        >
+                          <Pressable 
+                            style={styles.modalOverlay}
+                            onPress={() => setShowEndHourPicker(false)}
+                          >
+                            <View 
+                              style={[
+                                styles.pickerDropdown,
+                                {
+                                  position: 'absolute',
+                                  top: endHourButtonPosition.pageY + endHourButtonPosition.height + 5,
+                                  left: 20,
+                                  width: '40%',
+                                  height: 200,
+                                }
+                              ]}
+                            >
+                              <Pressable onPress={(e) => e.stopPropagation()}>
+                                <ScrollView style={styles.pickerScrollView}>
+                                  {getHoursArray().map(hour => (
+                                    <Pressable
+                                      key={hour}
+                                      style={[
+                                        styles.pickerItem,
+                                        selectedEndHour === hour && styles.pickerItemSelected
+                                      ]}
+                                      onPress={() => {
+                                        setSelectedEndHour(hour);
+                                        setShowEndHourPicker(false);
+                                      }}
+                                    >
+                                      <Text style={[
+                                        styles.pickerItemText,
+                                        selectedEndHour === hour && styles.pickerItemTextSelected
+                                      ]}>
+                                        {hour}
+                                      </Text>
+                                    </Pressable>
+                                  ))}
+                                </ScrollView>
+                              </Pressable>
+                            </View>
+                          </Pressable>
+                        </Modal>
+                      )}
+                    </View>
+                    
+                    <Text style={styles.timeSeparator}>:</Text>
+                    
+                    {/* Minute Dropdown */}
+                    <View style={styles.timePickerColumn}>
+                      <Text style={styles.datePickerLabel}>{t('common.minute')}</Text>
+                      <Pressable 
+                        ref={endMinuteButtonRef}
+                        style={styles.datePickerButton}
+                        onPress={() => {
+                          measureButtonPosition(endMinuteButtonRef, setEndMinuteButtonPosition);
+                          setShowEndMinutePicker(true);
+                          setShowEndHourPicker(false);
+                          setShowStartHourPicker(false);
+                          setShowStartMinutePicker(false);
+                          setShowDayPicker(false);
+                          setShowMonthPicker(false);
+                          setShowYearPicker(false);
+                        }}
+                      >
+                        <Text style={styles.datePickerButtonText}>{selectedEndMinute}</Text>
+                        <ChevronDown size={16} color="#6b7280" />
+                      </Pressable>
+                      
+                      {showEndMinutePicker && (
+                        <Modal
+                          transparent={true}
+                          visible={showEndMinutePicker}
+                          animationType="none"
+                          onRequestClose={() => setShowEndMinutePicker(false)}
+                        >
+                          <Pressable 
+                            style={styles.modalOverlay}
+                            onPress={() => setShowEndMinutePicker(false)}
+                          >
+                            <View 
+                              style={[
+                                styles.pickerDropdown,
+                                {
+                                  position: 'absolute',
+                                  top: endMinuteButtonPosition.pageY + endMinuteButtonPosition.height + 5,
+                                  right: 20,
+                                  width: '40%',
+                                  height: 200,
+                                }
+                              ]}
+                            >
+                              <Pressable onPress={(e) => e.stopPropagation()}>
+                                <ScrollView style={styles.pickerScrollView}>
+                                  {getMinutesArray().map(minute => (
+                                    <Pressable
+                                      key={minute}
+                                      style={[
+                                        styles.pickerItem,
+                                        selectedEndMinute === minute && styles.pickerItemSelected
+                                      ]}
+                                      onPress={() => {
+                                        setSelectedEndMinute(minute);
+                                        setShowEndMinutePicker(false);
+                                      }}
+                                    >
+                                      <Text style={[
+                                        styles.pickerItemText,
+                                        selectedEndMinute === minute && styles.pickerItemTextSelected
+                                      ]}>
+                                        {minute}
+                                      </Text>
+                                    </Pressable>
+                                  ))}
+                                </ScrollView>
+                              </Pressable>
+                            </View>
+                          </Pressable>
+                        </Modal>
+                      )}
+                    </View>
+                  </View>
                 </View>
               </View>
 
@@ -1548,10 +2183,9 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
   },
   calendarModalContent: {
     backgroundColor: '#ffffff',
@@ -1710,16 +2344,72 @@ const styles = StyleSheet.create({
     height: 100,
   },
   datePickerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    gap: 8,
+  },
+  datePickerColumn: {
+    flex: 1,
+    position: 'relative',
+  },
+  datePickerLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginBottom: 4,
+  },
+  datePickerButton: {
     backgroundColor: '#f9fafb',
     borderWidth: 1,
     borderColor: '#e5e7eb',
     borderRadius: 8,
-    overflow: 'hidden',
+    padding: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  dateInput: {
-    padding: 12,
+  datePickerButtonText: {
     fontSize: 16,
     color: '#1f2937',
+  },
+  pickerDropdown: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 8,
+    marginTop: 4,
+    zIndex: 9999,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    maxHeight: 160,
+  },
+  pickerScrollView: {
+    maxHeight: 150,
+    backgroundColor: '#ffffff',
+  },
+  pickerItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+    backgroundColor: '#ffffff',
+  },
+  pickerItemSelected: {
+    backgroundColor: 'rgba(147, 51, 234, 0.1)',
+  },
+  pickerItemText: {
+    fontSize: 14,
+    color: '#4b5563',
+  },
+  pickerItemTextSelected: {
+    color: '#9333ea',
+    fontWeight: '600',
   },
   timeInputRow: {
     flexDirection: 'row',
@@ -2010,5 +2700,21 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  timePickerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    alignItems: 'flex-end',
+  },
+  timePickerColumn: {
+    flex: 1,
+    position: 'relative',
+  },
+  timeSeparator: {
+    fontSize: 24,
+    color: '#4b5563',
+    marginBottom: 10,
+    paddingHorizontal: 5,
   },
 });

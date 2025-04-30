@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal, TextInput, ActivityIndicator, Switch } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal, TextInput, ActivityIndicator, Switch, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Bell, Calendar as CalendarIcon, Plus, ChevronRight, X, Edit, Trash2, Save, Check } from 'lucide-react-native';
+import { Bell, Calendar as CalendarIcon, Plus, ChevronRight, X, Edit, Trash2, Save, Check, ChevronDown } from 'lucide-react-native';
 import { Calendar } from 'react-native-calendars';
 import { useAuth } from '@/utils/AuthContext';
 import { DatabaseService } from '@/services/database';
@@ -50,6 +50,54 @@ export default function RemindersScreen() {
   // Delete confirmation
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
+  // Add new state variables for date dropdown
+  const [showDayPicker, setShowDayPicker] = useState(false);
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [showYearPicker, setShowYearPicker] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<number>(new Date().getDate());
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  
+  // Add new state variables for time pickers
+  const [showHourPicker, setShowHourPicker] = useState(false);
+  const [showMinutePicker, setShowMinutePicker] = useState(false);
+  const [selectedHour, setSelectedHour] = useState<string>('09');
+  const [selectedMinute, setSelectedMinute] = useState<string>('00');
+  const [hourButtonPosition, setHourButtonPosition] = useState({ pageY: 0, height: 0 });
+  const [minuteButtonPosition, setMinuteButtonPosition] = useState({ pageY: 0, height: 0 });
+  
+  // Add a reference to track if we're touching inside the picker
+  const pickerRef = useRef<View>(null);
+  
+  // Add measure position functionality for better dropdown positioning
+  const [dayButtonPosition, setDayButtonPosition] = useState({ pageY: 0, height: 0 });
+  const [monthButtonPosition, setMonthButtonPosition] = useState({ pageY: 0, height: 0 });
+  const [yearButtonPosition, setYearButtonPosition] = useState({ pageY: 0, height: 0 });
+  
+  const dayButtonRef = useRef<View>(null);
+  const monthButtonRef = useRef<View>(null);
+  const yearButtonRef = useRef<View>(null);
+  
+  const hourButtonRef = useRef<View>(null);
+  const minuteButtonRef = useRef<View>(null);
+  
+  const measureButtonPosition = (ref: React.RefObject<View>, setPosition: (position: {pageY: number, height: number}) => void) => {
+    if (ref.current) {
+      ref.current.measure((_x, _y, _width, height, _pageX, pageY) => {
+        setPosition({ pageY, height });
+      });
+    }
+  };
+  
+  // Helper function to close all pickers
+  const closeAllPickers = () => {
+    setShowDayPicker(false);
+    setShowMonthPicker(false);
+    setShowYearPicker(false);
+    setShowHourPicker(false);
+    setShowMinutePicker(false);
+  };
+  
   // Define a function to get localized day abbreviations based on current language
   const getDaysAbbreviations = () => {
     if (i18n.language === 'fr') {
@@ -269,7 +317,20 @@ export default function RemindersScreen() {
     setReminderDate(date);
     setReminderDateInput(formatLocalDate(date));
     
-    setReminderTime(reminder?.time || '09:00');
+    // Set dropdown values for date
+    setSelectedDay(date.getDate());
+    setSelectedMonth(date.getMonth() + 1);
+    setSelectedYear(date.getFullYear());
+    
+    // Set time values
+    const timeValue = reminder?.time || '09:00';
+    setReminderTime(timeValue);
+    
+    // Set dropdown values for time
+    const [hour, minute] = timeValue.split(':');
+    setSelectedHour(hour);
+    setSelectedMinute(minute);
+    
     setIsRecurring(reminder?.isRecurring || false);
     setSelectedDays(reminder?.daysOfWeek || []);
     setNotificationTimes(reminder?.notificationTimes || ['09:00']);
@@ -545,6 +606,82 @@ export default function RemindersScreen() {
       console.error('Error toggling reminder active state:', error);
     }
   };
+
+  // Add helper functions for dropdown date selection
+  // Get array of days in the current month
+  const getDaysInMonth = (year: number, month: number) => {
+    return new Date(year, month, 0).getDate();
+  };
+
+  // Generate days array based on selected month and year
+  const getDaysArray = () => {
+    const daysInMonth = getDaysInMonth(selectedYear, selectedMonth);
+    return Array.from({ length: daysInMonth }, (_, i) => i + 1);
+  };
+
+  // Generate months array (1-12)
+  const getMonthsArray = () => {
+    return Array.from({ length: 12 }, (_, i) => i + 1);
+  };
+
+  // Get month name
+  const getMonthName = (monthNum: number) => {
+    const date = new Date();
+    date.setMonth(monthNum - 1);
+    
+    // Use the current language from i18n 
+    const currentLanguage = i18n.language;
+    let locale = currentLanguage;
+    
+    // Map languages to locales if needed
+    if (currentLanguage === 'fr') locale = 'fr-FR';
+    else if (currentLanguage === 'en') locale = 'en-US';
+    else if (currentLanguage === 'nl') locale = 'nl-NL';
+    else if (currentLanguage === 'es') locale = 'es-ES';
+    else if (currentLanguage === 'pt') locale = 'pt-PT';
+    else if (currentLanguage === 'it') locale = 'it-IT';
+    
+    return date.toLocaleString(locale, { month: 'long' });
+  };
+
+  // Generate years array (current year - 1 to current year + 10)
+  const getYearsArray = () => {
+    const currentYear = new Date().getFullYear();
+    return Array.from({ length: 12 }, (_, i) => currentYear - 1 + i);
+  };
+
+  // Update reminderDate when dropdowns change
+  useEffect(() => {
+    // Ensure the selected day is valid for the month/year
+    const daysInMonth = getDaysInMonth(selectedYear, selectedMonth);
+    const validDay = Math.min(selectedDay, daysInMonth);
+    
+    if (validDay !== selectedDay) {
+      setSelectedDay(validDay);
+    }
+    
+    // Update the full date with the selected values
+    const newDate = new Date(selectedYear, selectedMonth - 1, validDay);
+    setReminderDate(newDate);
+    setReminderDateInput(formatLocalDate(newDate));
+  }, [selectedDay, selectedMonth, selectedYear]);
+
+  // Add helper functions for time picker
+  // Generate hours array (00-23)
+  const getHoursArray = () => {
+    return Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
+  };
+
+  // Generate minutes array (00-55, increments of 5)
+  const getMinutesArray = () => {
+    return Array.from({ length: 12 }, (_, i) => (i * 5).toString().padStart(2, '0'));
+  };
+
+  // Add useEffect to update reminderTime when time dropdowns change
+  useEffect(() => {
+    const newTime = `${selectedHour}:${selectedMinute}`;
+    setReminderTime(newTime);
+  }, [selectedHour, selectedMinute]);
 
   return (
     <View style={styles.container}>
@@ -871,21 +1008,214 @@ export default function RemindersScreen() {
               <Text style={styles.inputLabel}>
                 {isRecurring ? t('reminders.date') : t('reminders.date')}
               </Text>
-              <TextInput
-                style={styles.dateInput}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor="#999999"
-                value={reminderDateInput}
-                onChangeText={(text) => {
-                  setReminderDateInput(text);
-                  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
-                    const date = parseLocalDate(text);
-                    if (!isNaN(date.getTime())) {
-                      setReminderDate(date);
-                    }
-                  }
-                }}
-              />
+              <View style={styles.datePickerContainer}>
+                {/* Day Dropdown */}
+                <View style={styles.datePickerColumn}>
+                  <Text style={styles.datePickerLabel}>{t('common.day')}</Text>
+                  <Pressable 
+                    ref={dayButtonRef}
+                    style={styles.datePickerButton}
+                    onPress={() => {
+                      measureButtonPosition(dayButtonRef, setDayButtonPosition);
+                      setShowDayPicker(true);
+                      setShowMonthPicker(false);
+                      setShowYearPicker(false);
+                    }}
+                  >
+                    <Text style={styles.datePickerButtonText}>{selectedDay}</Text>
+                    <ChevronDown size={16} color="#6b7280" />
+                  </Pressable>
+                  
+                  {showDayPicker && (
+                    <Modal
+                      transparent={true}
+                      visible={showDayPicker}
+                      animationType="none"
+                      onRequestClose={() => setShowDayPicker(false)}
+                    >
+                      <Pressable 
+                        style={styles.modalOverlay}
+                        onPress={() => setShowDayPicker(false)}
+                      >
+                        <View 
+                          style={[
+                            styles.pickerDropdown,
+                            {
+                              position: 'absolute',
+                              top: dayButtonPosition.pageY + dayButtonPosition.height + 5,
+                              left: 20,
+                              width: '28%',
+                            }
+                          ]}
+                        >
+                          <Pressable onPress={(e) => e.stopPropagation()}>
+                            <ScrollView style={styles.pickerScrollView}>
+                              {getDaysArray().map(day => (
+                                <Pressable
+                                  key={day}
+                                  style={[
+                                    styles.pickerItem,
+                                    selectedDay === day && styles.pickerItemSelected
+                                  ]}
+                                  onPress={() => {
+                                    setSelectedDay(day);
+                                    setShowDayPicker(false);
+                                  }}
+                                >
+                                  <Text style={[
+                                    styles.pickerItemText,
+                                    selectedDay === day && styles.pickerItemTextSelected
+                                  ]}>
+                                    {day}
+                                  </Text>
+                                </Pressable>
+                              ))}
+                            </ScrollView>
+                          </Pressable>
+                        </View>
+                      </Pressable>
+                    </Modal>
+                  )}
+                </View>
+                
+                {/* Month Dropdown */}
+                <View style={styles.datePickerColumn}>
+                  <Text style={styles.datePickerLabel}>{t('common.month')}</Text>
+                  <Pressable 
+                    ref={monthButtonRef}
+                    style={styles.datePickerButton}
+                    onPress={() => {
+                      measureButtonPosition(monthButtonRef, setMonthButtonPosition);
+                      setShowMonthPicker(true);
+                      setShowDayPicker(false);
+                      setShowYearPicker(false);
+                    }}
+                  >
+                    <Text style={styles.datePickerButtonText}>{getMonthName(selectedMonth)}</Text>
+                    <ChevronDown size={16} color="#6b7280" />
+                  </Pressable>
+                  
+                  {showMonthPicker && (
+                    <Modal
+                      transparent={true}
+                      visible={showMonthPicker}
+                      animationType="none"
+                      onRequestClose={() => setShowMonthPicker(false)}
+                    >
+                      <Pressable 
+                        style={styles.modalOverlay}
+                        onPress={() => setShowMonthPicker(false)}
+                      >
+                        <View 
+                          style={[
+                            styles.pickerDropdown,
+                            {
+                              position: 'absolute',
+                              top: monthButtonPosition.pageY + monthButtonPosition.height + 5,
+                              left: '36%',
+                              width: '28%',
+                            }
+                          ]}
+                        >
+                          <Pressable onPress={(e) => e.stopPropagation()}>
+                            <ScrollView style={styles.pickerScrollView}>
+                              {getMonthsArray().map(month => (
+                                <Pressable
+                                  key={month}
+                                  style={[
+                                    styles.pickerItem,
+                                    selectedMonth === month && styles.pickerItemSelected
+                                  ]}
+                                  onPress={() => {
+                                    setSelectedMonth(month);
+                                    setShowMonthPicker(false);
+                                  }}
+                                >
+                                  <Text style={[
+                                    styles.pickerItemText,
+                                    selectedMonth === month && styles.pickerItemTextSelected
+                                  ]}>
+                                    {getMonthName(month)}
+                                  </Text>
+                                </Pressable>
+                              ))}
+                            </ScrollView>
+                          </Pressable>
+                        </View>
+                      </Pressable>
+                    </Modal>
+                  )}
+                </View>
+                
+                {/* Year Dropdown */}
+                <View style={styles.datePickerColumn}>
+                  <Text style={styles.datePickerLabel}>{t('common.year')}</Text>
+                  <Pressable 
+                    ref={yearButtonRef}
+                    style={styles.datePickerButton}
+                    onPress={() => {
+                      measureButtonPosition(yearButtonRef, setYearButtonPosition);
+                      setShowYearPicker(true);
+                      setShowDayPicker(false);
+                      setShowMonthPicker(false);
+                    }}
+                  >
+                    <Text style={styles.datePickerButtonText}>{selectedYear}</Text>
+                    <ChevronDown size={16} color="#6b7280" />
+                  </Pressable>
+                  
+                  {showYearPicker && (
+                    <Modal
+                      transparent={true}
+                      visible={showYearPicker}
+                      animationType="none"
+                      onRequestClose={() => setShowYearPicker(false)}
+                    >
+                      <Pressable 
+                        style={styles.modalOverlay}
+                        onPress={() => setShowYearPicker(false)}
+                      >
+                        <View 
+                          style={[
+                            styles.pickerDropdown,
+                            {
+                              position: 'absolute',
+                              top: yearButtonPosition.pageY + yearButtonPosition.height + 5,
+                              right: 20,
+                              width: '28%',
+                            }
+                          ]}
+                        >
+                          <Pressable onPress={(e) => e.stopPropagation()}>
+                            <ScrollView style={styles.pickerScrollView}>
+                              {getYearsArray().map(year => (
+                                <Pressable
+                                  key={year}
+                                  style={[
+                                    styles.pickerItem,
+                                    selectedYear === year && styles.pickerItemSelected
+                                  ]}
+                                  onPress={() => {
+                                    setSelectedYear(year);
+                                    setShowYearPicker(false);
+                                  }}
+                                >
+                                  <Text style={[
+                                    styles.pickerItemText,
+                                    selectedYear === year && styles.pickerItemTextSelected
+                                  ]}>
+                                    {year}
+                                  </Text>
+                                </Pressable>
+                              ))}
+                            </ScrollView>
+                          </Pressable>
+                        </View>
+                      </Pressable>
+                    </Modal>
+                  )}
+                </View>
+              </View>
 
               {isRecurring && (
                 <View style={styles.recurringContainer}>
@@ -913,71 +1243,153 @@ export default function RemindersScreen() {
               )}
 
               <Text style={styles.inputLabel}>{t('reminders.time')}</Text>
-              <TextInput
-                style={styles.timeInput}
-                placeholder="HH:MM"
-                placeholderTextColor="#999999"
-                value={reminderTime}
-                onChangeText={setReminderTime}
-              />
-
-              <Text style={styles.inputLabel}>{t('reminders.notificationTimes')}</Text>
-              {notificationTimes.map((time, index) => (
-                <View key={index} style={styles.notificationTimeRow}>
-                  <TextInput
-                    style={styles.notificationTimeInput}
-                    placeholder="HH:MM"
-                    placeholderTextColor="#999999"
-                    value={time}
-                    onChangeText={(newTime) => updateNotificationTime(index, newTime)}
-                  />
-                  {notificationTimes.length > 1 && (
-                    <TouchableOpacity
-                      style={styles.removeTimeButton}
-                      onPress={() => removeNotificationTime(index)}
+              <View style={styles.timePickerContainer}>
+                {/* Hour Dropdown */}
+                <View style={styles.timePickerColumn}>
+                  <Text style={styles.datePickerLabel}>{t('common.hour')}</Text>
+                  <Pressable 
+                    ref={hourButtonRef}
+                    style={styles.datePickerButton}
+                    onPress={() => {
+                      measureButtonPosition(hourButtonRef, setHourButtonPosition);
+                      setShowHourPicker(true);
+                      setShowMinutePicker(false);
+                      setShowDayPicker(false);
+                      setShowMonthPicker(false);
+                      setShowYearPicker(false);
+                    }}
+                  >
+                    <Text style={styles.datePickerButtonText}>{selectedHour}</Text>
+                    <ChevronDown size={16} color="#6b7280" />
+                  </Pressable>
+                  
+                  {showHourPicker && (
+                    <Modal
+                      transparent={true}
+                      visible={showHourPicker}
+                      animationType="none"
+                      onRequestClose={() => setShowHourPicker(false)}
                     >
-                      <X size={16} color="#ef4444" />
-                    </TouchableOpacity>
+                      <Pressable 
+                        style={styles.modalOverlay}
+                        onPress={() => setShowHourPicker(false)}
+                      >
+                        <View 
+                          style={[
+                            styles.pickerDropdown,
+                            {
+                              position: 'absolute',
+                              top: hourButtonPosition.pageY + hourButtonPosition.height + 5,
+                              left: 20,
+                              width: '40%',
+                              height: 200,
+                            }
+                          ]}
+                        >
+                          <Pressable onPress={(e) => e.stopPropagation()}>
+                            <ScrollView style={styles.pickerScrollView}>
+                              {getHoursArray().map(hour => (
+                                <Pressable
+                                  key={hour}
+                                  style={[
+                                    styles.pickerItem,
+                                    selectedHour === hour && styles.pickerItemSelected
+                                  ]}
+                                  onPress={() => {
+                                    setSelectedHour(hour);
+                                    setShowHourPicker(false);
+                                  }}
+                                >
+                                  <Text style={[
+                                    styles.pickerItemText,
+                                    selectedHour === hour && styles.pickerItemTextSelected
+                                  ]}>
+                                    {hour}
+                                  </Text>
+                                </Pressable>
+                              ))}
+                            </ScrollView>
+                          </Pressable>
+                        </View>
+                      </Pressable>
+                    </Modal>
                   )}
                 </View>
-              ))}
-              <TouchableOpacity
-                style={styles.addTimeButton}
-                onPress={addNotificationTime}
-              >
-                <Plus size={16} color="#9333ea" />
-                <Text style={styles.addTimeButtonText}>{t('reminders.addNotificationTime')}</Text>
-              </TouchableOpacity>
-
-              <View style={styles.switchContainer}>
-                <Text style={styles.switchLabel}>{t('reminders.active')}</Text>
-                <Switch
-                  value={isActive}
-                  onValueChange={setIsActive}
-                  trackColor={{ false: '#e5e7eb', true: '#9333ea' }}
-                  thumbColor={isActive ? '#ffffff' : '#f4f3f4'}
-                />
+                
+                <Text style={styles.timeSeparator}>:</Text>
+                
+                {/* Minute Dropdown */}
+                <View style={styles.timePickerColumn}>
+                  <Text style={styles.datePickerLabel}>{t('common.minute')}</Text>
+                  <Pressable 
+                    ref={minuteButtonRef}
+                    style={styles.datePickerButton}
+                    onPress={() => {
+                      measureButtonPosition(minuteButtonRef, setMinuteButtonPosition);
+                      setShowMinutePicker(true);
+                      setShowHourPicker(false);
+                      setShowDayPicker(false);
+                      setShowMonthPicker(false);
+                      setShowYearPicker(false);
+                    }}
+                  >
+                    <Text style={styles.datePickerButtonText}>{selectedMinute}</Text>
+                    <ChevronDown size={16} color="#6b7280" />
+                  </Pressable>
+                  
+                  {showMinutePicker && (
+                    <Modal
+                      transparent={true}
+                      visible={showMinutePicker}
+                      animationType="none"
+                      onRequestClose={() => setShowMinutePicker(false)}
+                    >
+                      <Pressable 
+                        style={styles.modalOverlay}
+                        onPress={() => setShowMinutePicker(false)}
+                      >
+                        <View 
+                          style={[
+                            styles.pickerDropdown,
+                            {
+                              position: 'absolute',
+                              top: minuteButtonPosition.pageY + minuteButtonPosition.height + 5,
+                              right: 20,
+                              width: '40%',
+                              height: 200,
+                            }
+                          ]}
+                        >
+                          <Pressable onPress={(e) => e.stopPropagation()}>
+                            <ScrollView style={styles.pickerScrollView}>
+                              {getMinutesArray().map(minute => (
+                                <Pressable
+                                  key={minute}
+                                  style={[
+                                    styles.pickerItem,
+                                    selectedMinute === minute && styles.pickerItemSelected
+                                  ]}
+                                  onPress={() => {
+                                    setSelectedMinute(minute);
+                                    setShowMinutePicker(false);
+                                  }}
+                                >
+                                  <Text style={[
+                                    styles.pickerItemText,
+                                    selectedMinute === minute && styles.pickerItemTextSelected
+                                  ]}>
+                                    {minute}
+                                  </Text>
+                                </Pressable>
+                              ))}
+                            </ScrollView>
+                          </Pressable>
+                        </View>
+                      </Pressable>
+                    </Modal>
+                  )}
+                </View>
               </View>
-
-              <TouchableOpacity
-                style={[
-                  styles.saveButton, 
-                  (!reminderName.trim() || isSubmitting) && styles.saveButtonDisabled
-                ]}
-                onPress={handleSubmitReminder}
-                disabled={!reminderName.trim() || isSubmitting}
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator size="small" color="#ffffff" />
-                ) : (
-                  <>
-                    <Save size={18} color="#ffffff" />
-                    <Text style={styles.saveButtonText}>
-                      {isEditMode ? t('reminders.save') : t('reminders.save')}
-                    </Text>
-                  </>
-                )}
-              </TouchableOpacity>
             </ScrollView>
           </View>
         </View>
@@ -987,26 +1399,22 @@ export default function RemindersScreen() {
       <Modal
         visible={showDeleteConfirmation}
         transparent
-        animationType="fade"
+        animationType="slide"
         onRequestClose={() => setShowDeleteConfirmation(false)}
       >
-        <View style={styles.modalOverlay}>
+        <View style={styles.confirmModalOverlay}>
           <View style={styles.confirmModalContent}>
             <Text style={styles.confirmModalTitle}>{t('reminders.deleteConfirmationTitle')}</Text>
-            <Text style={styles.confirmModalText}>
-              {t('reminders.deleteConfirmation')}
-            </Text>
-            
+            <Text style={styles.confirmModalText}>{t('reminders.deleteConfirmation')}</Text>
             <View style={styles.confirmModalButtons}>
               <TouchableOpacity
-                style={[styles.confirmModalButton, styles.confirmModalCancelButton]}
+                style={styles.confirmModalCancelButton}
                 onPress={() => setShowDeleteConfirmation(false)}
               >
                 <Text style={styles.confirmModalCancelText}>{t('reminders.cancel')}</Text>
               </TouchableOpacity>
-              
               <TouchableOpacity
-                style={[styles.confirmModalButton, styles.confirmModalDeleteButton]}
+                style={styles.confirmModalDeleteButton}
                 onPress={handleDeleteReminder}
               >
                 <Text style={styles.confirmModalDeleteText}>{t('reminders.delete')}</Text>
@@ -1016,10 +1424,12 @@ export default function RemindersScreen() {
         </View>
       </Modal>
 
+      {/* Add button */}
       <TouchableOpacity 
         style={styles.addButton}
         onPress={() => {
           resetForm();
+          setIsEditMode(false);
           setShowReminderModal(true);
         }}
       >
@@ -1274,10 +1684,9 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
   },
   calendarModalContent: {
     backgroundColor: '#ffffff',
@@ -1405,130 +1814,89 @@ const styles = StyleSheet.create({
   recurringContainer: {
     marginTop: 12,
   },
-  dateInput: {
-    backgroundColor: '#f9fafb',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: '#1f2937',
-  },
-  timeInput: {
-    backgroundColor: '#f9fafb',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: '#1f2937',
-  },
-  notificationTimeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  notificationTimeInput: {
-    backgroundColor: '#f9fafb',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: '#1f2937',
-    flex: 1,
-  },
-  removeTimeButton: {
-    padding: 8,
-    marginLeft: 8,
-  },
-  addTimeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(147, 51, 234, 0.1)',
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  addTimeButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#9333ea',
-    marginLeft: 8,
-  },
-  saveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#9333ea',
-    borderRadius: 8,
-    padding: 14,
-    marginTop: 24,
-    marginBottom: 16,
-  },
-  saveButtonDisabled: {
-    backgroundColor: '#d1d5db',
-  },
-  saveButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  inputFormat: {
-    fontSize: 12,
-    fontWeight: 'normal',
-    color: '#6b7280',
-  },
-  confirmModalContent: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    width: '90%',
-    maxWidth: 350,
-    padding: 20,
-  },
-  confirmModalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  confirmModalText: {
-    fontSize: 16,
-    color: '#4b5563',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  confirmModalButtons: {
+  datePickerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 12,
+    marginBottom: 16,
+    gap: 8,
   },
-  confirmModalButton: {
+  datePickerColumn: {
     flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
+    position: 'relative',
   },
-  confirmModalCancelButton: {
-    backgroundColor: '#f3f4f6',
+  datePickerLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginBottom: 4,
+  },
+  datePickerButton: {
+    backgroundColor: '#f9fafb',
     borderWidth: 1,
     borderColor: '#e5e7eb',
+    borderRadius: 8,
+    padding: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  confirmModalDeleteButton: {
-    backgroundColor: '#ef4444',
-  },
-  confirmModalCancelText: {
+  datePickerButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    color: '#1f2937',
+  },
+  pickerDropdown: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 8,
+    marginTop: 4,
+    zIndex: 9999,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    maxHeight: 160,
+  },
+  pickerScrollView: {
+    maxHeight: 150,
+    backgroundColor: '#ffffff',
+  },
+  pickerItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+    backgroundColor: '#ffffff',
+  },
+  pickerItemSelected: {
+    backgroundColor: 'rgba(147, 51, 234, 0.1)',
+  },
+  pickerItemText: {
+    fontSize: 14,
     color: '#4b5563',
   },
-  confirmModalDeleteText: {
-    fontSize: 16,
+  pickerItemTextSelected: {
+    color: '#9333ea',
     fontWeight: '600',
-    color: '#ffffff',
+  },
+  timePickerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    alignItems: 'flex-end',
+  },
+  timePickerColumn: {
+    flex: 1,
+    position: 'relative',
+  },
+  timeSeparator: {
+    fontSize: 24,
+    color: '#4b5563',
+    marginBottom: 10,
+    paddingHorizontal: 5,
   },
   filterContainer: {
     flexDirection: 'row',
@@ -1559,5 +1927,54 @@ const styles = StyleSheet.create({
   filterButtonTextActive: {
     color: '#ffffff',
     opacity: 1,
+  },
+  confirmModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  confirmModalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    width: '90%',
+    maxWidth: 350,
+    padding: 20,
+  },
+  confirmModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  confirmModalText: {
+    fontSize: 16,
+    color: '#4b5563',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  confirmModalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  confirmModalCancelButton: {
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  confirmModalDeleteButton: {
+    backgroundColor: '#ef4444',
+  },
+  confirmModalCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4b5563',
+  },
+  confirmModalDeleteText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
   },
 });

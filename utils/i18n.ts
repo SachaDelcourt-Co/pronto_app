@@ -31,7 +31,12 @@ const resources = {
         create: 'Créer',
         loading: 'Chargement...',
         today: 'Aujourd\'hui',
-        done: 'Terminé'
+        done: 'Terminé',
+        day: 'Jour',
+        month: 'Mois',
+        year: 'Année',
+        hour: 'Heure',
+        minute: 'Minute'
       },
       navigation: {
         home: 'Accueil',
@@ -312,7 +317,12 @@ const resources = {
         create: 'Create',
         loading: 'Loading...',
         today: 'Today',
-        done: 'Done'
+        done: 'Done',
+        day: 'Day',
+        month: 'Month',
+        year: 'Year',
+        hour: 'Hour',
+        minute: 'Minute'
       },
       navigation: {
         home: 'Home',
@@ -598,7 +608,12 @@ const resources = {
         create: 'Aanmaken',
         loading: 'Laden...',
         today: 'Vandaag',
-        done: 'Klaar'
+        done: 'Klaar',
+        day: 'Dag',
+        month: 'Maand',
+        year: 'Jaar',
+        hour: 'Uur',
+        minute: 'Minuut'
       },
       navigation: {
         home: 'Home',
@@ -826,6 +841,39 @@ const resources = {
         createFirstTask: 'Maak uw eerste taak om gezonde gewoonten te ontwikkelen'
       }
     }
+  },
+  es: {
+    translation: {
+      common: {
+        day: 'Día',
+        month: 'Mes',
+        year: 'Año',
+        hour: 'Hora',
+        minute: 'Minuto'
+      },
+    },
+  },
+  pt: {
+    translation: {
+      common: {
+        day: 'Dia',
+        month: 'Mês',
+        year: 'Ano',
+        hour: 'Hora',
+        minute: 'Minuto'
+      },
+    },
+  },
+  it: {
+    translation: {
+      common: {
+        day: 'Giorno',
+        month: 'Mese',
+        year: 'Anno',
+        hour: 'Ora',
+        minute: 'Minuto'
+      },
+    },
   }
 };
 
