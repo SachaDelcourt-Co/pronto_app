@@ -245,7 +245,7 @@ export default function HomePage() {
         {/* Appointments Banner */}
         <View style={[
           styles.scheduleBanner,
-          { height: 260 } // Fixed height instead of dynamic
+          { height: 280 } // Increased from 260 to 280
         ]}>
           <View style={styles.bannerHeader}>
             <Calendar size={16} color="#9333ea" />
@@ -258,39 +258,41 @@ export default function HomePage() {
               <ActivityIndicator size="small" color="#9333ea" />
             ) : appointments.length > 0 ? (
               <>
-                {appointments.slice(0, 3).map((appointment, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={styles.eventItem}
-                    onPress={() => {
-                      setSelectedAppointment(appointment);
-                      setShowAppointmentDetails(true);
-                    }}
-                  >
-                    <Text style={styles.eventTime}>
-                      {
-                        (() => {
-                          const appointmentDate = new Date(appointment.date);
-                          const today = new Date();
-                          const isToday = 
-                            appointmentDate.getDate() === today.getDate() &&
-                            appointmentDate.getMonth() === today.getMonth() &&
-                            appointmentDate.getFullYear() === today.getFullYear();
-                          
-                          return isToday
-                            ? appointment.startTime
-                            : `${appointmentDate.toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric'
-                              })} ${appointment.startTime}`;
-                        })()
-                      }
-                    </Text>
-                    <Text style={styles.eventTitle} numberOfLines={1}>
-                      {appointment.appointmentName}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                <View style={styles.eventList}>
+                  {appointments.slice(0, 3).map((appointment, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={styles.eventItem}
+                      onPress={() => {
+                        setSelectedAppointment(appointment);
+                        setShowAppointmentDetails(true);
+                      }}
+                    >
+                      <Text style={styles.eventTime}>
+                        {
+                          (() => {
+                            const appointmentDate = new Date(appointment.date);
+                            const today = new Date();
+                            const isToday = 
+                              appointmentDate.getDate() === today.getDate() &&
+                              appointmentDate.getMonth() === today.getMonth() &&
+                              appointmentDate.getFullYear() === today.getFullYear();
+                            
+                            return isToday
+                              ? appointment.startTime
+                              : `${appointmentDate.toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric'
+                                })} ${appointment.startTime}`;
+                          })()
+                        }
+                      </Text>
+                      <Text style={styles.eventTitle} numberOfLines={1} ellipsizeMode="tail">
+                        {appointment.appointmentName}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
 
                 <TouchableOpacity 
                   style={styles.seeMoreButton}
@@ -313,7 +315,7 @@ export default function HomePage() {
         {/* Reminders Banner */}
         <View style={[
           styles.scheduleBanner,
-          { height: 260 } // Fixed height instead of dynamic
+          { height: 280 } // Increased from 260 to 280
         ]}>
           <View style={styles.bannerHeader}>
             <Bell size={16} color="#9333ea" />
@@ -326,39 +328,41 @@ export default function HomePage() {
               <ActivityIndicator size="small" color="#9333ea" />
             ) : reminders.length > 0 ? (
               <>
-                {reminders.slice(0, 3).map((reminder, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={styles.eventItem}
-                    onPress={() => {
-                      setSelectedReminder(reminder);
-                      setShowReminderDetails(true);
-                    }}
-                  >
-                    <Text style={styles.eventTime}>
-                      {
-                        (() => {
-                          const reminderDate = new Date(reminder.date);
-                          const today = new Date();
-                          const isToday = 
-                            reminderDate.getDate() === today.getDate() &&
-                            reminderDate.getMonth() === today.getMonth() &&
-                            reminderDate.getFullYear() === today.getFullYear();
-                          
-                          return isToday
-                            ? reminder.time
-                            : `${reminderDate.toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric'
-                              })} ${reminder.time}`;
-                        })()
-                      }
-                    </Text>
-                    <Text style={styles.eventTitle} numberOfLines={1}>
-                      {reminder.reminderName}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                <View style={styles.eventList}>
+                  {reminders.slice(0, 3).map((reminder, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={styles.eventItem}
+                      onPress={() => {
+                        setSelectedReminder(reminder);
+                        setShowReminderDetails(true);
+                      }}
+                    >
+                      <Text style={styles.eventTime}>
+                        {
+                          (() => {
+                            const reminderDate = new Date(reminder.date);
+                            const today = new Date();
+                            const isToday = 
+                              reminderDate.getDate() === today.getDate() &&
+                              reminderDate.getMonth() === today.getMonth() &&
+                              reminderDate.getFullYear() === today.getFullYear();
+                            
+                            return isToday
+                              ? reminder.time
+                              : `${reminderDate.toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric'
+                                })} ${reminder.time}`;
+                          })()
+                        }
+                      </Text>
+                      <Text style={styles.eventTitle} numberOfLines={1} ellipsizeMode="tail">
+                        {reminder.reminderName}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
 
                 <TouchableOpacity 
                   style={styles.seeMoreButton}
@@ -1543,7 +1547,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     zIndex: 0,
     position: 'relative',
-    marginTop: 10,
+    marginTop: 5, // Reduced from 10 to 5
   },
   header: {
     flexDirection: 'row',
@@ -1591,9 +1595,9 @@ const styles = StyleSheet.create({
   },
   scheduleSection: {
     width: '100%',
-    marginBottom: 30, // More bottom margin for clearer separation
-    position: 'relative', // For proper layering
-    zIndex: 1, // Higher z-index to ensure proper stacking
+    marginBottom: 10, // Reduced from 30 to 10
+    position: 'relative',
+    zIndex: 1,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -1632,8 +1636,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     marginBottom: 16,
-    height: 260,
-    overflow: 'visible',
+    height: 280, // Increased from 260 to 280
+    overflow: 'hidden',
     flex: 1, 
     maxWidth: '48%',
   },
@@ -1653,32 +1657,34 @@ const styles = StyleSheet.create({
   bannerContent: {
     flex: 1,
     justifyContent: 'space-between',
+    display: 'flex',
+    flexDirection: 'column',
+    paddingBottom: 4, // Add padding at bottom to ensure space for button
   },
   eventList: {
     flex: 1,
-    paddingBottom: 10,
+    marginBottom: 8, // Add margin to create space between list and button
   },
   eventItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
     marginBottom: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.03)',
     padding: 10,
     borderRadius: 10,
-    minHeight: 40,
+    height: 56, // Slightly reduced from 60 to save space
   },
   eventTime: {
     fontSize: 11,
     fontFamily: 'Inter-SemiBold',
     color: '#9333ea',
-    width: 38,
-    flexShrink: 0,
+    marginBottom: 4,
   },
   eventTitle: {
     fontSize: 14,
     color: '#ffffff',
     fontWeight: '500',
-    flex: 1,
+    width: '100%',
   },
   dailyTasksSection: {
     flex: 1,
@@ -1942,7 +1948,7 @@ const styles = StyleSheet.create({
   },
   section: {
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 8, // Reduced from 16 to 8
     paddingBottom: 8,
     width: '100%',
   },
@@ -1972,8 +1978,8 @@ const styles = StyleSheet.create({
     padding: 8,
     backgroundColor: 'rgba(147, 51, 234, 0.2)',
     borderRadius: 8,
-    marginTop: 8,
-    marginBottom: 4,
+    marginTop: 'auto', // Push to bottom
+    marginBottom: 0, // Reduced from 4 to 0
     flexDirection: 'row',
     justifyContent: 'center',
     borderWidth: 1,
@@ -1981,6 +1987,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     position: 'relative',
     zIndex: 1,
+    height: 36, // Fixed height for button
   },
   seeMoreText: {
     fontSize: 11,
