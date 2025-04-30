@@ -777,6 +777,9 @@ export default function NotesScreen() {
           <TouchableOpacity 
             style={styles.actionButton}
             onPress={() => {
+              setNewNoteTitle('');
+              setNewNoteContent('');
+              setEditingNote(null);
               setSelectedFolderForNote(currentFolder);
               setShowCreateNoteModal(true);
             }}
@@ -919,6 +922,9 @@ export default function NotesScreen() {
       <TouchableOpacity 
         style={styles.addButton}
         onPress={() => {
+          setNewNoteTitle('');
+          setNewNoteContent('');
+          setEditingNote(null);
           setSelectedFolderForNote(currentFolder);
           setShowCreateNoteModal(true);
         }}
