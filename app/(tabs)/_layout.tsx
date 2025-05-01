@@ -3,16 +3,12 @@ import { Home, SquareCheck as CheckSquare, Calendar, Bell, FileText } from 'luci
 import { useTranslation } from 'react-i18next';
 import { View, StyleSheet, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import AdBanner from '@/components/AdBanner';
 
 export default function TabLayout() {
   const { t } = useTranslation();
   
   return (
     <View style={styles.container}>
-      {/* Ad Banner at the top */}
-      <AdBanner />
-      
       <Tabs
         screenOptions={{
           headerShown: false,

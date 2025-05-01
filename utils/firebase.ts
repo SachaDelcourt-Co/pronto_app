@@ -12,9 +12,22 @@ const firebaseConfig = {
   measurementId: "G-XTP7GGCPKH"
 };
 
-// Initialize Firebase
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-const db = getFirestore(app);
-const auth = getAuth(app);
+// Initialize Firebase with error handling
+let app;
+let db;
+let auth;
+
+try {
+  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+  db = getFirestore(app);
+  auth = getAuth(app);
+  console.log("Firebase initialized successfully");
+} catch (error) {
+  console.error("Error initializing Firebase:", error);
+  // Initialize with empty objects to prevent crashes
+  app = {};
+  db = {};
+  auth = {};
+}
 
 export { app, db, auth };
