@@ -1,7 +1,8 @@
 import { Tabs } from 'expo-router';
 import { Home, SquareCheck as CheckSquare, Calendar, Bell, FileText } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import AdBanner from '@/components/AdBanner';
 
 export default function TabLayout() {
@@ -15,19 +16,29 @@ export default function TabLayout() {
       <Tabs
         screenOptions={{
           headerShown: false,
+          tabBarBackground: () => (
+            <LinearGradient
+              colors={['#1a1a1a', '#2a1a2a']}
+              style={StyleSheet.absoluteFill}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+            />
+          ),
           tabBarStyle: {
-            backgroundColor: '#1a1a1a',
-            borderTopColor: '#2a1a2a',
-            height: 60,
+            borderTopColor: 'rgba(42, 26, 42, 0.8)',
+            borderTopWidth: 1,
+            height: Platform.OS === 'ios' ? 90 : 60,
+            paddingBottom: Platform.OS === 'ios' ? 30 : 5,
           },
           tabBarActiveTintColor: '#9333ea',
           tabBarInactiveTintColor: '#666666',
           tabBarItemStyle: {
-            paddingVertical: 5,
+            paddingVertical: Platform.OS === 'ios' ? 8 : 5,
           },
           tabBarLabelStyle: { 
             fontSize: 10,
-            marginBottom: 0,
+            marginBottom: Platform.OS === 'ios' ? 5 : 0,
+            paddingBottom: Platform.OS === 'ios' ? 2 : 0,
           },
         }}
       >

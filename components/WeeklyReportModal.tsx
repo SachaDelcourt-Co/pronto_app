@@ -85,6 +85,7 @@ const WeeklyReportModal: React.FC<WeeklyReportModalProps> = ({
       transparent
       animationType="fade"
       onRequestClose={onClose}
+      presentationStyle="overFullScreen"
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
@@ -184,13 +185,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16,
+    zIndex: 9999,
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
   modalContent: {
     backgroundColor: '#ffffff',
     borderRadius: 16,
     width: '100%',
     maxWidth: 500,
-    maxHeight: '90%',
+    ...(Platform.OS === 'ios' ? { 
+      height: '80%', 
+      maxHeight: 600,
+    } : { 
+      maxHeight: '90%' 
+    }),
     padding: 20,
     shadowColor: '#000',
     shadowOffset: {
