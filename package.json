@@ -24,6 +24,7 @@
     "dotenv": "^16.5.0",
     "eventsource": "^3.0.6",
     "expo": "~52.0.46",
+    "expo-ads-admob": "^13.0.0",
     "expo-blur": "~14.0.3",
     "expo-constants": "~17.0.8",
     "expo-font": "~13.0.4",
