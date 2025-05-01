@@ -38,6 +38,16 @@ import { formatLocalDate, parseLocalDate } from '@/utils/dateUtils';
 import { Calendar as RNCalendar } from 'react-native-calendars';
 import { getOrGenerateQuotes, shouldUpdateQuotes } from '@/utils/motivationalService';
 import type { MotivationCategory } from '@/utils/data/motivationalQuotes';
+import { 
+  hasUnviewedWeeklyReport, 
+  getLatestWeeklyReport, 
+  markWeeklyReportAsViewed, 
+  forceGenerateWeeklyReport, 
+  shouldGenerateWeeklyReport, 
+  generateWeeklyReport, 
+  type WeeklyReportData 
+} from '@/utils/weeklyReportService';
+import WeeklyReportModal from '@/components/WeeklyReportModal';
 
 // Add Badge component at the top after imports
 const Badge = ({ children }: { children: React.ReactNode }) => (
@@ -78,6 +88,11 @@ export default function HomePage() {
   const [currentVisibleMonth, setCurrentVisibleMonth] = useState(formatLocalDate(new Date()).substring(0, 7)); // YYYY-MM
   const [dailyAppointments, setDailyAppointments] = useState<Appointment[]>([]);
   const [dailyReminders, setDailyReminders] = useState<Reminder[]>([]);
+  
+  // Weekly report states
+  const [showWeeklyReport, setShowWeeklyReport] = useState(false);
+  const [weeklyReportData, setWeeklyReportData] = useState<WeeklyReportData | null>(null);
+  const [loadingWeeklyReport, setLoadingWeeklyReport] = useState(false);
 
   // Add a more aggressive refresh when tab is focused
   useFocusEffect(
@@ -1544,6 +1559,90 @@ export default function HomePage() {
     </Modal>
   );
   
+  // Add an effect to check for weekly reports independently
+  useEffect(() => {
+    if (authInitialized && authUser) {
+      // Add a short delay to avoid competing with other initial data loads
+      const timer = setTimeout(() => {
+        checkWeeklyReport();
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [authInitialized, authUser]);
+
+  // Check if we should generate a weekly report or if there's an unviewed one
+  const checkWeeklyReport = async () => {
+    try {
+      if (!authUser) return;
+      
+      // First check if we should generate a new report (Sunday after 8pm)
+      const shouldGenerate = await shouldGenerateWeeklyReport();
+      if (shouldGenerate) {
+        await generateWeeklyReport(authUser.uid);
+      }
+      
+      // Then check if there's an unviewed report
+      const hasUnviewed = await hasUnviewedWeeklyReport();
+      if (hasUnviewed) {
+        const report = await getLatestWeeklyReport();
+        setWeeklyReportData(report);
+        setShowWeeklyReport(true);
+      }
+    } catch (error) {
+      console.error('Error checking weekly report:', error);
+    }
+  };
+
+  // Handle closing the weekly report modal
+  const handleCloseWeeklyReport = async () => {
+    try {
+      await markWeeklyReportAsViewed();
+      setShowWeeklyReport(false);
+    } catch (error) {
+      console.error('Error marking weekly report as viewed:', error);
+    }
+  };
+
+  // Force generation of a weekly report (for development/testing)
+  const handleForceGenerateWeeklyReport = async () => {
+    try {
+      if (!authUser) return;
+      
+      setLoadingWeeklyReport(true);
+      const report = await forceGenerateWeeklyReport(authUser.uid);
+      setWeeklyReportData(report);
+      setShowWeeklyReport(true);
+      setLoadingWeeklyReport(false);
+    } catch (error) {
+      console.error('Error generating weekly report:', error);
+      setLoadingWeeklyReport(false);
+    }
+  };
+  
+  // Add weekly report modal rendering function
+  const renderWeeklyReportModal = () => (
+    <WeeklyReportModal
+      visible={showWeeklyReport}
+      onClose={handleCloseWeeklyReport}
+      reportData={weeklyReportData}
+      loading={loadingWeeklyReport}
+    />
+  );
+
+  // Add a dev section to manually trigger the weekly report
+  const renderDevMenu = () => (
+    <View style={styles.devSection}>
+      <Text style={styles.devSectionTitle}>{t('tasks.weeklyReport.generateReport')}</Text>
+      <TouchableOpacity 
+        style={styles.devButton}
+        onPress={handleForceGenerateWeeklyReport}
+      >
+        <Text style={styles.devButtonText}>{t('tasks.weeklyReport.generateReport')}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -1583,6 +1682,9 @@ export default function HomePage() {
                   )}
                 </View>
               </View>
+              
+              {/* Add dev section at the bottom */}
+              {renderDevMenu()}
             </View>
           </View>
         </ScrollView>
@@ -1606,6 +1708,7 @@ export default function HomePage() {
         {renderReminderDetail()}
         {showEditMotivations && renderEditMotivationsModal()}
         {showCalendar && renderCalendarModal()}
+        {showWeeklyReport && renderWeeklyReportModal()}
       </LinearGradient>
     </View>
   );
@@ -2510,5 +2613,29 @@ const styles = StyleSheet.create({
   refreshIconContainer: {
     marginTop: 4,
     opacity: 0.7,
+  },
+  devSection: {
+    marginTop: 24,
+    padding: 16,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 8,
+  },
+  devSectionTitle: {
+    fontSize: 16,
+    fontFamily: 'Inter-Bold',
+    color: '#ffffff',
+    marginBottom: 12,
+  },
+  devButton: {
+    backgroundColor: '#9333ea',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  devButtonText: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: '#ffffff',
   },
 }); 

@@ -298,7 +298,24 @@ const resources = {
         resetConfirmation: 'Êtes-vous sûr de vouloir réinitialiser la progression de "{taskName}"? Cela remettra votre progression à 0/{daysSelected} jours.',
         resetConfirmationTitle: 'Réinitialiser la tâche',
         noTasksYet: 'Aucune tâche pour le moment',
-        createFirstTask: 'Créez votre première tâche pour commencer à prendre de bonnes habitudes'
+        createFirstTask: 'Créez votre première tâche pour commencer à prendre de bonnes habitudes',
+        weeklyReport: {
+          title: 'Rapport Hebdomadaire',
+          subtitle: 'Votre progression cette semaine',
+          period: 'Période: {{startDate}} - {{endDate}}',
+          completionRate: 'Taux de réalisation',
+          tasksCompleted: 'Tâches réalisées',
+          taskCompletionDetail: '{{taskName}}: {{completed}}/{{total}} jours',
+          close: 'Fermer',
+          generateReport: 'Générer un rapport (DEV)',
+          notificationTitle: 'Votre rapport hebdomadaire est prêt !',
+          notificationBody: 'Vous avez accompli {{completionRate}}% de vos tâches cette semaine. Consultez votre rapport complet.',
+          excellent: 'Excellent travail ! Vous avez atteint {{completionRate}}% de vos tâches cette semaine. Continuez comme ça !',
+          great: 'Très bien ! Vous avez accompli {{completionRate}}% de vos tâches. Vous êtes sur la bonne voie !',
+          good: 'Bien joué ! Vous avez complété {{completionRate}}% de vos tâches. Chaque effort compte !',
+          okay: 'Vous avez complété {{completionRate}}% de vos tâches. C\'est un bon début, continuez à progresser !',
+          needsImprovement: 'Vous avez accompli {{completionRate}}% de vos tâches. La semaine prochaine sera meilleure, continuez d\'essayer !'
+        }
       }
     }
   },
@@ -589,7 +606,24 @@ const resources = {
         resetConfirmation: 'Are you sure you want to reset progress for "{taskName}"? This will set your progress back to 0/{daysSelected} days.',
         resetConfirmationTitle: 'Reset task',
         noTasksYet: 'No tasks yet',
-        createFirstTask: 'Create your first task to start building healthy habits'
+        createFirstTask: 'Create your first task to start building healthy habits',
+        weeklyReport: {
+          title: 'Weekly Report',
+          subtitle: 'Your progress this week',
+          period: 'Period: {{startDate}} - {{endDate}}',
+          completionRate: 'Completion Rate',
+          tasksCompleted: 'Tasks Completed',
+          taskCompletionDetail: '{{taskName}}: {{completed}}/{{total}} days',
+          close: 'Close',
+          generateReport: 'Generate Report (DEV)',
+          notificationTitle: 'Your Weekly Report is Ready!',
+          notificationBody: 'You accomplished {{completionRate}}% of your tasks this week. Check your full report.',
+          excellent: 'Excellent work! You achieved {{completionRate}}% of your tasks this week. Keep it up!',
+          great: 'Great job! You accomplished {{completionRate}}% of your tasks. You\'re on the right track!',
+          good: 'Well done! You completed {{completionRate}}% of your tasks. Every effort counts!',
+          okay: 'You completed {{completionRate}}% of your tasks. That\'s a good start, keep making progress!',
+          needsImprovement: 'You accomplished {{completionRate}}% of your tasks. Next week will be better, keep trying!'
+        }
       }
     }
   },
@@ -838,7 +872,24 @@ const resources = {
         resetConfirmation: 'Weet u zeker dat u de voortgang van "{taskName}" wilt resetten? Dit zal uw voortgang terugzetten naar 0/{daysSelected} dagen.',
         resetConfirmationTitle: 'Taak resetten',
         noTasksYet: 'Nog geen taken',
-        createFirstTask: 'Maak uw eerste taak om gezonde gewoonten te ontwikkelen'
+        createFirstTask: 'Maak uw eerste taak om gezonde gewoonten te ontwikkelen',
+        weeklyReport: {
+          title: 'Weekrapport',
+          subtitle: 'Uw voortgang deze week',
+          period: 'Periode: {{startDate}} - {{endDate}}',
+          completionRate: 'Voltooiingspercentage',
+          tasksCompleted: 'Voltooide taken',
+          taskCompletionDetail: '{{taskName}}: {{completed}}/{{total}} dagen',
+          close: 'Sluiten',
+          generateReport: 'Rapport genereren (DEV)',
+          notificationTitle: 'Uw weekrapport is klaar!',
+          notificationBody: 'U heeft {{completionRate}}% van uw taken deze week voltooid. Bekijk uw volledige rapport.',
+          excellent: 'Uitstekend werk! U heeft {{completionRate}}% van uw taken deze week bereikt. Ga zo door!',
+          great: 'Goed gedaan! U heeft {{completionRate}}% van uw taken voltooid. U bent op de goede weg!',
+          good: 'Goed gedaan! U heeft {{completionRate}}% van uw taken voltooid. Elke inspanning telt!',
+          okay: 'U heeft {{completionRate}}% van uw taken voltooid. Dat is een goed begin, blijf vooruitgaan!',
+          needsImprovement: 'U heeft {{completionRate}}% van uw taken voltooid. Volgende week zal beter zijn, blijf het proberen!'
+        }
       }
     }
   },
@@ -853,6 +904,23 @@ const resources = {
       },
       notes: {
         markdownHint: 'Los símbolos especiales como "- [ ]" se mostrarán como casillas de verificación'
+      },
+      weeklyReport: {
+        title: 'Informe Semanal',
+        subtitle: 'Tu progreso esta semana',
+        period: 'Período: {{startDate}} - {{endDate}}',
+        completionRate: 'Tasa de finalización',
+        tasksCompleted: 'Tareas completadas',
+        taskCompletionDetail: '{{taskName}}: {{completed}}/{{total}} días',
+        close: 'Cerrar',
+        generateReport: 'Generar informe (DEV)',
+        notificationTitle: '¡Tu informe semanal está listo!',
+        notificationBody: 'Has logrado {{completionRate}}% de tus tareas esta semana. Revisa tu informe completo.',
+        excellent: '¡Excelente trabajo! Has logrado {{completionRate}}% de tus tareas esta semana. ¡Sigue así!',
+        great: '¡Buen trabajo! Has logrado {{completionRate}}% de tus tareas. ¡Estás en el camino correcto!',
+        good: '¡Bien hecho! Has completado {{completionRate}}% de tus tareas. ¡Cada esfuerzo cuenta!',
+        okay: 'Has completado {{completionRate}}% de tus tareas. Es un buen comienzo, ¡sigue progresando!',
+        needsImprovement: 'Has logrado {{completionRate}}% de tus tareas. La próxima semana será mejor, ¡sigue intentándolo!'
       }
     },
   },
@@ -867,6 +935,23 @@ const resources = {
       },
       notes: {
         markdownHint: 'Símbolos especiais como "- [ ]" serão exibidos como caixas de seleção'
+      },
+      weeklyReport: {
+        title: 'Relatório Semanal',
+        subtitle: 'Seu progresso esta semana',
+        period: 'Período: {{startDate}} - {{endDate}}',
+        completionRate: 'Taxa de conclusão',
+        tasksCompleted: 'Tarefas concluídas',
+        taskCompletionDetail: '{{taskName}}: {{completed}}/{{total}} dias',
+        close: 'Fechar',
+        generateReport: 'Gerar relatório (DEV)',
+        notificationTitle: 'Seu relatório semanal está pronto!',
+        notificationBody: 'Você concluiu {{completionRate}}% de suas tarefas esta semana. Confira seu relatório completo.',
+        excellent: 'Excelente trabalho! Você atingiu {{completionRate}}% de suas tarefas esta semana. Continue assim!',
+        great: 'Ótimo trabalho! Você realizou {{completionRate}}% de suas tarefas. Você está no caminho certo!',
+        good: 'Bem feito! Você completou {{completionRate}}% de suas tarefas. Cada esforço conta!',
+        okay: 'Você completou {{completionRate}}% de suas tarefas. Esse é um bom começo, continue progredindo!',
+        needsImprovement: 'Você realizou {{completionRate}}% de suas tarefas. A próxima semana será melhor, continue tentando!'
       }
     },
   },
@@ -881,6 +966,23 @@ const resources = {
       },
       notes: {
         markdownHint: 'Simboli speciali come "- [ ]" verranno visualizzati come caselle di controllo'
+      },
+      weeklyReport: {
+        title: 'Rapporto Settimanale',
+        subtitle: 'I tuoi progressi questa settimana',
+        period: 'Periodo: {{startDate}} - {{endDate}}',
+        completionRate: 'Tasso di completamento',
+        tasksCompleted: 'Attività completate',
+        taskCompletionDetail: '{{taskName}}: {{completed}}/{{total}} giorni',
+        close: 'Chiudi',
+        generateReport: 'Genera rapporto (DEV)',
+        notificationTitle: 'Il tuo rapporto settimanale è pronto!',
+        notificationBody: 'Hai completato {{completionRate}}% delle tue attività questa settimana. Controlla il tuo rapporto completo.',
+        excellent: 'Ottimo lavoro! Hai raggiunto {{completionRate}}% delle tue attività questa settimana. Continua così!',
+        great: 'Ottimo lavoro! Hai completato {{completionRate}}% delle tue attività. Sei sulla strada giusta!',
+        good: 'Ben fatto! Hai completato {{completionRate}}% delle tue attività. Ogni sforzo conta!',
+        okay: 'Hai completato {{completionRate}}% delle tue attività. È un buon inizio, continua a progredire!',
+        needsImprovement: 'Hai completato {{completionRate}}% delle tue attività. La prossima settimana andrà meglio, continua a provare!'
       }
     },
   }
