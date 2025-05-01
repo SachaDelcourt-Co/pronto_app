@@ -21,7 +21,8 @@ import {
   CheckCircle2,
   Circle,
   LogOut,
-  User as UserIcon
+  User as UserIcon,
+  RefreshCw
 } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { getAuth } from 'firebase/auth';
@@ -35,6 +36,8 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/utils/firebase';
 import { formatLocalDate, parseLocalDate } from '@/utils/dateUtils';
 import { Calendar as RNCalendar } from 'react-native-calendars';
+import { getOrGenerateQuotes, shouldUpdateQuotes } from '@/utils/motivationalService';
+import type { MotivationCategory } from '@/utils/data/motivationalQuotes';
 
 // Add Badge component at the top after imports
 const Badge = ({ children }: { children: React.ReactNode }) => (
@@ -57,7 +60,7 @@ export default function HomePage() {
   const [user, setUser] = useState<UserType | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
-  const [motivationalPhrase, setMotivationalPhrase] = useState<string>('');
+  const [motivationalPhrases, setMotivationalPhrases] = useState<string[]>([]);
   const [dailyTasks, setDailyTasks] = useState<Task[]>([]);
   const [loadingTaskId, setLoadingTaskId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -114,7 +117,24 @@ export default function HomePage() {
         // Load user data
         try {
           const userData = await DatabaseService.getUser(userId);
-          if (isMounted && userData) setUser(userData);
+          if (isMounted && userData) {
+            setUser(userData);
+            
+            // Check and update motivational quotes if needed
+            if (userData.motivations && userData.motivations.length > 0) {
+              const needsUpdate = await shouldUpdateQuotes();
+              if (needsUpdate) {
+                console.log('Updating motivational quotes at midnight');
+                const newQuotes = await getOrGenerateQuotes(
+                  userData.motivations as MotivationCategory[],
+                  i18n.language as any
+                );
+                setMotivationalPhrases(newQuotes);
+              } else {
+                console.log('Motivational quotes still current');
+              }
+            }
+          }
         } catch (error) {
           console.error('Error loading user data:', error);
         }
@@ -218,14 +238,45 @@ export default function HomePage() {
     </View>
   );
 
+  // Add a function to refresh quotes manually
+  const refreshMotivationalQuotes = async () => {
+    if (!user || !user.motivations || user.motivations.length === 0) return;
+    
+    try {
+      // Force generate new quotes
+      await AsyncStorage.removeItem('last_motivational_quote_update');
+      
+      const newQuotes = await getOrGenerateQuotes(
+        user.motivations as MotivationCategory[],
+        i18n.language as any
+      );
+      
+      setMotivationalPhrases(newQuotes);
+    } catch (error) {
+      console.error('Error refreshing motivational quotes:', error);
+    }
+  };
+
   const renderMotivationalBanner = () => (
     <LinearGradient
       colors={['rgba(147, 51, 234, 0.1)', 'rgba(147, 51, 234, 0.05)']}
       style={styles.motivationalBanner}
     >
-      <Text style={styles.motivationalText}>
-        {motivationalPhrase || "Believe in yourself and all that you are."}
-      </Text>
+      {motivationalPhrases.length > 0 ? (
+        <View style={styles.motivationalPhrasesContainer}>
+          {motivationalPhrases.map((phrase, index) => (
+            <Text key={index} style={styles.motivationalText}>
+              {motivationalPhrases.length > 1 ? '- ' : ''}{phrase}
+            </Text>
+          ))}
+        </View>
+      ) : (
+        <Text style={styles.motivationalText}>
+          {i18n.language === 'fr' 
+            ? "Crois en toi et en tout ce que tu es." 
+            : "Believe in yourself and all that you are."}
+        </Text>
+      )}
     </LinearGradient>
   );
 
@@ -1046,6 +1097,17 @@ export default function HomePage() {
       // Update local user state
       setUser(updatedUser);
       
+      // Update motivational phrases based on new motivations
+      try {
+        const newQuotes = await getOrGenerateQuotes(
+          selectedMotivations as MotivationCategory[],
+          i18n.language as any
+        );
+        setMotivationalPhrases(newQuotes);
+      } catch (error) {
+        console.error('Error updating motivational phrases:', error);
+      }
+      
       // Close the modal
       setShowEditMotivations(false);
     } catch (error) {
@@ -1321,6 +1383,37 @@ export default function HomePage() {
     }
   }, [currentVisibleMonth, authUser, showCalendar]);
 
+  // Add a useEffect to load motivational quotes when user data changes
+  useEffect(() => {
+    const loadMotivationalPhrases = async () => {
+      if (user && user.motivations && user.motivations.length > 0) {
+        try {
+          // Get motivational quotes based on user's motivations and language
+          const quotes = await getOrGenerateQuotes(
+            user.motivations as MotivationCategory[], 
+            i18n.language as any
+          );
+          setMotivationalPhrases(quotes);
+        } catch (error) {
+          console.error('Error loading motivational phrases:', error);
+          // Set default phrase if there's an error
+          setMotivationalPhrases([i18n.language === 'fr' 
+            ? "Crois en toi et en tout ce que tu es." 
+            : "Believe in yourself and all that you are."]);
+        }
+      } else {
+        // Set default phrase if user has no motivations
+        setMotivationalPhrases([i18n.language === 'fr' 
+          ? "Crois en toi et en tout ce que tu es." 
+          : "Believe in yourself and all that you are."]);
+      }
+    };
+    
+    if (user) {
+      loadMotivationalPhrases();
+    }
+  }, [user, i18n.language]);
+
   const renderCalendarModal = () => (
     <Modal
       visible={showCalendar}
@@ -1592,6 +1685,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
     letterSpacing: 0.2,
+  },
+  motivationalPhrasesContainer: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  phrasesSeparator: {
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontWeight: 'bold',
   },
   scheduleSection: {
     width: '100%',
@@ -2403,5 +2506,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     textAlign: 'center',
+  },
+  refreshIconContainer: {
+    marginTop: 4,
+    opacity: 0.7,
   },
 }); 
