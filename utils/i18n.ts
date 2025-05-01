@@ -239,7 +239,7 @@ const resources = {
         noteDetails: 'Détails de la note',
         lastUpdated: 'Dernière mise à jour',
         addCheckbox: 'Ajouter une case à cocher',
-        markdownHint: 'Les notes prennent en charge le Markdown'
+        markdownHint: 'Les symboles spéciaux comme "- [ ]" s\'afficheront comme des cases à cocher'
       },
       reminders: {
         title: 'Rappels',
@@ -525,7 +525,7 @@ const resources = {
         noteDetails: 'Note Details',
         lastUpdated: 'Last updated',
         addCheckbox: 'Add Checkbox',
-        markdownHint: 'Notes support Markdown'
+        markdownHint: 'Special symbols like "- [ ]" will display as proper checkboxes'
       },
       reminders: {
         title: 'Reminders',
@@ -777,7 +777,7 @@ const resources = {
         noteDetails: 'Notitie details',
         lastUpdated: 'Laatst bijgewerkt',
         addCheckbox: 'Checkbox toevoegen',
-        markdownHint: 'Notities ondersteunen Markdown'
+        markdownHint: 'Speciale symbolen zoals "- [ ]" worden weergegeven als echte checkboxes'
       },
       reminders: {
         title: 'Herinneringen',
@@ -851,6 +851,9 @@ const resources = {
         hour: 'Hora',
         minute: 'Minuto'
       },
+      notes: {
+        markdownHint: 'Los símbolos especiales como "- [ ]" se mostrarán como casillas de verificación'
+      }
     },
   },
   pt: {
@@ -862,6 +865,9 @@ const resources = {
         hour: 'Hora',
         minute: 'Minuto'
       },
+      notes: {
+        markdownHint: 'Símbolos especiais como "- [ ]" serão exibidos como caixas de seleção'
+      }
     },
   },
   it: {
@@ -873,6 +879,9 @@ const resources = {
         hour: 'Ora',
         minute: 'Minuto'
       },
+      notes: {
+        markdownHint: 'Simboli speciali come "- [ ]" verranno visualizzati come caselle di controllo'
+      }
     },
   }
 };

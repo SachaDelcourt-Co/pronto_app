@@ -97,7 +97,7 @@ export default function RemindersScreen() {
     setShowHourPicker(false);
     setShowMinutePicker(false);
   };
-  
+
   // Define a function to get localized day abbreviations based on current language
   const getDaysAbbreviations = () => {
     if (i18n.language === 'fr') {
@@ -1349,7 +1349,7 @@ export default function RemindersScreen() {
                         onPress={() => setShowMinutePicker(false)}
                       >
                         <View 
-                          style={[
+                style={[
                             styles.pickerDropdown,
                             {
                               position: 'absolute',
@@ -1379,7 +1379,7 @@ export default function RemindersScreen() {
                                     selectedMinute === minute && styles.pickerItemTextSelected
                                   ]}>
                                     {minute}
-                                  </Text>
+                    </Text>
                                 </Pressable>
                               ))}
                             </ScrollView>

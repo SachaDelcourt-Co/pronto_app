@@ -78,7 +78,7 @@ export default function Login() {
           language: i18n.language as SupportedLanguage,
         });
         
-        router.replace('/(tabs)/home');
+        router.replace('/onboarding/notifications');
       } catch (dbError) {
         console.error('Error creating user profile:', dbError);
         setError(t('login.registrationError'));

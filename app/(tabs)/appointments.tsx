@@ -1914,7 +1914,7 @@ export default function AppointmentsScreen() {
                         return notifOption?.label || option;
                       }).join(', ')}
                     </Text>
-                  </View>
+                </View>
                 )}
                 
                 <View style={styles.appointmentActions}>
