@@ -25,7 +25,35 @@ export default function PrivacyPolicy() {
       
       <ScrollView style={styles.content}>
         <Text style={styles.lastUpdated}>{t('legal.lastUpdated')}</Text>
-        <Text style={styles.text}>{t('legal.privacyContent')}</Text>
+        <Text style={styles.text}>
+          {t('legal.privacyContent').split('\n').map((paragraph, index) => {
+            // Check if paragraph is a section title (starts with a number followed by a dot)
+            if (/^\d+\./.test(paragraph)) {
+              return (
+                <Text key={index} style={styles.sectionTitle}>
+                  {`\n${paragraph}\n\n`}
+                </Text>
+              );
+            }
+            // Check if paragraph is a subsection or URL
+            else if (paragraph.startsWith('http')) {
+              return (
+                <Text key={index} style={styles.link}>
+                  {`${paragraph}\n\n`}
+                </Text>
+              );
+            }
+            // Regular paragraph
+            else if (paragraph.trim()) {
+              return (
+                <Text key={index}>
+                  {`${paragraph}\n\n`}
+                </Text>
+              );
+            }
+            return <Text key={index}>{`\n`}</Text>;
+          })}
+        </Text>
       </ScrollView>
     </LinearGradient>
   );
@@ -72,4 +100,16 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     lineHeight: 24,
   },
+  sectionTitle: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontFamily: 'Inter-SemiBold',
+    lineHeight: 26,
+  },
+  link: {
+    color: '#9333ea',
+    textDecorationLine: 'underline',
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+  }
 });
