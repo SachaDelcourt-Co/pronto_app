@@ -44,6 +44,8 @@ export default function RemindersScreen() {
   const [isRecurring, setIsRecurring] = useState(false);
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const [notificationTimes, setNotificationTimes] = useState<string[]>(['09:00']);
+  const [notificationTimeHours, setNotificationTimeHours] = useState<string[]>(['09']);
+  const [notificationTimeMinutes, setNotificationTimeMinutes] = useState<string[]>(['00']);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isActive, setIsActive] = useState(true);
   
@@ -63,16 +65,16 @@ export default function RemindersScreen() {
   const [showMinutePicker, setShowMinutePicker] = useState(false);
   const [selectedHour, setSelectedHour] = useState<string>('09');
   const [selectedMinute, setSelectedMinute] = useState<string>('00');
-  const [hourButtonPosition, setHourButtonPosition] = useState({ pageY: 0, pageX: 0, height: 0 });
-  const [minuteButtonPosition, setMinuteButtonPosition] = useState({ pageY: 0, pageX: 0, height: 0 });
+  const [hourButtonPosition, setHourButtonPosition] = useState({ pageY: 0, height: 0 });
+  const [minuteButtonPosition, setMinuteButtonPosition] = useState({ pageY: 0, height: 0 });
   
   // Add a reference to track if we're touching inside the picker
   const pickerRef = useRef<View>(null);
   
   // Add measure position functionality for better dropdown positioning
-  const [dayButtonPosition, setDayButtonPosition] = useState({ pageY: 0, pageX: 0, height: 0 });
-  const [monthButtonPosition, setMonthButtonPosition] = useState({ pageY: 0, pageX: 0, height: 0 });
-  const [yearButtonPosition, setYearButtonPosition] = useState({ pageY: 0, pageX: 0, height: 0 });
+  const [dayButtonPosition, setDayButtonPosition] = useState({ pageY: 0, height: 0 });
+  const [monthButtonPosition, setMonthButtonPosition] = useState({ pageY: 0, height: 0 });
+  const [yearButtonPosition, setYearButtonPosition] = useState({ pageY: 0, height: 0 });
   
   const dayButtonRef = useRef<View>(null);
   const monthButtonRef = useRef<View>(null);
@@ -81,10 +83,10 @@ export default function RemindersScreen() {
   const hourButtonRef = useRef<View>(null);
   const minuteButtonRef = useRef<View>(null);
   
-  const measureButtonPosition = (ref: React.RefObject<View>, setPosition: (position: {pageY: number, pageX: number, height: number}) => void) => {
+  const measureButtonPosition = (ref: React.RefObject<View>, setPosition: (position: {pageY: number, height: number}) => void) => {
     if (ref.current) {
-      ref.current.measure((_x, _y, _width, height, pageX, pageY) => {
-        setPosition({ pageY, pageX, height });
+      ref.current.measure((_x, _y, _width, height, _pageX, pageY) => {
+        setPosition({ pageY, height });
       });
     }
   };
@@ -96,8 +98,6 @@ export default function RemindersScreen() {
     setShowYearPicker(false);
     setShowHourPicker(false);
     setShowMinutePicker(false);
-    setNotificationHourPickers(notificationHourPickers.map(() => false));
-    setNotificationMinutePickers(notificationMinutePickers.map(() => false));
   };
 
   // Define a function to get localized day abbreviations based on current language
@@ -335,32 +335,34 @@ export default function RemindersScreen() {
     
     setIsRecurring(reminder?.isRecurring || false);
     setSelectedDays(reminder?.daysOfWeek || []);
-    
-    // Set notification times
-    const notificationTimesArray = reminder?.notificationTimes || ['09:00'];
-    setNotificationTimes(notificationTimesArray);
-    
-    // Set notification time pickers
-    const hours: string[] = [];
-    const minutes: string[] = [];
-    
-    notificationTimesArray.forEach((time, index) => {
-      const [h, m] = time.split(':');
-      hours[index] = h;
-      minutes[index] = m;
-    });
-    
-    // Fill remaining slots with default values
-    for (let i = notificationTimesArray.length; i < 3; i++) {
-      hours[i] = '09';
-      minutes[i] = '00';
-    }
-    
-    setNotificationTimeHours(hours);
-    setNotificationTimeMinutes(minutes);
-    
     setIsActive(reminder?.active !== undefined ? reminder.active : true);
     setIsEditMode(!!reminder);
+    
+    // Set notification times
+    if (reminder?.notificationTimes && reminder.notificationTimes.length > 0) {
+      setNotificationTimes(reminder.notificationTimes);
+      
+      // Set hours and minutes arrays
+      const hours = reminder.notificationTimes.map(time => time.split(':')[0]);
+      const minutes = reminder.notificationTimes.map(time => time.split(':')[1]);
+      
+      setNotificationTimeHours(hours);
+      setNotificationTimeMinutes(minutes);
+      
+      // Initialize button positions for each notification time
+      setNotificationHourButtonPositions(
+        Array(reminder.notificationTimes.length).fill({ pageY: 0, height: 0 })
+      );
+      setNotificationMinuteButtonPositions(
+        Array(reminder.notificationTimes.length).fill({ pageY: 0, height: 0 })
+      );
+    } else {
+      setNotificationTimes(['09:00']);
+      setNotificationTimeHours(['09']);
+      setNotificationTimeMinutes(['00']);
+      setNotificationHourButtonPositions([{ pageY: 0, height: 0 }]);
+      setNotificationMinuteButtonPositions([{ pageY: 0, height: 0 }]);
+    }
   };
 
   // Toggle a day selection for recurring reminders
@@ -374,10 +376,7 @@ export default function RemindersScreen() {
 
   // Add a notification time
   const addNotificationTime = () => {
-    if (notificationTimes.length < 3) {
-      const newTime = `${notificationTimeHours[notificationTimes.length]}:${notificationTimeMinutes[notificationTimes.length]}`;
-      setNotificationTimes([...notificationTimes, newTime]);
-    }
+    setNotificationTimes([...notificationTimes, '09:00']);
   };
 
   // Update a notification time
@@ -711,112 +710,16 @@ export default function RemindersScreen() {
     setReminderTime(newTime);
   }, [selectedHour, selectedMinute]);
 
-  const [notificationHourPickers, setNotificationHourPickers] = useState<boolean[]>([false, false, false]);
-  const [notificationMinutePickers, setNotificationMinutePickers] = useState<boolean[]>([false, false, false]);
-  const [notificationTimeHours, setNotificationTimeHours] = useState<string[]>(['09', '09', '09']);
-  const [notificationTimeMinutes, setNotificationTimeMinutes] = useState<string[]>(['00', '00', '00']);
-  const [notificationHourPositions, setNotificationHourPositions] = useState<{pageY: number, pageX: number, height: number}[]>([
-    { pageY: 0, pageX: 0, height: 0 },
-    { pageY: 0, pageX: 0, height: 0 },
-    { pageY: 0, pageX: 0, height: 0 }
-  ]);
-  const [notificationMinutePositions, setNotificationMinutePositions] = useState<{pageY: number, pageX: number, height: number}[]>([
-    { pageY: 0, pageX: 0, height: 0 },
-    { pageY: 0, pageX: 0, height: 0 },
-    { pageY: 0, pageX: 0, height: 0 }
-  ]);
-  
-  const notificationHourRefs = useRef<Array<React.RefObject<View>>>([
-    React.createRef<View>(),
-    React.createRef<View>(),
-    React.createRef<View>()
-  ]);
-  
-  const notificationMinuteRefs = useRef<Array<React.RefObject<View>>>([
-    React.createRef<View>(),
-    React.createRef<View>(),
-    React.createRef<View>()
-  ]);
+  // Add these state variables with other state variables at the beginning of RemindersScreen
+  // Add after the notificationTimes declaration
+  const [showNotificationHourPicker, setShowNotificationHourPicker] = useState<number | null>(null);
+  const [showNotificationMinutePicker, setShowNotificationMinutePicker] = useState<number | null>(null);
+  const [notificationHourButtonPositions, setNotificationHourButtonPositions] = useState<{pageY: number, height: number}[]>([{pageY: 0, height: 0}]);
+  const [notificationMinuteButtonPositions, setNotificationMinuteButtonPositions] = useState<{pageY: number, height: number}[]>([{pageY: 0, height: 0}]);
 
-  // Toggle notification hour picker visibility
-  const toggleNotificationHourPicker = (index: number) => {
-    const newPickers = notificationHourPickers.map((_, i) => i === index);
-    setNotificationHourPickers(newPickers);
-    setNotificationMinutePickers(notificationMinutePickers.map(() => false));
-    
-    // Close other pickers
-    setShowDayPicker(false);
-    setShowMonthPicker(false);
-    setShowYearPicker(false);
-    setShowHourPicker(false);
-    setShowMinutePicker(false);
-    
-    // Measure button position
-    measureButtonPosition(
-      notificationHourRefs.current[index],
-      (position) => {
-        const newPositions = [...notificationHourPositions];
-        newPositions[index] = position;
-        setNotificationHourPositions(newPositions);
-      }
-    );
-  };
-  
-  // Toggle notification minute picker visibility
-  const toggleNotificationMinutePicker = (index: number) => {
-    const newPickers = notificationMinutePickers.map((_, i) => i === index);
-    setNotificationMinutePickers(newPickers);
-    setNotificationHourPickers(notificationHourPickers.map(() => false));
-    
-    // Close other pickers
-    setShowDayPicker(false);
-    setShowMonthPicker(false);
-    setShowYearPicker(false);
-    setShowHourPicker(false);
-    setShowMinutePicker(false);
-    
-    // Measure button position
-    measureButtonPosition(
-      notificationMinuteRefs.current[index],
-      (position) => {
-        const newPositions = [...notificationMinutePositions];
-        newPositions[index] = position;
-        setNotificationMinutePositions(newPositions);
-      }
-    );
-  };
-  
-  // Set notification time hour
-  const setNotificationTimeHour = (index: number, hour: string) => {
-    const newHours = [...notificationTimeHours];
-    newHours[index] = hour;
-    setNotificationTimeHours(newHours);
-    
-    // Update notification time
-    const newTime = `${hour}:${notificationTimeMinutes[index]}`;
-    updateNotificationTime(index, newTime);
-    
-    // Close picker
-    const newPickers = [...notificationHourPickers];
-    newPickers[index] = false;
-    setNotificationHourPickers(newPickers);
-  };
-  
-  // Set notification time minute
-  const setNotificationTimeMinute = (index: number, minute: string) => {
-    const newMinutes = [...notificationTimeMinutes];
-    newMinutes[index] = minute;
-    setNotificationTimeMinutes(newMinutes);
-    
-    // Update notification time
-    const newTime = `${notificationTimeHours[index]}:${minute}`;
-    updateNotificationTime(index, newTime);
-    
-    // Close picker
-    const newPickers = [...notificationMinutePickers];
-    newPickers[index] = false;
-    setNotificationMinutePickers(newPickers);
-  };
+  // Add ref creation
+  const notificationHourButtonRefs = useRef<View[]>([]);
+  const notificationMinuteButtonRefs = useRef<View[]>([]);
 
   return (
     <View style={styles.container}>
@@ -962,16 +865,14 @@ export default function RemindersScreen() {
                 )}
 
                 <View style={styles.notificationsContainer}>
-                  {reminder.notificationTimes && reminder.notificationTimes.length > 0 ? (
-                    reminder.notificationTimes.map((time, index) => (
-                      <View key={index} style={styles.notificationTimeDisplay}>
-                        <Bell size={14} color="#ef4444" />
-                        <Text style={styles.notificationTimeText}>{time}</Text>
-                      </View>
-                    ))
-                  ) : null}
+                  {reminder.notificationTimes.map((time, index) => (
+                    <View key={index} style={styles.notificationChip}>
+                      <Bell size={14} color="#9333ea" />
+                      <Text style={styles.notificationTime}>{time}</Text>
+                    </View>
+                  ))}
                 </View>
-
+                
                 <View style={styles.reminderActions}>
                   <TouchableOpacity 
                     style={styles.actionButton}
@@ -1180,10 +1081,8 @@ export default function RemindersScreen() {
                             {
                               position: 'absolute',
                               top: dayButtonPosition.pageY + dayButtonPosition.height + 5,
-                              left: dayButtonPosition.pageX,
+                              left: 20,
                               width: '28%',
-                              maxHeight: 200,
-                              zIndex: 9999,
                             }
                           ]}
                         >
@@ -1251,10 +1150,8 @@ export default function RemindersScreen() {
                             {
                               position: 'absolute',
                               top: monthButtonPosition.pageY + monthButtonPosition.height + 5,
-                              left: monthButtonPosition.pageX,
+                              left: '36%',
                               width: '28%',
-                              maxHeight: 200,
-                              zIndex: 9999,
                             }
                           ]}
                         >
@@ -1322,10 +1219,10 @@ export default function RemindersScreen() {
                             {
                               position: 'absolute',
                               top: yearButtonPosition.pageY + yearButtonPosition.height + 5,
-                              left: yearButtonPosition.pageX,
+                              left: null,
+                              right: null,
                               width: '28%',
-                              maxHeight: 200,
-                              zIndex: 9999,
+                              transform: [{ translateX: Platform.OS === 'ios' ? 250 : 250 }],
                             }
                           ]}
                         >
@@ -1423,10 +1320,10 @@ export default function RemindersScreen() {
                             {
                               position: 'absolute',
                               top: hourButtonPosition.pageY + hourButtonPosition.height + 5,
-                              left: hourButtonPosition.pageX,
-                              width: '40%',
-                              maxHeight: 200,
-                              zIndex: 9999,
+                              left: null,
+                              width: '25%',
+                              height: 200,
+                              transform: [{ translateX: Platform.OS === 'ios' ? 50 : 50 }],
                             }
                           ]}
                         >
@@ -1498,10 +1395,10 @@ export default function RemindersScreen() {
                             {
                               position: 'absolute',
                               top: minuteButtonPosition.pageY + minuteButtonPosition.height + 5,
-                              left: minuteButtonPosition.pageX,
-                              width: '40%',
-                              maxHeight: 200,
-                              zIndex: 9999,
+                              left: null,
+                              width: '25%',
+                              height: 200,
+                              transform: [{ translateX: Platform.OS === 'ios' ? 140 : 140 }],
                             }
                           ]}
                         >
@@ -1536,84 +1433,45 @@ export default function RemindersScreen() {
                 </View>
               </View>
 
-              {/* Notifications Section */}
               <Text style={styles.inputLabel}>{t('reminders.notifications')}</Text>
-              
-              {notificationTimes.map((time, index) => (
-                <View key={index} style={styles.notificationTimeContainer}>
-                  <View style={styles.notificationTimeRow}>
+              <View style={styles.notificationsContainer}>
+                {notificationTimes.map((time, index) => (
+                  <View key={index} style={styles.notificationTimeRow}>
                     <View style={styles.timePickerContainer}>
                       {/* Hour Dropdown */}
                       <View style={styles.timePickerColumn}>
                         <Text style={styles.datePickerLabel}>{t('common.hour')}</Text>
                         <Pressable 
-                          ref={notificationHourRefs.current[index]}
+                          ref={el => {
+                            if (el) {
+                              notificationHourButtonRefs.current[index] = el;
+                            }
+                          }}
                           style={styles.datePickerButton}
-                          onPress={() => toggleNotificationHourPicker(index)}
+                          onPress={() => {
+                            // Measure position
+                            if (notificationHourButtonRefs.current[index]) {
+                              notificationHourButtonRefs.current[index].measure((_x, _y, _width, height, _pageX, pageY) => {
+                                // Update the position for this specific index
+                                const newPositions = [...notificationHourButtonPositions];
+                                newPositions[index] = { pageY, height };
+                                setNotificationHourButtonPositions(newPositions);
+                                
+                                // Show picker for this index
+                                setShowNotificationHourPicker(index);
+                                setShowNotificationMinutePicker(null);
+                                setShowDayPicker(false);
+                                setShowMonthPicker(false);
+                                setShowYearPicker(false);
+                                setShowHourPicker(false);
+                                setShowMinutePicker(false);
+                              });
+                            }
+                          }}
                         >
-                          <Text style={styles.datePickerButtonText}>
-                            {notificationTimeHours[index]}
-                          </Text>
+                          <Text style={styles.datePickerButtonText}>{notificationTimeHours[index] || '09'}</Text>
                           <ChevronDown size={16} color="#6b7280" />
                         </Pressable>
-                        
-                        {notificationHourPickers[index] && (
-                          <Modal
-                            transparent={true}
-                            visible={notificationHourPickers[index]}
-                            animationType="none"
-                            onRequestClose={() => {
-                              const newPickers = [...notificationHourPickers];
-                              newPickers[index] = false;
-                              setNotificationHourPickers(newPickers);
-                            }}
-                          >
-                            <Pressable 
-                              style={styles.modalOverlay}
-                              onPress={() => {
-                                const newPickers = [...notificationHourPickers];
-                                newPickers[index] = false;
-                                setNotificationHourPickers(newPickers);
-                              }}
-                            >
-                              <View 
-                                style={[
-                                  styles.pickerDropdown,
-                                  {
-                                    position: 'absolute',
-                                    top: notificationHourPositions[index].pageY + notificationHourPositions[index].height + 5,
-                                    left: notificationHourPositions[index].pageX,
-                                    width: '40%',
-                                    maxHeight: 200,
-                                    zIndex: 9999,
-                                  }
-                                ]}
-                              >
-                                <Pressable onPress={(e) => e.stopPropagation()}>
-                                  <ScrollView style={styles.pickerScrollView}>
-                                    {getHoursArray().map(hour => (
-                                      <Pressable
-                                        key={hour}
-                                        style={[
-                                          styles.pickerItem,
-                                          notificationTimeHours[index] === hour && styles.pickerItemSelected
-                                        ]}
-                                        onPress={() => setNotificationTimeHour(index, hour)}
-                                      >
-                                        <Text style={[
-                                          styles.pickerItemText,
-                                          notificationTimeHours[index] === hour && styles.pickerItemTextSelected
-                                        ]}>
-                                          {hour}
-                                        </Text>
-                                      </Pressable>
-                                    ))}
-                                  </ScrollView>
-                                </Pressable>
-                              </View>
-                            </Pressable>
-                          </Modal>
-                        )}
                       </View>
                       
                       <Text style={styles.timeSeparator}>:</Text>
@@ -1622,123 +1480,91 @@ export default function RemindersScreen() {
                       <View style={styles.timePickerColumn}>
                         <Text style={styles.datePickerLabel}>{t('common.minute')}</Text>
                         <Pressable 
-                          ref={notificationMinuteRefs.current[index]}
+                          ref={el => {
+                            if (el) {
+                              notificationMinuteButtonRefs.current[index] = el;
+                            }
+                          }}
                           style={styles.datePickerButton}
-                          onPress={() => toggleNotificationMinutePicker(index)}
+                          onPress={() => {
+                            // Measure position
+                            if (notificationMinuteButtonRefs.current[index]) {
+                              notificationMinuteButtonRefs.current[index].measure((_x, _y, _width, height, _pageX, pageY) => {
+                                // Update the position for this specific index
+                                const newPositions = [...notificationMinuteButtonPositions];
+                                newPositions[index] = { pageY, height };
+                                setNotificationMinuteButtonPositions(newPositions);
+                                
+                                // Show picker for this index
+                                setShowNotificationMinutePicker(index);
+                                setShowNotificationHourPicker(null);
+                                setShowDayPicker(false);
+                                setShowMonthPicker(false);
+                                setShowYearPicker(false);
+                                setShowHourPicker(false);
+                                setShowMinutePicker(false);
+                              });
+                            }
+                          }}
                         >
-                          <Text style={styles.datePickerButtonText}>
-                            {notificationTimeMinutes[index]}
-                          </Text>
+                          <Text style={styles.datePickerButtonText}>{notificationTimeMinutes[index] || '00'}</Text>
                           <ChevronDown size={16} color="#6b7280" />
                         </Pressable>
-                        
-                        {notificationMinutePickers[index] && (
-                          <Modal
-                            transparent={true}
-                            visible={notificationMinutePickers[index]}
-                            animationType="none"
-                            onRequestClose={() => {
-                              const newPickers = [...notificationMinutePickers];
-                              newPickers[index] = false;
-                              setNotificationMinutePickers(newPickers);
-                            }}
-                          >
-                            <Pressable 
-                              style={styles.modalOverlay}
-                              onPress={() => {
-                                const newPickers = [...notificationMinutePickers];
-                                newPickers[index] = false;
-                                setNotificationMinutePickers(newPickers);
-                              }}
-                            >
-                              <View 
-                                style={[
-                                  styles.pickerDropdown,
-                                  {
-                                    position: 'absolute',
-                                    top: notificationMinutePositions[index].pageY + notificationMinutePositions[index].height + 5,
-                                    left: notificationMinutePositions[index].pageX,
-                                    width: '40%',
-                                    maxHeight: 200,
-                                    zIndex: 9999,
-                                  }
-                                ]}
-                              >
-                                <Pressable onPress={(e) => e.stopPropagation()}>
-                                  <ScrollView style={styles.pickerScrollView}>
-                                    {getMinutesArray().map(minute => (
-                                      <Pressable
-                                        key={minute}
-                                        style={[
-                                          styles.pickerItem,
-                                          notificationTimeMinutes[index] === minute && styles.pickerItemSelected
-                                        ]}
-                                        onPress={() => setNotificationTimeMinute(index, minute)}
-                                      >
-                                        <Text style={[
-                                          styles.pickerItemText,
-                                          notificationTimeMinutes[index] === minute && styles.pickerItemTextSelected
-                                        ]}>
-                                          {minute}
-                                        </Text>
-                                      </Pressable>
-                                    ))}
-                                  </ScrollView>
-                                </Pressable>
-                              </View>
-                            </Pressable>
-                          </Modal>
-                        )}
                       </View>
                     </View>
                     
+                    {/* Remove button */}
                     {notificationTimes.length > 1 && (
                       <TouchableOpacity
                         style={styles.removeNotificationButton}
-                        onPress={() => removeNotificationTime(index)}
+                        onPress={() => {
+                          // Remove notification time at this index
+                          const newTimes = [...notificationTimes];
+                          newTimes.splice(index, 1);
+                          setNotificationTimes(newTimes);
+                          
+                          // Also remove from hours and minutes arrays
+                          const newHours = [...notificationTimeHours];
+                          newHours.splice(index, 1);
+                          setNotificationTimeHours(newHours);
+                          
+                          const newMinutes = [...notificationTimeMinutes];
+                          newMinutes.splice(index, 1);
+                          setNotificationTimeMinutes(newMinutes);
+                        }}
                       >
-                        <X size={16} color="#ef4444" />
+                        <X size={18} color="#ef4444" />
                       </TouchableOpacity>
                     )}
                   </View>
-                </View>
-              ))}
-              
-              {notificationTimes.length < 3 && (
-                <TouchableOpacity
-                  style={styles.addNotificationButton}
-                  onPress={addNotificationTime}
-                >
-                  <Plus size={16} color="#9333ea" />
-                  <Text style={styles.addNotificationText}>
-                    {t('reminders.addNotificationTime')}
-                  </Text>
-                </TouchableOpacity>
-              )}
-
-              {/* Toggle for Active/Inactive */}
-              <View style={styles.switchContainer}>
-                <Text style={styles.switchLabel}>{t('reminders.active')}</Text>
-                <Switch
-                  value={isActive}
-                  onValueChange={setIsActive}
-                  trackColor={{ false: '#e5e7eb', true: '#9333ea' }}
-                  thumbColor={isActive ? '#ffffff' : '#f4f3f4'}
-                />
-              </View>
-              
-              {/* Save Button */}
-              <TouchableOpacity
-                style={[styles.saveButton, isSubmitting && styles.disabledButton]}
-                onPress={handleSubmitReminder}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator size="small" color="#ffffff" />
-                ) : (
-                  <Text style={styles.saveButtonText}>{t('common.save')}</Text>
+                ))}
+                
+                {/* Add button - only show if less than 2 notification times */}
+                {notificationTimes.length < 2 && (
+                  <TouchableOpacity
+                    style={styles.addNotificationButton}
+                    onPress={() => {
+                      // Add a new notification time
+                      setNotificationTimes([...notificationTimes, '09:00']);
+                      setNotificationTimeHours([...notificationTimeHours, '09']);
+                      setNotificationTimeMinutes([...notificationTimeMinutes, '00']);
+                      
+                      // Initialize positions for the new time pickers
+                      setNotificationHourButtonPositions([
+                        ...notificationHourButtonPositions,
+                        { pageY: 0, height: 0 }
+                      ]);
+                      setNotificationMinuteButtonPositions([
+                        ...notificationMinuteButtonPositions,
+                        { pageY: 0, height: 0 }
+                      ]);
+                    }}
+                  >
+                    <Plus size={18} color="#9333ea" />
+                    <Text style={styles.addNotificationButtonText}>{t('reminders.addNotification')}</Text>
+                  </TouchableOpacity>
                 )}
-              </TouchableOpacity>
+              </View>
             </ScrollView>
           </View>
         </View>
@@ -1784,6 +1610,131 @@ export default function RemindersScreen() {
       >
         <Plus size={24} color="#ffffff" />
       </TouchableOpacity>
+
+      {/* Add the notification time picker modals */}
+      {showNotificationHourPicker !== null && (
+        <Modal
+          transparent={true}
+          visible={showNotificationHourPicker !== null}
+          animationType="none"
+          onRequestClose={() => setShowNotificationHourPicker(null)}
+        >
+          <Pressable 
+            style={styles.modalOverlay}
+            onPress={() => setShowNotificationHourPicker(null)}
+          >
+            <View 
+              style={[
+                styles.pickerDropdown,
+                {
+                  position: 'absolute',
+                  top: notificationHourButtonPositions[showNotificationHourPicker]?.pageY + notificationHourButtonPositions[showNotificationHourPicker]?.height + 5,
+                  left: null,
+                  width: '25%',
+                  height: 200,
+                  transform: [{ translateX: Platform.OS === 'ios' ? 50 : 50 }],
+                }
+              ]}
+            >
+              <Pressable onPress={(e) => e.stopPropagation()}>
+                <ScrollView style={styles.pickerScrollView}>
+                  {getHoursArray().map(hour => (
+                    <Pressable
+                      key={hour}
+                      style={[
+                        styles.pickerItem,
+                        notificationTimeHours[showNotificationHourPicker] === hour && styles.pickerItemSelected
+                      ]}
+                      onPress={() => {
+                        // Update the hour for this specific notification
+                        const newHours = [...notificationTimeHours];
+                        newHours[showNotificationHourPicker] = hour;
+                        setNotificationTimeHours(newHours);
+                        
+                        // Update the full time string
+                        const newTimes = [...notificationTimes];
+                        newTimes[showNotificationHourPicker] = `${hour}:${notificationTimeMinutes[showNotificationHourPicker] || '00'}`;
+                        setNotificationTimes(newTimes);
+                        
+                        setShowNotificationHourPicker(null);
+                      }}
+                    >
+                      <Text style={[
+                        styles.pickerItemText,
+                        notificationTimeHours[showNotificationHourPicker] === hour && styles.pickerItemTextSelected
+                      ]}>
+                        {hour}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Modal>
+      )}
+
+      {showNotificationMinutePicker !== null && (
+        <Modal
+          transparent={true}
+          visible={showNotificationMinutePicker !== null}
+          animationType="none"
+          onRequestClose={() => setShowNotificationMinutePicker(null)}
+        >
+          <Pressable 
+            style={styles.modalOverlay}
+            onPress={() => setShowNotificationMinutePicker(null)}
+          >
+            <View 
+              style={[
+                styles.pickerDropdown,
+                {
+                  position: 'absolute',
+                  top: notificationMinuteButtonPositions[showNotificationMinutePicker]?.pageY + notificationMinuteButtonPositions[showNotificationMinutePicker]?.height + 5,
+                  left: null,
+                  width: '25%',
+                  height: 200,
+                  transform: [{ translateX: Platform.OS === 'ios' ? 140 : 140 }],
+                }
+              ]}
+            >
+              <Pressable onPress={(e) => e.stopPropagation()}>
+                <ScrollView style={styles.pickerScrollView}>
+                  {getMinutesArray().map(minute => (
+                    <Pressable
+                      key={minute}
+                      style={[
+                        styles.pickerItem,
+                        notificationTimeMinutes[showNotificationMinutePicker] === minute && styles.pickerItemSelected
+                      ]}
+                      onPress={() => {
+                        // Update the minute for this specific notification
+                        const newMinutes = [...notificationTimeMinutes];
+                        newMinutes[showNotificationMinutePicker] = minute;
+                        setNotificationTimeMinutes(newMinutes);
+                        
+                        // Update the full time string
+                        const newTimes = [...notificationTimes];
+                        newTimes[showNotificationMinutePicker] = `${notificationTimeHours[showNotificationMinutePicker] || '09'}:${minute}`;
+                        setNotificationTimes(newTimes);
+                        
+                        setShowNotificationMinutePicker(null);
+                      }}
+                    >
+                      <Text style={[
+                        styles.pickerItemText,
+                        notificationTimeMinutes[showNotificationMinutePicker] === minute && styles.pickerItemTextSelected
+                      ]}>
+                        {minute}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -1946,32 +1897,19 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     marginBottom: 12,
   },
-  notificationTimeContainer: {
-    marginBottom: 16,
-  },
-  notificationTimeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  removeNotificationButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    marginLeft: 8,
-  },
-  addNotificationButton: {
+  notificationChip: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(147, 51, 234, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
+    gap: 4,
   },
-  addNotificationText: {
+  notificationTime: {
+    fontSize: 12,
+    fontWeight: '600',
     color: '#9333ea',
-    marginLeft: 8,
-    fontWeight: '500',
   },
   reminderActions: {
     flexDirection: 'row',
@@ -2231,7 +2169,7 @@ const styles = StyleSheet.create({
     maxHeight: 160,
   },
   pickerScrollView: {
-    maxHeight: 200,
+    maxHeight: 150,
     backgroundColor: '#ffffff',
   },
   pickerItem: {
@@ -2346,39 +2284,48 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#ffffff',
   },
-  saveButton: {
-    backgroundColor: '#9333ea',
-    borderRadius: 8,
-    padding: 12,
-    marginTop: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#9333ea',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 6,
+  notificationsContainer: {
+    marginBottom: 16,
   },
-  saveButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#ffffff',
-  },
-  disabledButton: {
-    backgroundColor: '#e5e7eb',
-  },
-  notificationTimeDisplay: {
+  notificationTimeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 12,
   },
-  notificationTimeText: {
-    fontSize: 12,
+  timePickerContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    flex: 1,
+  },
+  timeSeparator: {
+    fontSize: 24,
+    color: '#4b5563',
+    marginBottom: 10,
+    paddingHorizontal: 5,
+  },
+  removeNotificationButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    marginLeft: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addNotificationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(147, 51, 234, 0.1)',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginTop: 8,
+  },
+  addNotificationButtonText: {
+    fontSize: 14,
+    color: '#9333ea',
+    marginLeft: 8,
     fontWeight: '600',
-    color: '#ef4444',
-    marginLeft: 4,
   },
 });

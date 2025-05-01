@@ -687,18 +687,18 @@ export default function AppointmentsScreen() {
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
 
   // Add measure position functionality for better dropdown positioning
-  const [dayButtonPosition, setDayButtonPosition] = useState({ pageY: 0, height: 0 });
-  const [monthButtonPosition, setMonthButtonPosition] = useState({ pageY: 0, height: 0 });
-  const [yearButtonPosition, setYearButtonPosition] = useState({ pageY: 0, height: 0 });
+  const [dayButtonPosition, setDayButtonPosition] = useState({ pageY: 0, pageX: 0, height: 0 });
+  const [monthButtonPosition, setMonthButtonPosition] = useState({ pageY: 0, pageX: 0, height: 0 });
+  const [yearButtonPosition, setYearButtonPosition] = useState({ pageY: 0, pageX: 0, height: 0 });
   
   const dayButtonRef = useRef<View>(null);
   const monthButtonRef = useRef<View>(null);
   const yearButtonRef = useRef<View>(null);
   
-  const measureButtonPosition = (ref: React.RefObject<View>, setPosition: (position: {pageY: number, height: number}) => void) => {
+  const measureButtonPosition = (ref: React.RefObject<View>, setPosition: (position: {pageY: number, pageX: number, height: number}) => void) => {
     if (ref.current) {
-      ref.current.measure((_x, _y, _width, height, _pageX, pageY) => {
-        setPosition({ pageY, height });
+      ref.current.measure((_x, _y, _width, height, pageX, pageY) => {
+        setPosition({ pageY, pageX, height });
       });
     }
   };
@@ -778,15 +778,15 @@ export default function AppointmentsScreen() {
   const [showStartMinutePicker, setShowStartMinutePicker] = useState(false);
   const [selectedStartHour, setSelectedStartHour] = useState<string>('09');
   const [selectedStartMinute, setSelectedStartMinute] = useState<string>('00');
-  const [startHourButtonPosition, setStartHourButtonPosition] = useState({ pageY: 0, height: 0 });
-  const [startMinuteButtonPosition, setStartMinuteButtonPosition] = useState({ pageY: 0, height: 0 });
+  const [startHourButtonPosition, setStartHourButtonPosition] = useState({ pageY: 0, pageX: 0, height: 0 });
+  const [startMinuteButtonPosition, setStartMinuteButtonPosition] = useState({ pageY: 0, pageX: 0, height: 0 });
   
   const [showEndHourPicker, setShowEndHourPicker] = useState(false);
   const [showEndMinutePicker, setShowEndMinutePicker] = useState(false);
   const [selectedEndHour, setSelectedEndHour] = useState<string>('10');
   const [selectedEndMinute, setSelectedEndMinute] = useState<string>('00');
-  const [endHourButtonPosition, setEndHourButtonPosition] = useState({ pageY: 0, height: 0 });
-  const [endMinuteButtonPosition, setEndMinuteButtonPosition] = useState({ pageY: 0, height: 0 });
+  const [endHourButtonPosition, setEndHourButtonPosition] = useState({ pageY: 0, pageX: 0, height: 0 });
+  const [endMinuteButtonPosition, setEndMinuteButtonPosition] = useState({ pageY: 0, pageX: 0, height: 0 });
   
   const startHourButtonRef = useRef<View>(null);
   const startMinuteButtonRef = useRef<View>(null);
@@ -1214,8 +1214,10 @@ export default function AppointmentsScreen() {
                             {
                               position: 'absolute',
                               top: dayButtonPosition.pageY + dayButtonPosition.height + 5,
-                              left: 20,
+                              left: dayButtonPosition.pageX,
                               width: '28%',
+                              maxHeight: 200,
+                              zIndex: 9999,
                             }
                           ]}
                         >
@@ -1283,8 +1285,10 @@ export default function AppointmentsScreen() {
                             {
                               position: 'absolute',
                               top: monthButtonPosition.pageY + monthButtonPosition.height + 5,
-                              left: '36%',
+                              left: monthButtonPosition.pageX,
                               width: '28%',
+                              maxHeight: 200,
+                              zIndex: 9999,
                             }
                           ]}
                         >
@@ -1352,8 +1356,10 @@ export default function AppointmentsScreen() {
                             {
                               position: 'absolute',
                               top: yearButtonPosition.pageY + yearButtonPosition.height + 5,
-                              right: 20,
+                              left: yearButtonPosition.pageX,
                               width: '28%',
+                              maxHeight: 200,
+                              zIndex: 9999,
                             }
                           ]}
                         >
@@ -1430,9 +1436,10 @@ export default function AppointmentsScreen() {
                                 {
                                   position: 'absolute',
                                   top: startHourButtonPosition.pageY + startHourButtonPosition.height + 5,
-                                  left: 20,
+                                  left: startHourButtonPosition.pageX,
                                   width: '40%',
-                                  height: 200,
+                                  maxHeight: 200,
+                                  zIndex: 9999,
                                 }
                               ]}
                             >
@@ -1506,9 +1513,10 @@ export default function AppointmentsScreen() {
                                 {
                                   position: 'absolute',
                                   top: startMinuteButtonPosition.pageY + startMinuteButtonPosition.height + 5,
-                                  right: 20,
+                                  left: startMinuteButtonPosition.pageX,
                                   width: '40%',
-                                  height: 200,
+                                  maxHeight: 200,
+                                  zIndex: 9999,
                                 }
                               ]}
                             >
@@ -1585,9 +1593,10 @@ export default function AppointmentsScreen() {
                                 {
                                   position: 'absolute',
                                   top: endHourButtonPosition.pageY + endHourButtonPosition.height + 5,
-                                  left: 20,
+                                  left: endHourButtonPosition.pageX,
                                   width: '40%',
-                                  height: 200,
+                                  maxHeight: 200,
+                                  zIndex: 9999,
                                 }
                               ]}
                             >
@@ -1661,9 +1670,10 @@ export default function AppointmentsScreen() {
                                 {
                                   position: 'absolute',
                                   top: endMinuteButtonPosition.pageY + endMinuteButtonPosition.height + 5,
-                                  right: 20,
+                                  left: endMinuteButtonPosition.pageX,
                                   width: '40%',
-                                  height: 200,
+                                  maxHeight: 200,
+                                  zIndex: 9999,
                                 }
                               ]}
                             >
@@ -2184,8 +2194,9 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    justifyContent: 'center',
+    justifyContent: 'flex-start', // Change from 'center' to 'flex-start'
     alignItems: 'center',
+    paddingTop: 100, // Add padding to position modal higher
   },
   calendarModalContent: {
     backgroundColor: '#ffffff',
@@ -2303,7 +2314,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     width: '100%',
     maxWidth: 500,
-    maxHeight: '90%',
     padding: 20,
     shadowColor: '#000',
     shadowOffset: {
@@ -2313,9 +2323,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+    ...(Platform.OS === 'ios' && {
+      minHeight: 650, // Increase minimum height for iOS
+    }),
   },
   modalScrollContent: {
     flex: 1,
+    // Add a specific height for iOS to fix the scroll issue
+    ...(Platform.OS === 'ios' && {
+      height: 600,  // Increase height for iOS
+      minHeight: 300, // Increase minimum height
+    }),
   },
   inputLabel: {
     fontSize: 14,
