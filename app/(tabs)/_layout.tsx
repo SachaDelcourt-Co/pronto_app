@@ -3,9 +3,26 @@ import { Home, SquareCheck as CheckSquare, Calendar, Bell, FileText } from 'luci
 import { useTranslation } from 'react-i18next';
 import { View, StyleSheet, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAuth } from '@/utils/AuthContext';
+import { useEffect } from 'react';
+import { router } from 'expo-router';
 
 export default function TabLayout() {
   const { t } = useTranslation();
+  const { user, authInitialized } = useAuth();
+  
+  // Protect this route - redirect to login if not authenticated
+  useEffect(() => {
+    if (authInitialized && !user) {
+      console.log('User not authenticated, redirecting to login');
+      router.replace('/(auth)/login');
+    }
+  }, [user, authInitialized]);
+  
+  // Don't render the tabs if not authenticated
+  if (authInitialized && !user) {
+    return null;
+  }
   
   return (
     <View style={styles.container}>

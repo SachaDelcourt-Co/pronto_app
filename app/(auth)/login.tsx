@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, Modal, A
 import { Link, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { ChevronDown, X, Check } from 'lucide-react-native';
 import { saveLanguagePreference, SUPPORTED_LANGUAGES, SupportedLanguage } from '@/utils/i18n';
 import { DatabaseService } from '@/services/database';
@@ -32,39 +32,87 @@ export default function Login() {
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [error, setError] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async () => {
+    if (isLoading) return;
+    
     try {
+      setIsLoading(true);
+      setError('');
+      
+      if (!email || !password) {
+        setError(t('login.fieldsRequired'));
+        return;
+      }
+      
       const auth = getAuth();
-      await signInWithEmailAndPassword(auth, email, password);
-      router.replace('/(tabs)/home');
-    } catch (err) {
-      setError(t('login.invalidCredentials'));
+      
+      // For web, set persistence to LOCAL to maintain auth state
+      if (Platform.OS === 'web') {
+        await setPersistence(auth, browserLocalPersistence);
+      }
+      
+      console.log('Attempting login with email:', email);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      console.log('Login successful, user:', userCredential.user.uid);
+      
+      // Wait a moment to ensure Firebase auth state is fully established
+      setTimeout(() => {
+        router.replace('/(tabs)/home');
+      }, 500);
+    } catch (err: any) {
+      console.error('Login error:', err);
+      
+      // Handle specific error codes
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        setError(t('login.invalidCredentials'));
+      } else if (err.code === 'auth/too-many-requests') {
+        setError(t('login.tooManyAttempts'));
+      } else {
+        setError(t('login.loginError'));
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleSignup = async () => {
+    if (isLoading) return;
+    
+    setIsLoading(true);
     setError('');
     
     // Form validation
     if (!email || !password) {
       setError(t('login.fieldsRequired'));
+      setIsLoading(false);
       return;
     }
     
     if (!termsAccepted) {
       setError(t('login.acceptTerms'));
+      setIsLoading(false);
       return;
     }
     
     if (selectedMotivations.length === 0) {
       setError(t('login.selectMotivationsRequired'));
+      setIsLoading(false);
       return;
     }
     
     try {
       const auth = getAuth();
+      
+      // For web, set persistence to LOCAL to maintain auth state
+      if (Platform.OS === 'web') {
+        await setPersistence(auth, browserLocalPersistence);
+      }
+      
+      console.log('Creating new user with email:', email);
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      console.log('User created successfully:', userCredential.user.uid);
       
       // No need to map motivations since they're already in the correct DB format
       
@@ -78,7 +126,10 @@ export default function Login() {
           language: i18n.language as SupportedLanguage,
         });
         
-        router.replace('/onboarding/notifications');
+        // Wait a moment to ensure Firebase auth state is fully established
+        setTimeout(() => {
+          router.replace('/onboarding/notifications');
+        }, 500);
       } catch (dbError) {
         console.error('Error creating user profile:', dbError);
         setError(t('login.registrationError'));
@@ -96,6 +147,8 @@ export default function Login() {
       } else {
         setError(t('login.registrationError'));
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -268,11 +321,14 @@ export default function Login() {
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <TouchableOpacity 
-            style={styles.button}
+            style={[styles.button, isLoading && styles.buttonDisabled]}
             onPress={isLogin ? handleLogin : handleSignup}
+            disabled={isLoading}
           >
             <Text style={styles.buttonText}>
-              {isLogin ? t('login.loginButton') : t('login.createAccount')}
+              {isLoading 
+                ? t('login.processing') 
+                : (isLogin ? t('login.loginButton') : t('login.createAccount'))}
             </Text>
           </TouchableOpacity>
 
@@ -477,6 +533,10 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     marginTop: 8,
+  },
+  buttonDisabled: {
+    backgroundColor: '#622b93',
+    opacity: 0.7,
   },
   buttonText: {
     color: '#ffffff',
