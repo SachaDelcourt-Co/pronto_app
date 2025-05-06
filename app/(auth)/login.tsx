@@ -3,11 +3,12 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, Modal, A
 import { Link, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { ChevronDown, X, Check } from 'lucide-react-native';
 import { saveLanguagePreference, SUPPORTED_LANGUAGES, SupportedLanguage } from '@/utils/i18n';
 import { DatabaseService } from '@/services/database';
 import { User } from '@/types/database';
+import { ensureAuth } from '@/utils/firebase';
 
 // Motivation categories directly map to database values
 const MOTIVATION_CATEGORIES: { [key: string]: 'sport' | 'business' | 'studies' | 'wellbeing' | 'parenting' | 'personalDevelopment' | 'financialManagement' } = {
@@ -46,7 +47,8 @@ export default function Login() {
         return;
       }
       
-      const auth = getAuth();
+      // Use ensureAuth instead of getAuth to ensure Firebase Auth is properly initialized
+      const auth = ensureAuth();
       
       // For web, set persistence to LOCAL to maintain auth state
       if (Platform.OS === 'web') {
@@ -103,7 +105,8 @@ export default function Login() {
     }
     
     try {
-      const auth = getAuth();
+      // Use ensureAuth instead of getAuth to ensure Firebase Auth is properly initialized
+      const auth = ensureAuth();
       
       // For web, set persistence to LOCAL to maintain auth state
       if (Platform.OS === 'web') {

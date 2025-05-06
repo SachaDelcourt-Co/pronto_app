@@ -6,11 +6,12 @@ import { useFonts, Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@e
 import { SplashScreen } from 'expo-router';
 import { View } from 'react-native';
 import { initI18n } from '@/utils/i18n';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import { AuthContext } from '../utils/AuthContext';
 import { User } from 'firebase/auth';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import ErrorBoundary from '@/utils/ErrorBoundary';
+import { ensureAuth } from '@/utils/firebase';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync().catch(() => {
@@ -47,7 +48,9 @@ export default function RootLayout() {
 
   useEffect(() => {
     try {
-      const auth = getAuth();
+      // Use ensureAuth instead of getAuth to guarantee Firebase Auth is properly initialized
+      const auth = ensureAuth();
+      console.log("Setting up auth state listener");
       
       // Set up auth state listener
       const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
