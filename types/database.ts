@@ -10,25 +10,39 @@ export interface User {
 
 export interface Task {
   userID: string;
+  taskID?: string;
   taskName: string;
-  description?: string;
-  daysSelected: number[];
-  status: boolean;
+  description?: string | null;
+  daysSelected: number;
+  daysDone: number;
+  status: 'active' | 'completed' | 'archived';
+  lastCompletedDate?: string;
+  createdAt: Date;
   timestamp: Date;
 }
 
 export interface Appointment {
   userID: string;
+  appointmentID?: string;
   appointmentName: string;
   description: string;
   date: Date;
-  time: string;
+  startTime: string;
+  endTime: string;
+  allDay?: boolean;
   address?: string;
   notificationTimes: Date[];
+  color?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  isRecurring?: boolean;
+  recurrencePattern?: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  recurrenceEndDate?: Date | null;
 }
 
 export interface Reminder {
   userID: string;
+  reminderID?: string;
   reminderName: string;
   date: Date;
   time: string;
@@ -36,13 +50,26 @@ export interface Reminder {
   daysOfWeek?: number[];
   notificationTimes: string[];
   active: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface Note {
   userID: string;
+  noteID?: string;
   title: string;
   content: string;
+  folderID?: string | null;
   createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Folder {
+  userID: string;
+  folderID?: string;
+  folderName: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface SundayReport {

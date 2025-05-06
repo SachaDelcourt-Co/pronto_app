@@ -25,7 +25,27 @@ export default function Terms() {
       
       <ScrollView style={styles.content}>
         <Text style={styles.lastUpdated}>{t('legal.lastUpdated')}</Text>
-        <Text style={styles.text}>{t('legal.termsContent')}</Text>
+        <Text style={styles.text}>
+          {t('legal.termsContent').split('\n').map((paragraph, index) => {
+            // Check if paragraph is a section title (starts with a number followed by a dot)
+            if (/^\d+\./.test(paragraph)) {
+              return (
+                <Text key={index} style={styles.sectionTitle}>
+                  {`\n${paragraph}\n\n`}
+                </Text>
+              );
+            }
+            // Regular paragraph
+            else if (paragraph.trim()) {
+              return (
+                <Text key={index}>
+                  {`${paragraph}\n\n`}
+                </Text>
+              );
+            }
+            return <Text key={index}>{`\n`}</Text>;
+          })}
+        </Text>
       </ScrollView>
     </LinearGradient>
   );
@@ -72,4 +92,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     lineHeight: 24,
   },
+  sectionTitle: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontFamily: 'Inter-SemiBold',
+    lineHeight: 26,
+  }
 });

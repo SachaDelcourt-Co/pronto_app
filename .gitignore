@@ -35,3 +35,6 @@ yarn-error.*
 
 # bolt
 .bolt
+
+# MCP configuration
+.cursor

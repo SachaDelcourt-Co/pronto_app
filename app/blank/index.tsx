@@ -8,18 +8,8 @@ import { getAuth } from 'firebase/auth';
 import { DatabaseService } from '@/services/database';
 import type { User, Appointment, Reminder } from '@/types/database';
 
-const TABS = [
-  { key: 'tasks', icon: CheckSquare, label: 'TASK' },
-  { key: 'reminders', icon: Bell, label: 'REMINDER' },
-  { key: 'appointments', icon: Calendar, label: 'APPOINTMENT' },
-  { key: 'notes', icon: FileText, label: 'NOTES' },
-] as const;
-
-type Tab = typeof TABS[number]['key'];
-
 export default function HomePage() {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<Tab>('tasks');
   const [showMenu, setShowMenu] = useState(false);
   const [showAppointments, setShowAppointments] = useState(false);
   const [showReminders, setShowReminders] = useState(false);
@@ -201,22 +191,11 @@ export default function HomePage() {
     </Modal>
   );
 
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'tasks':
-        return (
-          <View style={styles.tabContent}>
-            <Text style={styles.comingSoonText}>Tasks coming soon</Text>
-          </View>
-        );
-      default:
-        return (
-          <View style={styles.tabContent}>
-            <Text style={styles.comingSoonText}>Coming soon</Text>
-          </View>
-        );
-    }
-  };
+  const renderContent = () => (
+    <View style={styles.tabContent}>
+      <Text style={styles.comingSoonText}>Tasks coming soon</Text>
+    </View>
+  );
 
   const renderMenu = () => {
     if (!showMenu) return null;
@@ -259,27 +238,6 @@ export default function HomePage() {
         </View>
 
         <View style={styles.lowerContent}>
-          <View style={styles.tabBar}>
-            {TABS.map(({ key, icon: Icon, label }) => (
-              <TouchableOpacity
-                key={key}
-                style={[styles.tab, activeTab === key && styles.activeTab]}
-                onPress={() => setActiveTab(key)}
-              >
-                <Icon
-                  size={18}
-                  color={activeTab === key ? '#9333ea' : '#666666'}
-                />
-                <Text style={[
-                  styles.tabLabel,
-                  activeTab === key && styles.activeTabLabel
-                ]}>
-                  {label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
           {renderContent()}
         </View>
 
@@ -444,34 +402,6 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     flex: 1,
     marginLeft: 8,
-  },
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    margin: 16,
-    borderRadius: 16,
-    padding: 4,
-    height: 44,
-  },
-  tab: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-    paddingVertical: 4,
-  },
-  activeTab: {
-    backgroundColor: 'rgba(147, 51, 234, 0.1)',
-  },
-  tabLabel: {
-    fontSize: 10,
-    fontFamily: 'Inter-SemiBold',
-    color: '#666666',
-    marginTop: 2,
-    letterSpacing: 0.5,
-  },
-  activeTabLabel: {
-    color: '#9333ea',
   },
   tabContent: {
     flex: 1,

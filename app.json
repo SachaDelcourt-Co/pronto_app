@@ -2,7 +2,7 @@
   "expo": {
     "name": "PRONTO",
     "slug": "pronto-assistant",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "pronto",
@@ -17,14 +17,36 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.pronto.assistant"
+      "bundleIdentifier": "com.pronto.assistant",
+      "buildNumber": "2",
+      "config": {
+        "googleMobileAdsAppId": "ca-app-pub-3940256099942544~1458002511"
+      },
+      "infoPlist": {
+        "NSUserTrackingUsageDescription": "This identifier will be used to deliver personalized ads to you.",
+        "SKAdNetworkItems": [
+          {
+            "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork"
+          }
+        ],
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIBackgroundModes": []
+      },
+      "jsEngine": "jsc"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#4c1d95"
       },
-      "package": "com.pronto.assistant"
+      "package": "com.pronto.assistant",
+      "versionCode": 1,
+      "config": {
+        "googleMobileAdsAppId": "ca-app-pub-3940256099942544~3347511713"
+      }
     },
     "web": {
       "bundler": "metro",
@@ -37,6 +59,25 @@
     "experiments": {
       "typedRoutes": true,
       "tsconfigPaths": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "48d38dcf-04c6-4e33-9f2f-d3a3751eac3d"
+      },
+      "reactNativeIgnoreWarnings": [
+        "Unsupported top level event type \"topInsetsChange\" dispatched",
+        "Unsupported top level event type \"topInsetsChange\" dispatched"
+      ],
+      "router": {
+        "origin": false
+      }
+    },
+    "owner": "yassinechenik",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/48d38dcf-04c6-4e33-9f2f-d3a3751eac3d"
     }
   }
 }
