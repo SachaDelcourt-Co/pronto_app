@@ -1005,7 +1005,7 @@ export default function RemindersScreen() {
               <Bell size={48} color="#9333ea" opacity={0.5} />
               <Text style={styles.emptyStateText}>{t('reminders.noReminders')}</Text>
               <Text style={styles.emptyStateSubtext}>
-                Tap the + button to create a reminder
+                {t('reminders.createReminderTip')}
               </Text>
             </View>
           )}

@@ -228,7 +228,7 @@ const resources = {
         deleteConfirmation: 'Êtes-vous sûr de vouloir supprimer cette note?',
         deleteFolderConfirmation: 'Êtes-vous sûr de vouloir supprimer ce dossier?',
         deleteConfirmationTitle: 'Supprimer',
-        root: 'Racine',
+        root: 'Aucun',
         selectFolder: 'Sélectionner un dossier',
         update: 'Mettre à jour',
         create: 'Créer',
@@ -276,7 +276,8 @@ const resources = {
         openCalendar: 'Ouvrir le calendrier',
         filterAll: 'Tous',
         filterRecurring: 'Récurrents',
-        filterNonRecurring: 'Ponctuels'
+        filterNonRecurring: 'Ponctuels',
+        createReminderTip: 'Appuyez sur le bouton + pour créer un rappel'
       },
       tasks: {
         title: 'Tâches quotidiennes',
@@ -534,7 +535,7 @@ const resources = {
         deleteConfirmation: 'Are you sure you want to delete this note?',
         deleteFolderConfirmation: 'Are you sure you want to delete this folder?',
         deleteConfirmationTitle: 'Delete',
-        root: 'Root',
+        root: 'None',
         selectFolder: 'Select folder',
         update: 'Update',
         create: 'Create',
@@ -587,7 +588,8 @@ const resources = {
         remindersFor: 'Reminders for {{date}}',
         filterAll: 'All',
         filterRecurring: 'Recurring',
-        filterNonRecurring: 'One-time'
+        filterNonRecurring: 'One-time',
+        createReminderTip: 'Tap the + button to create a reminder'
       },
       tasks: {
         title: 'Daily Tasks',
