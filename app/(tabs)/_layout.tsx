@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Home, SquareCheck as CheckSquare, Calendar, Bell, FileText } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Platform, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/utils/AuthContext';
 import { useEffect } from 'react';
@@ -40,17 +40,20 @@ export default function TabLayout() {
           tabBarStyle: {
             borderTopColor: 'rgba(42, 26, 42, 0.8)',
             borderTopWidth: 1,
-            height: Platform.OS === 'ios' ? 100 : 70,
-            paddingBottom: Platform.OS === 'ios' ? 30 : 10,
+            height: Platform.OS === 'ios' ? 110 : 80,
+            paddingBottom: Platform.OS === 'ios' ? 35 : 10,
           },
           tabBarActiveTintColor: '#9333ea',
-          tabBarInactiveTintColor: '#666666',
+          tabBarInactiveTintColor: '#cccccc',
+          tabBarLabelPosition: 'below-icon',
           tabBarItemStyle: {
-            paddingVertical: Platform.OS === 'ios' ? 8 : 5,
+            paddingVertical: 8,
           },
           tabBarLabelStyle: { 
-            fontSize: 10,
-            marginTop: 3,
+            fontSize: 11,
+            fontWeight: '500',
+            lineHeight: 16,
+            marginTop: 2,
             marginBottom: 0,
           },
         }}
