@@ -1031,71 +1031,76 @@ export default function RemindersScreen() {
               </TouchableOpacity>
             </View>
 
-            <Calendar
-              onDayPress={handleDayPress}
-              markedDates={markedDates}
-              markingType="multi-dot"
-              theme={{
-                backgroundColor: '#ffffff',
-                calendarBackground: '#ffffff',
-                textSectionTitleColor: '#1f2937',
-                selectedDayBackgroundColor: '#9333ea',
-                selectedDayTextColor: '#ffffff',
-                todayTextColor: '#9333ea',
-                dayTextColor: '#1f2937',
-                textDisabledColor: '#d1d5db',
-                dotColor: '#ef4444',
-                selectedDotColor: '#ffffff',
-                arrowColor: '#9333ea',
-                monthTextColor: '#1f2937',
-                indicatorColor: '#9333ea',
-                textDayFontWeight: '400',
-                textMonthFontWeight: '700',
-                textDayHeaderFontWeight: '600',
-                textDayFontSize: 16,
-                textMonthFontSize: 18,
-                textDayHeaderFontSize: 14
-              }}
-              onMonthChange={(month: {year: number, month: number}) => {
-                const newVisibleMonth = `${month.year}-${String(month.month).padStart(2, '0')}`;
-                setCurrentVisibleMonth(newVisibleMonth);
-              }}
-              current={currentVisibleMonth}
-            />
-            
-            {/* Display reminders for the selected date */}
-            <View style={styles.calendarDayReminders}>
-              <Text style={styles.calendarDayTitle}>
-                {t('reminders.remindersFor', { date: formatDate(selectedDate) })}
-              </Text>
+            <ScrollView
+              style={styles.calendarScrollContent}
+              showsVerticalScrollIndicator={true}
+            >
+              <Calendar
+                onDayPress={handleDayPress}
+                markedDates={markedDates}
+                markingType="multi-dot"
+                theme={{
+                  backgroundColor: '#ffffff',
+                  calendarBackground: '#ffffff',
+                  textSectionTitleColor: '#1f2937',
+                  selectedDayBackgroundColor: '#9333ea',
+                  selectedDayTextColor: '#ffffff',
+                  todayTextColor: '#9333ea',
+                  dayTextColor: '#1f2937',
+                  textDisabledColor: '#d1d5db',
+                  dotColor: '#ef4444',
+                  selectedDotColor: '#ffffff',
+                  arrowColor: '#9333ea',
+                  monthTextColor: '#1f2937',
+                  indicatorColor: '#9333ea',
+                  textDayFontWeight: '400',
+                  textMonthFontWeight: '700',
+                  textDayHeaderFontWeight: '600',
+                  textDayFontSize: 14,
+                  textMonthFontSize: 16,
+                  textDayHeaderFontSize: 12
+                }}
+                onMonthChange={(month: {year: number, month: number}) => {
+                  const newVisibleMonth = `${month.year}-${String(month.month).padStart(2, '0')}`;
+                  setCurrentVisibleMonth(newVisibleMonth);
+                }}
+                current={currentVisibleMonth}
+              />
+              
+              {/* Display reminders for the selected date */}
+              <View style={styles.calendarDayReminders}>
+                <Text style={styles.calendarDayTitle}>
+                  {t('reminders.remindersFor', { date: formatDate(selectedDate) })}
+                </Text>
 
-              <ScrollView 
-                style={styles.calendarDayRemindersList}
-                showsVerticalScrollIndicator={false}
-              >
-                {dailyReminders.length > 0 ? (
-                  dailyReminders.map((reminder, index) => (
-                    <View key={index} style={styles.calendarDayReminderItem}>
-                      <View style={styles.reminderTimeBlock}>
-                        <Bell size={16} color="#ef4444" />
-                        <Text style={styles.reminderTimeText}>
-                          {reminder.time}
+                <ScrollView 
+                  style={styles.calendarDayRemindersList}
+                  showsVerticalScrollIndicator={true}
+                >
+                  {dailyReminders.length > 0 ? (
+                    dailyReminders.map((reminder, index) => (
+                      <View key={index} style={styles.calendarDayReminderItem}>
+                        <View style={styles.reminderTimeBlock}>
+                          <Bell size={16} color="#ef4444" />
+                          <Text style={styles.reminderTimeText}>
+                            {reminder.time}
+                          </Text>
+                        </View>
+                        <Text style={styles.calendarReminderName}>
+                          {reminder.reminderName}
                         </Text>
                       </View>
-                      <Text style={styles.calendarReminderName}>
-                        {reminder.reminderName}
+                    ))
+                  ) : (
+                    <View style={styles.noRemindersMessage}>
+                      <Text style={styles.noRemindersText}>
+                        {t('reminders.noReminders')}
                       </Text>
                     </View>
-                  ))
-                ) : (
-                  <View style={styles.noRemindersMessage}>
-                    <Text style={styles.noRemindersText}>
-                      {t('reminders.noReminders')}
-                    </Text>
-                  </View>
-                )}
-              </ScrollView>
-            </View>
+                  )}
+                </ScrollView>
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -2053,9 +2058,9 @@ const styles = StyleSheet.create({
   calendarModalContent: {
     backgroundColor: '#ffffff',
     borderRadius: 16,
-    width: '100%',
+    width: '90%',
     maxWidth: 500,
-    maxHeight: '90%',
+    maxHeight: '80%',
     padding: 20,
     shadowColor: '#000',
     shadowOffset: {
@@ -2065,6 +2070,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  calendarScrollContent: {
+    flexGrow: 0,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -2095,7 +2103,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   calendarDayRemindersList: {
-    maxHeight: 300,
+    maxHeight: 150,
   },
   calendarDayReminderItem: {
     backgroundColor: '#f9fafb',

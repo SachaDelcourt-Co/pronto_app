@@ -110,14 +110,14 @@ export default function AppointmentsScreen() {
     // Set dropdown values for start time
     const startTime = appointment?.startTime || '09:00';
     setAppointmentStartTime(startTime);
-    const [startHour, startMinute] = startTime.split(':');
+    const [startHour, startMinute] = startTime.split(':').map(Number);
     setSelectedStartHour(startHour.toString());
     setSelectedStartMinute(startMinute.toString());
     
     // Set dropdown values for end time
     const endTime = appointment?.endTime || '10:00';
     setAppointmentEndTime(endTime);
-    const [endHour, endMinute] = endTime.split(':');
+    const [endHour, endMinute] = endTime.split(':').map(Number);
     setSelectedEndHour(endHour.toString());
     setSelectedEndMinute(endMinute.toString());
     
@@ -843,7 +843,7 @@ export default function AppointmentsScreen() {
           <View style={styles.dayHeaderControls}>
             <TouchableOpacity 
               style={styles.dayNavigationButton}
-              onPress={goToPreviousDay}
+              onPress={() => goToPreviousDay()}
             >
               <ChevronLeft size={20} color="#6b7280" />
             </TouchableOpacity>
@@ -854,7 +854,7 @@ export default function AppointmentsScreen() {
             
             <TouchableOpacity 
               style={styles.dayNavigationButton}
-              onPress={goToNextDay}
+              onPress={() => goToNextDay()}
             >
               <ChevronRight size={20} color="#6b7280" />
             </TouchableOpacity>
@@ -862,7 +862,7 @@ export default function AppointmentsScreen() {
           
           <TouchableOpacity 
             style={styles.todayButton}
-            onPress={goToToday}
+            onPress={() => goToToday()}
           >
             <TodayIcon size={16} color="#9333ea" />
             <Text style={styles.todayButtonText}>{t('common.today')}</Text>
@@ -1043,95 +1043,99 @@ export default function AppointmentsScreen() {
               </TouchableOpacity>
             </View>
 
-            <Calendar
-              key={`calendar-${currentVisibleMonth}`}
-              onDayPress={handleDayPress}
-              markedDates={{
-                ...markedDates,
-                [formatLocalDate(selectedDate)]: {
-                  ...(markedDates[formatLocalDate(selectedDate)] || {}),
-                  selected: true,
-                  selectedColor: '#9333ea',
-                },
-              }}
-              theme={{
-                backgroundColor: '#ffffff',
-                calendarBackground: '#ffffff',
-                textSectionTitleColor: '#1f2937',
-                selectedDayBackgroundColor: '#9333ea',
-                selectedDayTextColor: '#ffffff',
-                todayTextColor: '#9333ea',
-                dayTextColor: '#1f2937',
-                textDisabledColor: '#d1d5db',
-                dotColor: '#9333ea',
-                selectedDotColor: '#ffffff',
-                arrowColor: '#9333ea',
-                monthTextColor: '#1f2937',
-                indicatorColor: '#9333ea',
-                textDayFontWeight: '400',
-                textMonthFontWeight: '700',
-                textDayHeaderFontWeight: '600',
-                textDayFontSize: 16,
-                textMonthFontSize: 18,
-                textDayHeaderFontSize: 14
-              }}
-              onMonthChange={(month: {year: number, month: number}) => {
-                const newVisibleMonth = `${month.year}-${String(month.month).padStart(2, '0')}`;
-                console.log('Calendar month changed to:', newVisibleMonth);
-                setCurrentVisibleMonth(newVisibleMonth);
-              }}
-              current={parseLocalDate(`${currentVisibleMonth}-01`)}
-              hideExtraDays={false}
-            />
-            
-            {/* Display appointments for the selected date */}
-            <View style={styles.calendarDayAppointments}>
-              <Text style={styles.calendarDayTitle}>
-                {t('appointments.appointmentsFor', { date: formatDate(selectedDate) })}
-              </Text>
+            <ScrollView 
+              style={styles.calendarScrollContent}
+              showsVerticalScrollIndicator={true}
+            >
+              <Calendar
+                onDayPress={handleDayPress}
+                markedDates={{
+                  ...markedDates,
+                  [formatLocalDate(selectedDate)]: {
+                    ...(markedDates[formatLocalDate(selectedDate)] || {}),
+                    selected: true,
+                    selectedColor: '#9333ea',
+                  },
+                }}
+                theme={{
+                  backgroundColor: '#ffffff',
+                  calendarBackground: '#ffffff',
+                  textSectionTitleColor: '#1f2937',
+                  selectedDayBackgroundColor: '#9333ea',
+                  selectedDayTextColor: '#ffffff',
+                  todayTextColor: '#9333ea',
+                  dayTextColor: '#1f2937',
+                  textDisabledColor: '#d1d5db',
+                  dotColor: '#9333ea',
+                  selectedDotColor: '#ffffff',
+                  arrowColor: '#9333ea',
+                  monthTextColor: '#1f2937',
+                  indicatorColor: '#9333ea',
+                  textDayFontWeight: '400',
+                  textMonthFontWeight: '700',
+                  textDayHeaderFontWeight: '600',
+                  textDayFontSize: 14,
+                  textMonthFontSize: 16,
+                  textDayHeaderFontSize: 12
+                }}
+                onMonthChange={(month: {year: number, month: number}) => {
+                  const newVisibleMonth = `${month.year}-${String(month.month).padStart(2, '0')}`;
+                  console.log('Calendar month changed to:', newVisibleMonth);
+                  setCurrentVisibleMonth(newVisibleMonth);
+                }}
+                current={parseLocalDate(`${currentVisibleMonth}-01`)}
+                hideExtraDays={false}
+              />
+              
+              {/* Display appointments for the selected date */}
+              <View style={styles.calendarDayAppointments}>
+                <Text style={styles.calendarDayTitle}>
+                  {t('appointments.appointmentsFor', { date: formatDate(selectedDate) })}
+                </Text>
 
-              <ScrollView 
-                style={styles.calendarDayAppointmentsList}
-                showsVerticalScrollIndicator={false}
-              >
-                {dailyAppointments.length > 0 ? (
-                  dailyAppointments.map((appointment, index) => (
-                    <View key={index} style={styles.calendarDayAppointmentItem}>
-                      <View style={styles.appointmentTimeBlock}>
-                        <Clock size={16} color="#9333ea" />
-                        <Text style={styles.appointmentTimeText}>
-                          {appointment.startTime} - {appointment.endTime}
-                        </Text>
-                      </View>
-                      <View style={styles.appointmentDetailsBlock}>
-                        <Text style={styles.calendarAppointmentTitle}>
-                          {appointment.appointmentName}
-                        </Text>
-                        {appointment.description && (
-                          <Text style={styles.calendarAppointmentDescription}>
-                            {appointment.description}
+                <ScrollView 
+                  style={styles.calendarDayAppointmentsList}
+                  showsVerticalScrollIndicator={true}
+                >
+                  {dailyAppointments.length > 0 ? (
+                    dailyAppointments.map((appointment, index) => (
+                      <View key={index} style={styles.calendarDayAppointmentItem}>
+                        <View style={styles.appointmentTimeBlock}>
+                          <Clock size={16} color="#9333ea" />
+                          <Text style={styles.appointmentTimeText}>
+                            {appointment.startTime} - {appointment.endTime}
                           </Text>
-                        )}
-                        {appointment.address && (
-                          <View style={styles.appointmentAddressBlock}>
-                            <MapPin size={14} color="#6b7280" />
-                            <Text style={styles.appointmentAddressText}>
-                              {appointment.address}
+                        </View>
+                        <View style={styles.appointmentDetailsBlock}>
+                          <Text style={styles.calendarAppointmentTitle}>
+                            {appointment.appointmentName}
+                          </Text>
+                          {appointment.description && (
+                            <Text style={styles.calendarAppointmentDescription}>
+                              {appointment.description}
                             </Text>
-                          </View>
-                        )}
+                          )}
+                          {appointment.address && (
+                            <View style={styles.appointmentAddressBlock}>
+                              <MapPin size={14} color="#6b7280" />
+                              <Text style={styles.appointmentAddressText}>
+                                {appointment.address}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
                       </View>
+                    ))
+                  ) : (
+                    <View style={styles.noAppointmentsMessage}>
+                      <Text style={styles.noAppointmentsText}>
+                        {t('appointments.noAppointmentsForDate')}
+                      </Text>
                     </View>
-                  ))
-                ) : (
-                  <View style={styles.noAppointmentsMessage}>
-                    <Text style={styles.noAppointmentsText}>
-                      {t('appointments.noAppointmentsForDate')}
-                    </Text>
-                  </View>
-                )}
-              </ScrollView>
-            </View>
+                  )}
+                </ScrollView>
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -2200,9 +2204,9 @@ const styles = StyleSheet.create({
   calendarModalContent: {
     backgroundColor: '#ffffff',
     borderRadius: 16,
-    width: '100%',
+    width: '90%',
     maxWidth: 500,
-    maxHeight: '90%',
+    maxHeight: '80%',
     padding: 20,
     shadowColor: '#000',
     shadowOffset: {
@@ -2212,6 +2216,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  calendarScrollContent: {
+    flexGrow: 0,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -2257,7 +2264,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   calendarDayAppointmentsList: {
-    maxHeight: 300,
+    maxHeight: 150,
   },
   calendarDayAppointmentItem: {
     backgroundColor: '#f9fafb',
@@ -2581,7 +2588,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   upcomingList: {
-    maxHeight: 300,
+    maxHeight: Platform.OS === 'ios' ? 200 : 180,
   },
   upcomingAppointmentItem: {
     borderBottomWidth: 1,
@@ -2727,5 +2734,8 @@ const styles = StyleSheet.create({
     color: '#4b5563',
     marginBottom: 10,
     paddingHorizontal: 5,
+  },
+  calendarDayRemindersList: {
+    maxHeight: 250,
   },
 });

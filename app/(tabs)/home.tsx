@@ -1447,48 +1447,48 @@ export default function HomePage() {
               <X size={20} color="#666666" />
             </TouchableOpacity>
           </View>
-
-          <RNCalendar
-            onDayPress={handleDayPress}
-            markedDates={markedDates}
-            markingType="multi-dot"
-            theme={{
-              backgroundColor: '#ffffff',
-              calendarBackground: '#ffffff',
-              textSectionTitleColor: '#1f2937',
-              selectedDayBackgroundColor: '#9333ea',
-              selectedDayTextColor: '#ffffff',
-              todayTextColor: '#9333ea',
-              dayTextColor: '#1f2937',
-              textDisabledColor: '#d1d5db',
-              dotColor: '#ef4444',
-              selectedDotColor: '#ffffff',
-              arrowColor: '#9333ea',
-              monthTextColor: '#1f2937',
-              indicatorColor: '#9333ea',
-              textDayFontWeight: '400',
-              textMonthFontWeight: '700',
-              textDayHeaderFontWeight: '600',
-              textDayFontSize: 16,
-              textMonthFontSize: 18,
-              textDayHeaderFontSize: 14
-            }}
-            onMonthChange={(month: {year: number, month: number}) => {
-              const newVisibleMonth = `${month.year}-${String(month.month).padStart(2, '0')}`;
-              setCurrentVisibleMonth(newVisibleMonth);
-            }}
-            current={currentVisibleMonth}
-          />
           
-          <View style={styles.calendarDayItems}>
-            <Text style={styles.calendarDayTitle}>
-              {formatCalendarDate(selectedDate)}
-            </Text>
-
-            <ScrollView 
-              style={styles.calendarDayItemsList}
-              showsVerticalScrollIndicator={false}
-            >
+          <ScrollView
+            style={styles.calendarScrollContent}
+            showsVerticalScrollIndicator={true}
+          >
+            <RNCalendar
+              onDayPress={handleDayPress}
+              markedDates={markedDates}
+              markingType="multi-dot"
+              theme={{
+                backgroundColor: '#ffffff',
+                calendarBackground: '#ffffff',
+                textSectionTitleColor: '#1f2937',
+                selectedDayBackgroundColor: '#9333ea',
+                selectedDayTextColor: '#ffffff',
+                todayTextColor: '#9333ea',
+                dayTextColor: '#1f2937',
+                textDisabledColor: '#d1d5db',
+                dotColor: '#ef4444',
+                selectedDotColor: '#ffffff',
+                arrowColor: '#9333ea',
+                monthTextColor: '#1f2937',
+                indicatorColor: '#9333ea',
+                textDayFontWeight: '400',
+                textMonthFontWeight: '700',
+                textDayHeaderFontWeight: '600',
+                textDayFontSize: 14,
+                textMonthFontSize: 16,
+                textDayHeaderFontSize: 12
+              }}
+              onMonthChange={(month: {year: number, month: number}) => {
+                const newVisibleMonth = `${month.year}-${String(month.month).padStart(2, '0')}`;
+                setCurrentVisibleMonth(newVisibleMonth);
+              }}
+              current={currentVisibleMonth}
+            />
+            
+            <View style={styles.calendarDayItems}>
+              <Text style={styles.calendarDayTitle}>
+                {formatCalendarDate(selectedDate)}
+              </Text>
+              
               {/* Render appointments for the selected date */}
               {dailyAppointments.length > 0 && (
                 <View style={styles.calendarDaySection}>
@@ -1544,7 +1544,7 @@ export default function HomePage() {
                   ))}
                 </View>
               )}
-
+              
               {dailyAppointments.length === 0 && dailyReminders.length === 0 && (
                 <View style={styles.noItemsMessage}>
                   <Text style={styles.noItemsText}>
@@ -1552,8 +1552,8 @@ export default function HomePage() {
                   </Text>
                 </View>
               )}
-            </ScrollView>
-          </View>
+            </View>
+          </ScrollView>
         </View>
       </View>
     </Modal>
@@ -2525,9 +2525,9 @@ const styles = StyleSheet.create({
   calendarModalContent: {
     backgroundColor: '#ffffff',
     borderRadius: 16,
-    width: '100%',
+    width: '90%',
     maxWidth: 500,
-    maxHeight: '90%',
+    maxHeight: '80%',
     padding: 20,
     shadowColor: '#000',
     shadowOffset: {
@@ -2537,6 +2537,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  calendarScrollContent: {
+    flexGrow: 0,
   },
   calendarDayItems: {
     marginTop: 16,
@@ -2549,7 +2552,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   calendarDayItemsList: {
-    maxHeight: 250,
+    maxHeight: 150,
   },
   calendarDaySection: {
     backgroundColor: '#f9fafb',
