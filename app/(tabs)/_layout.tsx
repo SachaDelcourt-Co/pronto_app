@@ -40,8 +40,8 @@ export default function TabLayout() {
           tabBarStyle: {
             borderTopColor: 'rgba(42, 26, 42, 0.8)',
             borderTopWidth: 1,
-            height: Platform.OS === 'ios' ? 95 : 65,
-            paddingBottom: Platform.OS === 'ios' ? 30 : 5,
+            height: Platform.OS === 'ios' ? 100 : 70,
+            paddingBottom: Platform.OS === 'ios' ? 30 : 10,
           },
           tabBarActiveTintColor: '#9333ea',
           tabBarInactiveTintColor: '#666666',
@@ -50,8 +50,8 @@ export default function TabLayout() {
           },
           tabBarLabelStyle: { 
             fontSize: 10,
-            marginBottom: Platform.OS === 'ios' ? 5 : 2,
-            paddingBottom: Platform.OS === 'ios' ? 2 : 0,
+            marginTop: 3,
+            marginBottom: 0,
           },
         }}
       >
