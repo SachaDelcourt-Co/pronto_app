@@ -2047,9 +2047,8 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 100,
   },
   calendarModalContent: {
     backgroundColor: '#ffffff',
@@ -2133,6 +2132,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     width: '100%',
     maxWidth: 500,
+    maxHeight: '90%',
+    margin: 20,
     padding: 20,
     shadowColor: '#000',
     shadowOffset: {
@@ -2142,16 +2143,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
-    ...(Platform.OS === 'ios' && {
-      minHeight: 650,
-    }),
   },
   modalScrollContent: {
-    flex: 1,
-    ...(Platform.OS === 'ios' && {
-      height: 600,
-      minHeight: 300,
-    }),
+    flexGrow: 1,
   },
   inputLabel: {
     fontSize: 14,

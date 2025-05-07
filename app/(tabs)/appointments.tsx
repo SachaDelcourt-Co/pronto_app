@@ -111,15 +111,15 @@ export default function AppointmentsScreen() {
     const startTime = appointment?.startTime || '09:00';
     setAppointmentStartTime(startTime);
     const [startHour, startMinute] = startTime.split(':');
-    setSelectedStartHour(startHour);
-    setSelectedStartMinute(startMinute);
+    setSelectedStartHour(startHour.toString());
+    setSelectedStartMinute(startMinute.toString());
     
     // Set dropdown values for end time
     const endTime = appointment?.endTime || '10:00';
     setAppointmentEndTime(endTime);
     const [endHour, endMinute] = endTime.split(':');
-    setSelectedEndHour(endHour);
-    setSelectedEndMinute(endMinute);
+    setSelectedEndHour(endHour.toString());
+    setSelectedEndMinute(endMinute.toString());
     
     // Reset notification times
     setSelectedNotifications(
@@ -2194,9 +2194,8 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    justifyContent: 'flex-start', // Change from 'center' to 'flex-start'
+    justifyContent: 'center', // Change to center
     alignItems: 'center',
-    paddingTop: 100, // Add padding to position modal higher
   },
   calendarModalContent: {
     backgroundColor: '#ffffff',
@@ -2314,6 +2313,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     width: '100%',
     maxWidth: 500,
+    maxHeight: '90%',
+    margin: 20,
     padding: 20,
     shadowColor: '#000',
     shadowOffset: {
@@ -2323,17 +2324,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
-    ...(Platform.OS === 'ios' && {
-      minHeight: 650, // Increase minimum height for iOS
-    }),
   },
   modalScrollContent: {
-    flex: 1,
-    // Add a specific height for iOS to fix the scroll issue
-    ...(Platform.OS === 'ios' && {
-      height: 600,  // Increase height for iOS
-      minHeight: 300, // Increase minimum height
-    }),
+    flexGrow: 1,
   },
   inputLabel: {
     fontSize: 14,
