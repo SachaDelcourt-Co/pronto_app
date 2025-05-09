@@ -38,3 +38,6 @@ yarn-error.*
 
 # MCP configuration
 .cursor
+
+# Temporary
+ProntoClean

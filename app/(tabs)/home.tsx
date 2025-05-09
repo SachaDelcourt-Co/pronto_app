@@ -344,9 +344,17 @@ export default function HomePage() {
                               appointmentDate.getMonth() === today.getMonth() &&
                               appointmentDate.getFullYear() === today.getFullYear();
                             
+                            // Get the appropriate locale based on the current language
+                            const currentLanguage = i18n.language;
+                            let locale = currentLanguage === 'fr' ? 'fr-FR' : 
+                                        currentLanguage === 'nl' ? 'nl-NL' : 
+                                        currentLanguage === 'es' ? 'es-ES' : 
+                                        currentLanguage === 'pt' ? 'pt-PT' : 
+                                        currentLanguage === 'it' ? 'it-IT' : 'en-US';
+                            
                             return isToday
                               ? appointment.startTime
-                              : `${appointmentDate.toLocaleDateString('en-US', {
+                              : `${appointmentDate.toLocaleDateString(locale, {
                                   month: 'short',
                                   day: 'numeric'
                                 })} ${appointment.startTime}`;
@@ -364,7 +372,10 @@ export default function HomePage() {
                   style={styles.seeMoreButton}
                   onPress={() => {
                     setExpandedAppointments(true);
+                    // First set the flag to true to trigger display of expanded list
                     setShowAppointments(true);
+                    // Then explicitly reload the appointments with the expanded flag
+                    loadUpcomingAppointments(true);
                   }}
                 >
                   <Text style={styles.seeMoreText}>{t('home.seeAll')}</Text>
@@ -414,9 +425,17 @@ export default function HomePage() {
                               reminderDate.getMonth() === today.getMonth() &&
                               reminderDate.getFullYear() === today.getFullYear();
                             
+                            // Get the appropriate locale based on the current language
+                            const currentLanguage = i18n.language;
+                            let locale = currentLanguage === 'fr' ? 'fr-FR' : 
+                                        currentLanguage === 'nl' ? 'nl-NL' : 
+                                        currentLanguage === 'es' ? 'es-ES' : 
+                                        currentLanguage === 'pt' ? 'pt-PT' : 
+                                        currentLanguage === 'it' ? 'it-IT' : 'en-US';
+                            
                             return isToday
                               ? reminder.time
-                              : `${reminderDate.toLocaleDateString('en-US', {
+                              : `${reminderDate.toLocaleDateString(locale, {
                                   month: 'short',
                                   day: 'numeric'
                                 })} ${reminder.time}`;
@@ -501,22 +520,25 @@ export default function HomePage() {
                       itemDate.getMonth() === today.getMonth() &&
                       itemDate.getFullYear() === today.getFullYear();
                     
+                    // Get locale from current language
+                    const locale = getLocaleFromLanguage(i18n.language);
+                    
                     if (isToday) {
                       // Just show time for today's items
                       return (item as any).time || 
                              (item as Appointment).startTime || 
-                             new Date(item.date).toLocaleTimeString('en-US', {
+                             new Date(item.date).toLocaleTimeString(locale, {
                                hour: '2-digit',
                                minute: '2-digit',
                              });
                     } else {
                       // Show date and time for future dates
-                      return `${itemDate.toLocaleDateString('en-US', {
+                      return `${itemDate.toLocaleDateString(locale, {
                         month: 'short',
                         day: 'numeric'
                       })} ${(item as any).time || 
                              (item as Appointment).startTime ||
-                             new Date(item.date).toLocaleTimeString('en-US', {
+                             new Date(item.date).toLocaleTimeString(locale, {
                                hour: '2-digit',
                                minute: '2-digit',
                              })}`;
@@ -824,7 +846,7 @@ export default function HomePage() {
   };
 
   // Function to load upcoming appointments
-  const loadUpcomingAppointments = async () => {
+  const loadUpcomingAppointments = async (forceExpanded?: boolean) => {
     if (!authUser) return;
     
     try {
@@ -835,10 +857,13 @@ export default function HomePage() {
       const today = new Date();
       today.setHours(0, 0, 0, 0); // Set to beginning of today
       
+      // Use either the passed forceExpanded parameter or the current state
+      const isExpanded = forceExpanded !== undefined ? forceExpanded : expandedAppointments;
+      
       // Get upcoming appointments with expanded limit if needed
       const upcomingAppointments = await DatabaseService.getUpcomingAppointments(
         authUser.uid, 
-        expandedAppointments ? 50 : 3, // Increase limit to show more appointments
+        isExpanded ? 50 : 3, // Increase limit to show more appointments
         today // Pass today's start time
       );
       
@@ -1695,6 +1720,18 @@ export default function HomePage() {
       </TouchableOpacity>
     </View>
   );
+
+  // Add a helper function for getting locale from language
+  const getLocaleFromLanguage = (language: string): string => {
+    switch (language) {
+      case 'fr': return 'fr-FR';
+      case 'nl': return 'nl-NL';
+      case 'es': return 'es-ES';
+      case 'pt': return 'pt-PT';
+      case 'it': return 'it-IT';
+      default: return 'en-US';
+    }
+  };
 
   return (
     <View style={styles.container}>
