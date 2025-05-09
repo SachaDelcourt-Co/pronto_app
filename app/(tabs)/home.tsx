@@ -853,9 +853,8 @@ export default function HomePage() {
       // Always use fresh data for home screen
       DatabaseService.clearAppointmentCache();
       
-      // Use beginning of today instead of current time
-      const today = new Date();
-      today.setHours(0, 0, 0, 0); // Set to beginning of today
+      // Get current date and time
+      const now = new Date();
       
       // Use either the passed forceExpanded parameter or the current state
       const isExpanded = forceExpanded !== undefined ? forceExpanded : expandedAppointments;
@@ -864,19 +863,37 @@ export default function HomePage() {
       const upcomingAppointments = await DatabaseService.getUpcomingAppointments(
         authUser.uid, 
         isExpanded ? 50 : 3, // Increase limit to show more appointments
-        today // Pass today's start time
+        now // Pass current date and time instead of beginning of day
       );
       
-      setAppointments(upcomingAppointments);
+      // Further filter appointments that have already ended
+      const filteredAppointments = upcomingAppointments.filter(appointment => {
+        const appointmentDate = new Date(appointment.date);
+        const [endHours, endMinutes] = appointment.endTime.split(':').map(Number);
+        appointmentDate.setHours(endHours, endMinutes, 0, 0);
+        
+        return appointmentDate > now;
+      });
+      
+      setAppointments(filteredAppointments);
       
       // Get the total count of all upcoming appointments
       const allUpcomingAppointments = await DatabaseService.getUpcomingAppointments(
         authUser.uid,
         1000, // Use a large limit to get all appointments
-        today
+        now
       );
       
-      setTotalAppointmentCount(allUpcomingAppointments.length);
+      // Filter total count the same way
+      const filteredTotal = allUpcomingAppointments.filter(appointment => {
+        const appointmentDate = new Date(appointment.date);
+        const [endHours, endMinutes] = appointment.endTime.split(':').map(Number);
+        appointmentDate.setHours(endHours, endMinutes, 0, 0);
+        
+        return appointmentDate > now;
+      });
+      
+      setTotalAppointmentCount(filteredTotal.length);
     } catch (error) {
       console.error('Error loading upcoming appointments:', error);
       setAppointments([]);
@@ -993,10 +1010,6 @@ export default function HomePage() {
     if (!authUser) return;
     
     try {
-      // Use the start of today to include all of today's reminders
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
       // Get current date and time for filtering
       const now = new Date();
       
@@ -1006,14 +1019,14 @@ export default function HomePage() {
         expandedReminders ? 50 : 10 // Increased from 3 to 10 to ensure we have enough after filtering
       );
       
-      // Filter out past one-time reminders but keep all recurring ones
+      // Filter out past reminders including time check
       const filteredReminders = userReminders.filter(reminder => {
         // Always keep recurring reminders
         if (reminder.isRecurring) {
           return true;
         }
         
-        // For one-time reminders, check if they're in the future
+        // For one-time reminders, check if they're in the future including time
         const reminderDate = new Date(reminder.date);
         if (reminder.time) {
           const [hours, minutes] = reminder.time.split(':').map(Number);
@@ -1034,13 +1047,13 @@ export default function HomePage() {
       
       setReminders(Array.from(uniqueReminders.values()));
       
-      // Get the total count of all active reminders (still include only future non-recurring)
+      // Get the total count of all active reminders (include only future non-recurring)
       const allActiveReminders = await DatabaseService.getUserReminders(
         authUser.uid, 
         { active: true }
       );
       
-      // Filter count the same way
+      // Filter count the same way, including time check
       const activeCount = allActiveReminders.filter(reminder => 
         reminder.isRecurring || 
         (() => {

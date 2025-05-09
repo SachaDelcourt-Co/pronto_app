@@ -915,64 +915,138 @@ export default function AppointmentsScreen() {
           {Array.from({ length: 24 }).map((_, hour) => (
             <View key={hour} style={styles.timeSlot}>
               <Text style={styles.timeLabel}>{hour.toString().padStart(2, '0')}:00</Text>
-              <View style={styles.timeSlotContent}>
-                {/* Group appointments by start hour to handle multiple appointments at the same time */}
-                {(() => {
-                  // Get appointments that start in this hour
-                  const hourAppointments = dailyAppointments.filter(appointment => {
-                    const [startHour] = appointment.startTime.split(':').map(Number);
-                    return startHour === hour;
-                  });
-
-                  // If no appointments in this hour, return null
-                  if (hourAppointments.length === 0) return null;
-
-                  // Calculate the width for each appointment based on how many are in this time slot
-                  const appointmentWidth = 100 / Math.min(hourAppointments.length, 3); // Max 3 side by side
-
-                  return hourAppointments.map((appointment, index) => {
-                    // Calculate the height based on the appointment duration
-                    const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
-                    const [endHour, endMinute] = appointment.endTime.split(':').map(Number);
-                    
-                    // Calculate total minutes for height
-                    const durationInMinutes = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
-                    const heightInPixels = Math.max(56, durationInMinutes); // Minimum height of 56px
-                    
-                    // Calculate the top offset based on start minute (1 minute = 1 pixel)
-                    const topOffset = startMinute;
-
-                    return (
-                      <TouchableOpacity 
-                        key={index}
-                        style={[
-                          styles.appointmentBlock,
-                          {
-                            height: heightInPixels,
-                            width: `${appointmentWidth}%`,
-                            left: `${appointmentWidth * (index % 3)}%`,
-                            top: topOffset, // Position vertically based on minutes
-                            zIndex: 10 - index, // Higher index items go behind lower index items
-                          }
-                        ]}
-                        onPress={() => {
-                          setSelectedAppointment(appointment);
-                          setShowAppointmentDetails(true);
-                        }}
-                      >
-                        <Text style={styles.appointmentBlockTitle} numberOfLines={2}>
-                          {appointment.appointmentName}
-                        </Text>
-                        <Text style={styles.appointmentBlockTime}>
-                          {appointment.startTime} - {appointment.endTime}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  });
-                })()}
-              </View>
+              <View style={styles.timeSlotContent} />
             </View>
           ))}
+          
+          {/* Render all appointments as absolute positioned elements over the time grid */}
+          <View style={styles.appointmentsContainer}>
+            {(() => {
+              if (dailyAppointments.length === 0) return null;
+              
+              // First convert all appointments to a more convenient format for calculation
+              const appointmentList = dailyAppointments.map(appointment => {
+                const [startHour, startMin] = appointment.startTime.split(':').map(Number);
+                const [endHour, endMin] = appointment.endTime.split(':').map(Number);
+                
+                // Calculate time in minutes for easier comparison
+                const startTime = startHour * 60 + startMin;
+                const endTime = endHour * 60 + endMin;
+                
+                return {
+                  ...appointment,
+                  startTime,
+                  endTime,
+                  duration: endTime - startTime,
+                  column: 0, // Will be assigned in collision detection
+                  maxColumn: 0 // Will be assigned in collision detection
+                };
+              }).sort((a, b) => a.startTime - b.startTime); // Sort by start time
+              
+              // Define types for processed appointments
+              type ProcessedAppointment = typeof appointmentList[0];
+              type ActiveColumn = { column: number; endTime: number };
+              
+              // Collision detection algorithm that works properly across hours
+              // This follows a greedy algorithm to assign columns
+              const detectCollisions = (appointments: ProcessedAppointment[]): ProcessedAppointment[] => {
+                if (appointments.length <= 1) {
+                  appointments.forEach(app => {
+                    app.column = 0;
+                    app.maxColumn = 0;
+                  });
+                  return appointments;
+                }
+                
+                // Track active columns
+                let activeColumns: ActiveColumn[] = [];
+                let maxColumnCount = 0;
+                
+                // Process appointments chronologically
+                appointments.forEach(appointment => {
+                  // Find the first free column
+                  let column = 0;
+                  while (activeColumns.some(col => 
+                    col.column === column && col.endTime > appointment.startTime
+                  )) {
+                    column++;
+                  }
+                  
+                  // Assign column to appointment
+                  appointment.column = column;
+                  
+                  // Update active columns
+                  activeColumns = activeColumns.filter(col => col.endTime > appointment.startTime);
+                  activeColumns.push({
+                    column,
+                    endTime: appointment.endTime
+                  });
+                  
+                  // Update max column count (for calculating widths)
+                  maxColumnCount = Math.max(maxColumnCount, activeColumns.length);
+                });
+                
+                // Set maxColumn for all appointments
+                appointments.forEach(app => {
+                  app.maxColumn = maxColumnCount - 1;
+                });
+                
+                return appointments;
+              };
+              
+              // Apply collision detection
+              const processedAppointments = detectCollisions(appointmentList);
+              
+              // Render processed appointments
+              return processedAppointments.map((appointment: ProcessedAppointment, index: number) => {
+                // Calculate display properties
+                const columnWidth = 100 / (appointment.maxColumn + 1);
+                const colPosition = columnWidth * appointment.column;
+                
+                // Calculate position based on start time
+                const startHour = Math.floor(appointment.startTime / 60);
+                const startMinute = appointment.startTime % 60;
+                const topPosition = startHour * 60 + startMinute;
+                
+                // Appoint height based on duration
+                const heightInPixels = Math.max(10, appointment.duration);
+                
+                return (
+                  <TouchableOpacity 
+                    key={`appointment-${index}`}
+                    style={[
+                      styles.appointmentBlock,
+                      {
+                        height: heightInPixels,
+                        width: `${columnWidth}%`,
+                        left: `${colPosition}%`,
+                        top: topPosition
+                      }
+                    ]}
+                    onPress={() => {
+                      setSelectedAppointment({
+                        ...appointment,
+                        startTime: `${Math.floor(appointment.startTime / 60).toString().padStart(2, '0')}:${(appointment.startTime % 60).toString().padStart(2, '0')}`,
+                        endTime: `${Math.floor(appointment.endTime / 60).toString().padStart(2, '0')}:${(appointment.endTime % 60).toString().padStart(2, '0')}`
+                      });
+                      setShowAppointmentDetails(true);
+                    }}
+                  >
+                    <Text 
+                      style={[
+                        styles.appointmentBlockTitle,
+                        appointment.duration < 30 && styles.smallAppointmentText
+                      ]} 
+                      numberOfLines={Math.max(1, Math.floor(appointment.duration / 15))}
+                      ellipsizeMode="tail"
+                    >
+                      {appointment.appointmentName}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              });
+            })()}
+          </View>
           
           {/* Current time indicator - only show for current day */}
           {isToday(displayDate) && (
@@ -998,6 +1072,8 @@ export default function AppointmentsScreen() {
           
           <ScrollView 
             style={styles.upcomingList}
+            contentContainerStyle={{ paddingBottom: 70 }} // Add padding at the bottom
+            showsVerticalScrollIndicator={true} // Make scrollbar visible
           >
             {/* Use the refreshTrigger in a way that doesn't affect rendering but ensures re-render */}
             {refreshTrigger ? null : null}
@@ -2308,7 +2384,7 @@ const styles = StyleSheet.create({
   },
   timeSlot: {
     flexDirection: 'row',
-    height: 60,
+    height: 60, // Each hour is 60px tall
     borderBottomWidth: 1,
     borderBottomColor: '#f3f4f6',
   },
@@ -2330,22 +2406,24 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(147, 51, 234, 0.1)',
     borderLeftWidth: 3,
     borderLeftColor: '#9333ea',
-    padding: 8,
+    padding: 4, // Reduced padding to fit smaller blocks
+    paddingLeft: 6, // Slightly more padding on the left
+    paddingVertical: 2, // Even smaller vertical padding
     borderRadius: 4,
     marginBottom: 1,
-    minHeight: 56,
     position: 'absolute', // Change to absolute positioning
-    width: '100%', // Will be overridden for multiple appointments
+    overflow: 'hidden', // Ensure text doesn't overflow
+    justifyContent: 'flex-start', // Start content from the top
   },
   appointmentBlockTitle: {
-    fontSize: 14,
+    fontSize: 12, // Smaller base font size
     fontWeight: '600',
     color: '#1f2937',
+    lineHeight: 14, // Tighter line height
   },
-  appointmentBlockTime: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginTop: 2,
+  smallAppointmentText: {
+    fontSize: 9, // Even smaller text for very short appointments
+    lineHeight: 10, // Tighter line height for small text
   },
   currentTimeIndicator: {
     position: 'absolute',
@@ -2766,7 +2844,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     borderTopWidth: 1,
     borderTopColor: '#2a1a2a',
-    minHeight: 200,
+    minHeight: 240, // Increased from 200 to 240
   },
   upcomingHeader: {
     paddingVertical: 12,
@@ -2932,5 +3010,14 @@ const styles = StyleSheet.create({
   },
   calendarDayRemindersList: {
     maxHeight: 250,
+  },
+  appointmentsContainer: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 61, // Start after the time labels AND the vertical line
+    zIndex: 10,
+    pointerEvents: 'box-none', // Allow touches to pass through to underlying content
   },
 });
