@@ -212,7 +212,7 @@ export default function HomePage() {
     
     // Clean up the interval on component unmount
     return () => clearInterval(intervalId);
-  }, [authUser, expandedAppointments, showAppointments]);
+  }, [authUser]); // Removed expandedAppointments and showAppointments from dependencies
 
   // Add effect for reminders that triggers on expandedReminders change
   useEffect(() => {
@@ -644,7 +644,19 @@ export default function HomePage() {
     // Format date for last activity
     const formatLastActivity = () => {
       const now = new Date();
-      return now.toLocaleDateString('en-US', {
+      // Use the current language from i18n instead of hardcoded 'en-US'
+      const currentLanguage = i18n.language;
+      let locale = currentLanguage;
+      
+      // Map languages to locales if needed
+      if (currentLanguage === 'fr') locale = 'fr-FR';
+      else if (currentLanguage === 'en') locale = 'en-US';
+      else if (currentLanguage === 'nl') locale = 'nl-NL';
+      else if (currentLanguage === 'es') locale = 'es-ES';
+      else if (currentLanguage === 'pt') locale = 'pt-PT';
+      else if (currentLanguage === 'it') locale = 'it-IT';
+      
+      return now.toLocaleDateString(locale, {
         weekday: 'long',
         year: 'numeric',
         month: 'long',
@@ -665,10 +677,10 @@ export default function HomePage() {
     return (
       <View style={StyleSheet.absoluteFill}>
         <BlurView intensity={95} style={[StyleSheet.absoluteFill, styles.menuOverlay]} tint="dark">
-          <ScrollView style={styles.menuScrollContent}>
+          <ScrollView style={styles.menuScrollContent} contentContainerStyle={{paddingTop: Platform.OS === 'ios' ? 50 : 20}}>
             <View style={styles.menuContent}>
               <TouchableOpacity
-                style={styles.closeButton}
+                style={[styles.closeButton, {marginTop: Platform.OS === 'ios' ? 20 : 0}]}
                 onPress={() => setShowMenu(false)}
               >
                 <X color="#ffffff" size={24} />
@@ -676,7 +688,6 @@ export default function HomePage() {
 
               {/* Profile Section */}
               <View style={styles.profileSection}>
-                <Text style={styles.profileName}>{user?.name || 'User'}</Text>
                 <Text style={styles.profileEmail}>{user?.email}</Text>
               </View>
 
@@ -832,7 +843,15 @@ export default function HomePage() {
       );
       
       setAppointments(upcomingAppointments);
-      setTotalAppointmentCount(upcomingAppointments.length);
+      
+      // Get the total count of all upcoming appointments
+      const allUpcomingAppointments = await DatabaseService.getUpcomingAppointments(
+        authUser.uid,
+        1000, // Use a large limit to get all appointments
+        today
+      );
+      
+      setTotalAppointmentCount(allUpcomingAppointments.length);
     } catch (error) {
       console.error('Error loading upcoming appointments:', error);
       setAppointments([]);
@@ -953,15 +972,36 @@ export default function HomePage() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
-      // Get upcoming reminders
+      // Get current date and time for filtering
+      const now = new Date();
+      
+      // Get upcoming reminders - fetch more initially to ensure we have enough after filtering
       const userReminders = await DatabaseService.getUpcomingReminders(
         authUser.uid, 
-        expandedReminders ? 50 : 3 // Show more when expanded
+        expandedReminders ? 50 : 10 // Increased from 3 to 10 to ensure we have enough after filtering
       );
+      
+      // Filter out past one-time reminders but keep all recurring ones
+      const filteredReminders = userReminders.filter(reminder => {
+        // Always keep recurring reminders
+        if (reminder.isRecurring) {
+          return true;
+        }
+        
+        // For one-time reminders, check if they're in the future
+        const reminderDate = new Date(reminder.date);
+        if (reminder.time) {
+          const [hours, minutes] = reminder.time.split(':').map(Number);
+          reminderDate.setHours(hours, minutes, 0, 0);
+        }
+        
+        // Keep only if reminder date/time is in the future
+        return reminderDate >= now;
+      });
       
       // Ensure no duplicates by using a Map with reminderID as key
       const uniqueReminders = new Map();
-      userReminders.forEach(reminder => {
+      filteredReminders.forEach(reminder => {
         if (reminder.reminderID) {
           uniqueReminders.set(reminder.reminderID, reminder);
         }
@@ -969,13 +1009,26 @@ export default function HomePage() {
       
       setReminders(Array.from(uniqueReminders.values()));
       
-      // Get the total count of all active reminders
+      // Get the total count of all active reminders (still include only future non-recurring)
       const allActiveReminders = await DatabaseService.getUserReminders(
         authUser.uid, 
         { active: true }
       );
       
-      setTotalReminderCount(allActiveReminders.length);
+      // Filter count the same way
+      const activeCount = allActiveReminders.filter(reminder => 
+        reminder.isRecurring || 
+        (() => {
+          const reminderDate = new Date(reminder.date);
+          if (reminder.time) {
+            const [hours, minutes] = reminder.time.split(':').map(Number);
+            reminderDate.setHours(hours, minutes, 0, 0);
+          }
+          return reminderDate >= now;
+        })()
+      ).length;
+      
+      setTotalReminderCount(activeCount);
     } catch (error) {
       console.error('Error loading reminders:', error);
       setReminders([]);

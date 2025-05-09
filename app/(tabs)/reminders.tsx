@@ -573,16 +573,39 @@ export default function RemindersScreen() {
 
   // Filter reminders based on the active filter
   const filterReminders = () => {
+    // Get current date and time for comparison
+    const now = new Date();
+    
+    // First filter out past one-time reminders
+    const activeReminders = reminders.filter(reminder => {
+      // Always keep recurring reminders
+      if (reminder.isRecurring) {
+        return true;
+      }
+      
+      // For one-time reminders, check if they're in the future
+      const reminderDate = new Date(reminder.date);
+      // Set the time from the reminder.time field (format: "HH:MM")
+      if (reminder.time) {
+        const [hours, minutes] = reminder.time.split(':').map(Number);
+        reminderDate.setHours(hours, minutes, 0, 0);
+      }
+      
+      // Keep only if reminder date/time is in the future or is today
+      return reminderDate >= now;
+    });
+    
+    // Then apply the active filter on the already filtered reminders
     switch (activeFilter) {
       case 'recurring':
-        setFilteredReminders(reminders.filter(reminder => reminder.isRecurring));
+        setFilteredReminders(activeReminders.filter(reminder => reminder.isRecurring));
         break;
       case 'nonRecurring':
-        setFilteredReminders(reminders.filter(reminder => !reminder.isRecurring));
+        setFilteredReminders(activeReminders.filter(reminder => !reminder.isRecurring));
         break;
       case 'all':
       default:
-        setFilteredReminders(reminders);
+        setFilteredReminders(activeReminders);
     }
   };
 
