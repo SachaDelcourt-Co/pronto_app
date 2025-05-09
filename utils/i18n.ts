@@ -201,6 +201,7 @@ const resources = {
         noNotifications: 'Aucune notification',
         selectNotifications: 'Sélectionner les notifications',
         selectUpToThree: 'Sélectionnez jusqu\'à 3 rappels',
+        minDurationMessage: 'Les événements doivent durer au moins 15 minutes',
         notificationOptions: {
           fifteenMinutes: '15 minutes avant',
           oneHour: '1 heure avant',
@@ -508,6 +509,7 @@ const resources = {
         noNotifications: 'No notifications',
         selectNotifications: 'Select notifications',
         selectUpToThree: 'Select up to 3 reminders',
+        minDurationMessage: 'Events must be at least 15 minutes long',
         notificationOptions: {
           fifteenMinutes: '15 minutes before',
           oneHour: '1 hour before',
@@ -779,6 +781,7 @@ const resources = {
         noNotifications: 'Geen notificaties',
         selectNotifications: 'Selecteer notificaties',
         selectUpToThree: 'Selecteer maximaal 3 herinneringen',
+        minDurationMessage: 'Evenementen moeten minimaal 15 minuten duren',
         notificationOptions: {
           fifteenMinutes: '15 minuten vooraf',
           oneHour: '1 uur vooraf',

@@ -114,15 +114,15 @@ export default function AppointmentsScreen() {
     const startTime = appointment?.startTime || '09:00';
     setAppointmentStartTime(startTime);
     const [startHour, startMinute] = startTime.split(':').map(Number);
-    setSelectedStartHour(startHour.toString());
-    setSelectedStartMinute(startMinute.toString());
+    setSelectedStartHour(startHour.toString().padStart(2, '0'));
+    setSelectedStartMinute(startMinute.toString().padStart(2, '0'));
     
     // Set dropdown values for end time
     const endTime = appointment?.endTime || '10:00';
     setAppointmentEndTime(endTime);
     const [endHour, endMinute] = endTime.split(':').map(Number);
-    setSelectedEndHour(endHour.toString());
-    setSelectedEndMinute(endMinute.toString());
+    setSelectedEndHour(endHour.toString().padStart(2, '0'));
+    setSelectedEndMinute(endMinute.toString().padStart(2, '0'));
     
     // Reset notification times
     setSelectedNotifications(
@@ -853,6 +853,27 @@ export default function AppointmentsScreen() {
     setAppointmentEndTime(newEndTime);
   }, [selectedEndHour, selectedEndMinute]);
 
+  // Add a function to validate event duration
+  // Add this function before the return statement of the component
+  const isEventDurationValid = (): boolean => {
+    // Parse start and end time strings to minutes
+    const [startHour, startMinute] = appointmentStartTime.split(':').map(Number);
+    const [endHour, endMinute] = appointmentEndTime.split(':').map(Number);
+    
+    // Convert to minutes since midnight
+    const startMinutes = startHour * 60 + startMinute;
+    const endMinutes = endHour * 60 + endMinute;
+    
+    // Check if event crosses midnight
+    if (endMinutes <= startMinutes) {
+      // When end time is earlier than start time, assume it's the next day
+      return (24 * 60 - startMinutes) + endMinutes >= 15;
+    }
+    
+    // Regular case, end time is later than start time on the same day
+    return endMinutes - startMinutes >= 15;
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -1072,7 +1093,7 @@ export default function AppointmentsScreen() {
           
           <ScrollView 
             style={styles.upcomingList}
-            contentContainerStyle={{ paddingBottom: 70 }} // Add padding at the bottom
+            contentContainerStyle={{ paddingBottom: 120 }} // Increased from 70 to 120 for better visibility of the last event
             showsVerticalScrollIndicator={true} // Make scrollbar visible
           >
             {/* Use the refreshTrigger in a way that doesn't affect rendering but ensures re-render */}
@@ -1835,6 +1856,13 @@ export default function AppointmentsScreen() {
                 </View>
               </View>
 
+              {/* Add validation message right after time inputs */}
+              <View style={styles.validationMessageContainer}>
+                <Text style={styles.validationMessage}>
+                  {t('appointments.minDurationMessage', {fallback: 'Events must be at least 15 minutes long'})}
+                </Text>
+              </View>
+
               <Text style={styles.inputLabel}>{t('appointments.address')}</Text>
               <TextInput
                 style={styles.textInput}
@@ -1915,10 +1943,10 @@ export default function AppointmentsScreen() {
               <TouchableOpacity
                 style={[
                   styles.saveButton, 
-                  (!appointmentName.trim() || isSubmitting) && styles.saveButtonDisabled
+                  (!appointmentName.trim() || isSubmitting || !isEventDurationValid()) && styles.saveButtonDisabled
                 ]}
                 onPress={async () => {
-                  if (!appointmentName.trim() || isSubmitting || !user) return;
+                  if (!appointmentName.trim() || isSubmitting || !user || !isEventDurationValid()) return;
                   
                   // Validate date format
                   if (!/^\d{4}-\d{2}-\d{2}$/.test(appointmentDateInput)) {
@@ -2098,7 +2126,7 @@ export default function AppointmentsScreen() {
                     setIsSubmitting(false);
                   }
                 }}
-                disabled={!appointmentName.trim() || isSubmitting}
+                disabled={!appointmentName.trim() || isSubmitting || !isEventDurationValid()}
               >
                 {isSubmitting ? (
                   <ActivityIndicator size="small" color="#ffffff" />
@@ -2844,7 +2872,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     borderTopWidth: 1,
     borderTopColor: '#2a1a2a',
-    minHeight: 240, // Increased from 200 to 240
+    minHeight: 280, // Increased from 240 to 280 for better visibility
   },
   upcomingHeader: {
     paddingVertical: 12,
@@ -2861,7 +2889,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   upcomingList: {
-    maxHeight: Platform.OS === 'ios' ? 200 : 180,
+    maxHeight: Platform.OS === 'ios' ? 240 : 220, // Increased from 200/180 to 240/220
   },
   upcomingAppointmentItem: {
     borderBottomWidth: 1,
@@ -3019,5 +3047,14 @@ const styles = StyleSheet.create({
     left: 61, // Start after the time labels AND the vertical line
     zIndex: 10,
     pointerEvents: 'box-none', // Allow touches to pass through to underlying content
+  },
+  validationMessageContainer: {
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  validationMessage: {
+    fontSize: 12,
+    color: '#6b7280',
+    fontStyle: 'italic',
   },
 });

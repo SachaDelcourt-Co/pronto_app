@@ -856,18 +856,22 @@ export default function HomePage() {
       // Get current date and time
       const now = new Date();
       
+      // Get the start of the current day for the database query
+      const startOfDay = new Date(now);
+      startOfDay.setHours(0, 0, 0, 0);
+      
       // Use either the passed forceExpanded parameter or the current state
       const isExpanded = forceExpanded !== undefined ? forceExpanded : expandedAppointments;
       
       // Get upcoming appointments with expanded limit if needed
       const upcomingAppointments = await DatabaseService.getUpcomingAppointments(
         authUser.uid, 
-        isExpanded ? 50 : 3, // Increase limit to show more appointments
-        now // Pass current date and time instead of beginning of day
+        isExpanded ? 50 : 10, // Increase limit and fetch more to ensure we have enough after filtering
+        startOfDay // Use start of day to include today's appointments 
       );
       
       // Further filter appointments that have already ended
-      const filteredAppointments = upcomingAppointments.filter(appointment => {
+      let filteredAppointments = upcomingAppointments.filter(appointment => {
         const appointmentDate = new Date(appointment.date);
         const [endHours, endMinutes] = appointment.endTime.split(':').map(Number);
         appointmentDate.setHours(endHours, endMinutes, 0, 0);
@@ -875,22 +879,64 @@ export default function HomePage() {
         return appointmentDate > now;
       });
       
-      setAppointments(filteredAppointments);
+      // Sort appointments by date and time
+      filteredAppointments.sort((a, b) => {
+        // First compare dates
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        const dateDiff = dateA.getTime() - dateB.getTime();
+        
+        // If dates are different, sort by date
+        if (dateDiff !== 0) return dateDiff;
+        
+        // If same date, sort by start time
+        const [hoursA, minutesA] = a.startTime.split(':').map(Number);
+        const [hoursB, minutesB] = b.startTime.split(':').map(Number);
+        
+        // Convert to minutes for easier comparison
+        const timeA = hoursA * 60 + minutesA;
+        const timeB = hoursB * 60 + minutesB;
+        
+        return timeA - timeB;
+      });
+      
+      setAppointments(filteredAppointments.slice(0, isExpanded ? 50 : 3)); // Take only the needed number after filtering
       
       // Get the total count of all upcoming appointments
       const allUpcomingAppointments = await DatabaseService.getUpcomingAppointments(
         authUser.uid,
         1000, // Use a large limit to get all appointments
-        now
+        startOfDay // Use start of day to include today's appointments
       );
       
-      // Filter total count the same way
-      const filteredTotal = allUpcomingAppointments.filter(appointment => {
+      // Filter total count the same way and sort them similarly
+      let filteredTotal = allUpcomingAppointments.filter(appointment => {
         const appointmentDate = new Date(appointment.date);
         const [endHours, endMinutes] = appointment.endTime.split(':').map(Number);
         appointmentDate.setHours(endHours, endMinutes, 0, 0);
         
         return appointmentDate > now;
+      });
+      
+      // Sort total appointments the same way
+      filteredTotal.sort((a, b) => {
+        // First compare dates
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        const dateDiff = dateA.getTime() - dateB.getTime();
+        
+        // If dates are different, sort by date
+        if (dateDiff !== 0) return dateDiff;
+        
+        // If same date, sort by start time
+        const [hoursA, minutesA] = a.startTime.split(':').map(Number);
+        const [hoursB, minutesB] = b.startTime.split(':').map(Number);
+        
+        // Convert to minutes for easier comparison
+        const timeA = hoursA * 60 + minutesA;
+        const timeB = hoursB * 60 + minutesB;
+        
+        return timeA - timeB;
       });
       
       setTotalAppointmentCount(filteredTotal.length);
@@ -1020,7 +1066,7 @@ export default function HomePage() {
       );
       
       // Filter out past reminders including time check
-      const filteredReminders = userReminders.filter(reminder => {
+      let filteredReminders = userReminders.filter(reminder => {
         // Always keep recurring reminders
         if (reminder.isRecurring) {
           return true;
@@ -1037,6 +1083,31 @@ export default function HomePage() {
         return reminderDate >= now;
       });
       
+      // Sort reminders by date and time
+      filteredReminders.sort((a, b) => {
+        // First compare dates
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        const dateDiff = dateA.getTime() - dateB.getTime();
+        
+        // If dates are different, sort by date
+        if (dateDiff !== 0) return dateDiff;
+        
+        // If same date, sort by time
+        // Extract hours and minutes from time strings
+        const timeA = a.time ? a.time : "00:00";
+        const timeB = b.time ? b.time : "00:00";
+        
+        const [hoursA, minutesA] = timeA.split(':').map(Number);
+        const [hoursB, minutesB] = timeB.split(':').map(Number);
+        
+        // Convert to minutes for easier comparison
+        const totalMinutesA = hoursA * 60 + minutesA;
+        const totalMinutesB = hoursB * 60 + minutesB;
+        
+        return totalMinutesA - totalMinutesB;
+      });
+      
       // Ensure no duplicates by using a Map with reminderID as key
       const uniqueReminders = new Map();
       filteredReminders.forEach(reminder => {
@@ -1045,7 +1116,7 @@ export default function HomePage() {
         }
       });
       
-      setReminders(Array.from(uniqueReminders.values()));
+      setReminders(Array.from(uniqueReminders.values()).slice(0, expandedReminders ? 50 : 3));
       
       // Get the total count of all active reminders (include only future non-recurring)
       const allActiveReminders = await DatabaseService.getUserReminders(
@@ -1054,7 +1125,7 @@ export default function HomePage() {
       );
       
       // Filter count the same way, including time check
-      const activeCount = allActiveReminders.filter(reminder => 
+      let activeReminders = allActiveReminders.filter(reminder => 
         reminder.isRecurring || 
         (() => {
           const reminderDate = new Date(reminder.date);
@@ -1064,9 +1135,33 @@ export default function HomePage() {
           }
           return reminderDate >= now;
         })()
-      ).length;
+      );
       
-      setTotalReminderCount(activeCount);
+      // Sort total reminders the same way
+      activeReminders.sort((a, b) => {
+        // First compare dates
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        const dateDiff = dateA.getTime() - dateB.getTime();
+        
+        // If dates are different, sort by date
+        if (dateDiff !== 0) return dateDiff;
+        
+        // If same date, sort by time
+        const timeA = a.time ? a.time : "00:00";
+        const timeB = b.time ? b.time : "00:00";
+        
+        const [hoursA, minutesA] = timeA.split(':').map(Number);
+        const [hoursB, minutesB] = timeB.split(':').map(Number);
+        
+        // Convert to minutes for easier comparison
+        const totalMinutesA = hoursA * 60 + minutesA;
+        const totalMinutesB = hoursB * 60 + minutesB;
+        
+        return totalMinutesA - totalMinutesB;
+      });
+      
+      setTotalReminderCount(activeReminders.length);
     } catch (error) {
       console.error('Error loading reminders:', error);
       setReminders([]);
