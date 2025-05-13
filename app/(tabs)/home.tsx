@@ -1791,21 +1791,6 @@ export default function HomePage() {
   };
 
   // Force generation of a weekly report (for development/testing)
-  const handleForceGenerateWeeklyReport = async () => {
-    try {
-      if (!authUser) return;
-      
-      setLoadingWeeklyReport(true);
-      const report = await forceGenerateWeeklyReport(authUser.uid);
-      setWeeklyReportData(report);
-      setShowWeeklyReport(true);
-      setLoadingWeeklyReport(false);
-    } catch (error) {
-      console.error('Error generating weekly report:', error);
-      setLoadingWeeklyReport(false);
-    }
-  };
-  
   // Add weekly report modal rendering function
   const renderWeeklyReportModal = () => (
     <WeeklyReportModal
@@ -1817,17 +1802,6 @@ export default function HomePage() {
   );
 
   // Add a dev section to manually trigger the weekly report
-  const renderDevMenu = () => (
-    <View style={styles.devSection}>
-      <Text style={styles.devSectionTitle}>{t('tasks.weeklyReport.generateReport')}</Text>
-      <TouchableOpacity 
-        style={styles.devButton}
-        onPress={handleForceGenerateWeeklyReport}
-      >
-        <Text style={styles.devButtonText}>{t('tasks.weeklyReport.generateReport')}</Text>
-      </TouchableOpacity>
-    </View>
-  );
 
   // Add a helper function for getting locale from language
   const getLocaleFromLanguage = (language: string): string => {
@@ -1880,9 +1854,6 @@ export default function HomePage() {
                   )}
                 </View>
               </View>
-              
-              {/* Add dev section at the bottom */}
-              {renderDevMenu()}
             </View>
           </View>
         </ScrollView>
@@ -2815,28 +2786,4 @@ const styles = StyleSheet.create({
     marginTop: 4,
     opacity: 0.7,
   },
-  devSection: {
-    marginTop: 24,
-    padding: 16,
-    backgroundColor: '#1a1a1a',
-    borderRadius: 8,
-  },
-  devSectionTitle: {
-    fontSize: 16,
-    fontFamily: 'Inter-Bold',
-    color: '#ffffff',
-    marginBottom: 12,
-  },
-  devButton: {
-    backgroundColor: '#9333ea',
-    borderRadius: 8,
-    padding: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  devButtonText: {
-    fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
-    color: '#ffffff',
-  },
-}); 
+});

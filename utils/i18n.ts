@@ -36,7 +36,9 @@ const resources = {
         month: 'Mois',
         year: 'Année',
         hour: 'Heure',
-        minute: 'Minute'
+        minute: 'Minute',
+        processing: 'Traitement en cours...',
+        error: 'Une erreur est survenue, veuillez réessayer'
       },
       navigation: {
         home: 'Accueil',
@@ -69,6 +71,17 @@ const resources = {
         weakPassword: 'Le mot de passe est trop faible',
         termsAgreement: 'J\'accepte la',
         and: 'et les'
+      },
+      forgotPassword: {
+        title: 'Mot de passe oublié',
+        description: 'Entrez votre adresse e-mail et nous vous enverrons un lien pour réinitialiser votre mot de passe.',
+        emailRequired: 'L\'adresse e-mail est requise',
+        sendLink: 'Envoyer le lien',
+        sending: 'Envoi en cours...',
+        error: 'Une erreur est survenue lors de l\'envoi du lien',
+        emailSent: 'E-mail envoyé !',
+        checkEmail: 'Vérifiez votre boîte de réception pour le lien de réinitialisation.',
+        backToLogin: 'Retour à la connexion'
       },
       home: {
         subtitle: 'Votre Assistant Personnel',
@@ -242,7 +255,11 @@ const resources = {
         noteDetails: 'Détails de la note',
         lastUpdated: 'Dernière mise à jour',
         addCheckbox: 'Ajouter une case à cocher',
-        markdownHint: 'Les symboles spéciaux comme "- [ ]" s\'afficheront comme des cases à cocher'
+        markdownHint: 'Les symboles spéciaux comme "- [ ]" s\'afficheront comme des cases à cocher',
+        notificationHandlers: {
+          appointmentReminder: 'Rappel de rendez-vous',
+          reminderAlert: 'Rappel',
+        },
       },
       reminders: {
         title: 'Rappels',
@@ -258,7 +275,7 @@ const resources = {
         time: 'Heure',
         description: 'Description',
         save: 'Enregistrer',
-        notifications: "Notifications",
+        notifications: 'Notifications',
         cancel: 'Annuler',
         delete: 'Supprimer',
         loading: 'Chargement des rappels...',
@@ -278,7 +295,11 @@ const resources = {
         filterAll: 'Tous',
         filterRecurring: 'Récurrents',
         filterNonRecurring: 'Ponctuels',
-        createReminderTip: 'Appuyez sur le bouton + pour créer un rappel'
+        createReminderTip: 'Appuyez sur le bouton + pour créer un rappel',
+        notificationHandlers: {
+          appointmentReminder: 'Rappel de rendez-vous',
+          reminderAlert: 'Rappel',
+        },
       },
       tasks: {
         title: 'Tâches quotidiennes',
@@ -319,9 +340,17 @@ const resources = {
           great: 'Très bien ! Vous avez accompli {{completionRate}}% de vos tâches. Vous êtes sur la bonne voie !',
           good: 'Bien joué ! Vous avez complété {{completionRate}}% de vos tâches. Chaque effort compte !',
           okay: 'Vous avez complété {{completionRate}}% de vos tâches. C\'est un bon début, continuez à progresser !',
-          needsImprovement: 'Vous avez accompli {{completionRate}}% de vos tâches. La semaine prochaine sera meilleure, continuez d\'essayer !'
+          needsImprovement: 'Vous avez accompli {{completionRate}}% de vos tâches. La semaine prochaine sera meilleure, continuez d\'essayer !',
+          notifications: {
+            appointmentReminder: 'Rappel de rendez-vous',
+            reminderAlert: 'Rappel',
+          },
         }
-      }
+      },
+      notifications: {
+        appointmentReminder: 'Rappel de rendez-vous',
+        reminderAlert: 'Rappel',
+      },
     }
   },
   en: {
@@ -344,7 +373,9 @@ const resources = {
         month: 'Month',
         year: 'Year',
         hour: 'Hour',
-        minute: 'Minute'
+        minute: 'Minute',
+        processing: 'Processing...',
+        error: 'An error occurred, please try again'
       },
       navigation: {
         home: 'Home',
@@ -376,7 +407,20 @@ const resources = {
         invalidEmail: 'Invalid email address',
         weakPassword: 'The password is too weak',
         termsAgreement: 'I accept the',
-        and: 'and the'
+        and: 'and the',
+        processing: 'Processing...',
+        error: 'An error occurred, please try again'
+      },
+      forgotPassword: {
+        title: 'Forgot Password',
+        description: 'Enter your email address and we will send you a link to reset your password.',
+        emailRequired: 'Email address is required',
+        sendLink: 'Send Link',
+        sending: 'Sending...',
+        error: 'An error occurred while sending the link',
+        emailSent: 'Email Sent!',
+        checkEmail: 'Please check your inbox for the reset link.',
+        backToLogin: 'Back to Login'
       },
       home: {
         subtitle: 'Your Personal Assistant',
@@ -479,7 +523,7 @@ const resources = {
       legal: {
         lastUpdated: 'Last updated: February 1, 2024',
         privacyContent: 'Pronto Privacy Policy\n\nLast updated: [05/01/2025]\n\nAt Pronto, we are committed to protecting your privacy. This privacy policy explains how your information is collected, used, and shared when you use our Pronto mobile application.\n\n1. Data Collected\n\nThe application does not collect sensitive personal data such as your name, address, phone number, or email address.\n\nHowever, the application uses Google AdMob to display advertisements. Therefore, Google may collect certain device identifiers, usage logs, and advertising data for targeting or advertising statistics purposes.\n\n2. Use of Data\n\nData automatically collected via Google AdMob is used to:\n\nDisplay relevant and personalized advertisements.\nMeasure advertising performance.\n\nPronto does not store or resell any user data.\n\n3. Sharing of Data\n\nPronto does not share any data with third parties, except for the Google AdMob advertising service, which operates in accordance with its own privacy policy.\n\nSee Google\'s privacy policy here:\nhttps://policies.google.com/privacy\n\n4. GDPR Consent (EU Users)\n\nIn accordance with European legislation (GDPR), during your first use of the application, a consent screen will be presented to you to:\n\nAccept or decline personalized advertisements.\nAccess the privacy policy.\n\nYou can change your choice at any time in the application settings.\n\n5. Security\n\nWe implement reasonable technical measures to protect data, although the application does not store any personal data on its servers.\n\n6. User Rights\n\nIn accordance with GDPR, you have the right to:\n\nAccess the collected data.\nRequest its deletion or modification.\nWithdraw your consent.\n\nFor any requests: prontoapp.info@gmail.com\n\n7. Modifications\n\nThis policy may be updated. In case of significant changes, a notice will be communicated to you via the application.',
-        termsContent: 'Pronto Terms of Use\n\n1. Acceptance of Terms\n\nBy using the Pronto application, you accept these terms of use.\n\n2. Service Description\n\nPronto is a productivity application that allows you to:\n\nManage reminders, tasks, and personal projects\nOrganize notes, lists, and folders\nBenefit from a calendar and weekly checklists\n\n3. Advertising\n\nThe application is free and funded by advertising. Advertisements may be displayed via Google AdMob.\n\n4. Prohibited Behavior\n\nYou agree not to:\n\nUse the application for illegal purposes.\nDisrupt the operation or security of the application.\n\n5. Intellectual Property\n\nAll contents of the application, including design, brand, and texts, are the exclusive property of Pronto.\n\n6. Termination\n\nYou can uninstall the application at any time. We reserve the right to suspend access in case of non-compliance with the terms.\n\n7. Contact\n\nFor any questions: prontoapp.info@gmail.com'
+        termsContent: 'Pronto Terms of Use\n\n1. Acceptance of Terms\n\nBy using the Pronto application, you accept these terms of use.\n\n2. Service Description\n\nPronto is a productivity application that allows you to:\n\nManage reminders, tasks, and personal projects\nOrganize notes, lists, and folders\nBenefit from a calendar and weekly checklists\n\n3. Advertising\n\nThe application is free and funded by advertising. Advertisements may be displayed via Google AdMob.\n\n4. Prohibited Behavior\n\nYou agree not to:\n\nUse the application for illegal purposes.\nDisrupt the operation or security of the application.\n\n5. Intellectual Property\n\nAll content of the application, including design, brand and text, is the exclusive property of Pronto.\n\n6. Termination\n\nYou can uninstall the application at any time. We reserve the right to suspend access in case of non-compliance with the terms.\n\n7. Contact\n\nFor any questions: prontoapp.info@gmail.com'
       },
       appointments: {
         title: 'Appointments',
@@ -550,7 +594,11 @@ const resources = {
         noteDetails: 'Note Details',
         lastUpdated: 'Last updated',
         addCheckbox: 'Add Checkbox',
-        markdownHint: 'Special symbols like "- [ ]" will display as proper checkboxes'
+        markdownHint: 'Special symbols like "- [ ]" will display as proper checkboxes',
+        notificationHandlers: {
+          appointmentReminder: 'Appointment Reminder',
+          reminderAlert: 'Reminder',
+        },
       },
       reminders: {
         title: 'Reminders',
@@ -574,7 +622,7 @@ const resources = {
         cancel: 'Cancel',
         delete: 'Delete',
         edit: 'Edit',
-        notifications: "Notifications",
+        notifications: 'Notifications',
         loading: 'Loading reminders...',
         deleteConfirmation: 'Are you sure you want to delete this reminder?',
         deleteConfirmationTitle: 'Delete reminder',
@@ -591,7 +639,11 @@ const resources = {
         filterAll: 'All',
         filterRecurring: 'Recurring',
         filterNonRecurring: 'One-time',
-        createReminderTip: 'Tap the + button to create a reminder'
+        createReminderTip: 'Tap the + button to create a reminder',
+        notificationHandlers: {
+          appointmentReminder: 'Appointment Reminder',
+          reminderAlert: 'Reminder'
+        }
       },
       tasks: {
         title: 'Daily Tasks',
@@ -633,8 +685,16 @@ const resources = {
           good: 'Well done! You completed {{completionRate}}% of your tasks. Every effort counts!',
           okay: 'You completed {{completionRate}}% of your tasks. That\'s a good start, keep making progress!',
           needsImprovement: 'You accomplished {{completionRate}}% of your tasks. Next week will be better, keep trying!'
-        }
-      }
+        },
+        notifications: {
+          appointmentReminder: 'Appointment Reminder',
+          reminderAlert: 'Reminder',
+        },
+      },
+      notifications: {
+        appointmentReminder: 'Appointment Reminder',
+        reminderAlert: 'Reminder',
+      },
     }
   },
   nl: {
@@ -657,7 +717,9 @@ const resources = {
         month: 'Maand',
         year: 'Jaar',
         hour: 'Uur',
-        minute: 'Minuut'
+        minute: 'Minuut',
+        processing: 'Bezig met laden...',
+        error: 'Er is een fout opgetreden, probeer het opnieuw'
       },
       navigation: {
         home: 'Home',
@@ -822,7 +884,11 @@ const resources = {
         noteDetails: 'Notitie details',
         lastUpdated: 'Laatst bijgewerkt',
         addCheckbox: 'Checkbox toevoegen',
-        markdownHint: 'Speciale symbolen zoals "- [ ]" worden weergegeven als echte checkboxes'
+        markdownHint: 'Speciale symbolen zoals "- [ ]" worden weergegeven als echte checkboxes',
+        notificationHandlers: {
+          appointmentReminder: 'Afspraakherinnering',
+          reminderAlert: 'Herinnering',
+        },
       },
       reminders: {
         title: 'Herinneringen',
@@ -858,7 +924,11 @@ const resources = {
           friday: 'Vr',
           saturday: 'Za'
         },
-        remindersFor: 'Herinneringen voor {{date}}'
+        remindersFor: 'Herinneringen voor {{date}}',
+        notifications: {
+          appointmentReminder: 'Afspraakherinnering',
+          reminderAlert: 'Herinnering',
+        },
       },
       tasks: {
         title: 'Dagelijkse Taken',
@@ -899,72 +969,649 @@ const resources = {
           great: 'Goed gedaan! U heeft {{completionRate}}% van uw taken voltooid. U bent op de goede weg!',
           good: 'Goed gedaan! U heeft {{completionRate}}% van uw taken voltooid. Elke inspanning telt!',
           okay: 'U heeft {{completionRate}}% van uw taken voltooid. Dat is een goed begin, blijf vooruitgaan!',
-          needsImprovement: 'U heeft {{completionRate}}% van uw taken voltooid. Volgende week zal beter zijn, blijf het proberen!'
-        }
-      }
+          needsImprovement: 'U heeft {{completionRate}}% van uw taken voltooid. Volgende week zal beter zijn, blijf het proberen!',
+          notifications: {
+            appointmentReminder: 'Appointment Reminder',
+            reminderAlert: 'Reminder',
+          },
+        },
+        notifications: {
+          appointmentReminder: 'Afspraakherinnering',
+          reminderAlert: 'Herinnering',
+        },
+      },
+      notifications: {
+        appointmentReminder: 'Afspraakherinnering',
+        reminderAlert: 'Herinnering',
+      },
     }
   },
   es: {
     translation: {
       common: {
+        at: 'a',
+        on: 'en',
+        yes: 'Sí',
+        no: 'No',
+        ok: 'OK',
+        cancel: 'Cancelar',
+        save: 'Guardar',
+        delete: 'Eliminar',
+        edit: 'Editar',
+        create: 'Crear',
+        loading: 'Cargando...',
+        today: 'Hoy',
+        done: 'Hecho',
         day: 'Día',
         month: 'Mes',
         year: 'Año',
         hour: 'Hora',
-        minute: 'Minuto'
+        minute: 'Minuto',
+        processing: 'Procesando...',
+        error: 'Se produjo un error, por favor intente de nuevo'
+      },
+      navigation: {
+        home: 'Inicio',
+        tasks: 'Tareas',
+        appointments: 'Citas',
+        reminders: 'Recordatorios',
+        notes: 'Notas'
+      },
+      login: {
+        title: 'PRONTO',
+        subtitle: 'Tu Asistente Personal',
+        email: 'Correo electrónico',
+        password: 'Contraseña',
+        login: 'Iniciar sesión',
+        register: 'Crear cuenta',
+        loginButton: 'Iniciar sesión',
+        createAccount: 'Crear cuenta',
+        forgotPassword: '¿Olvidó su contraseña?',
+        privacyPolicy: 'Política de privacidad',
+        termsOfUse: 'Términos de uso',
+        selectMotivations: 'Seleccionar sus motivaciones (máx. 2)',
+        invalidCredentials: 'Correo electrónico o contraseña incorrectos',
+        selectLanguage: 'Seleccionar idioma',
+        fieldsRequired: 'Todos los campos son requeridos',
+        acceptTerms: 'Aceptar términos de uso',
+        selectMotivationsRequired: 'Por favor, seleccione al menos una motivación',
+        registrationError: 'Se produjo un error durante el registro',
+        emailInUse: 'Este correo electrónico ya está en uso',
+        invalidEmail: 'Correo electrónico inválido',
+        weakPassword: 'La contraseña es demasiado débil',
+        termsAgreement: 'Acepto la',
+        and: 'y los'
+      },
+      forgotPassword: {
+        title: '¿Olvidó su contraseña?',
+        description: 'Ingrese su dirección de correo electrónico y le enviaremos un enlace para restablecer su contraseña.',
+        emailRequired: 'Se requiere dirección de correo electrónico',
+        sendLink: 'Enviar enlace',
+        sending: 'Enviando...',
+        error: 'Se produjo un error al enviar el enlace',
+        emailSent: '¡Correo electrónico enviado!',
+        checkEmail: 'Por favor, compruebe su bandeja de entrada para el enlace de restablecimiento.',
+        backToLogin: 'Regresar al inicio de sesión'
+      },
+      home: {
+        subtitle: 'Tu Asistente Personal',
+        todaySchedule: 'Programa de hoy',
+        appointments: 'Citas',
+        reminders: 'Recordatorios',
+        noUpcomingAppointments: 'No hay citas próximas',
+        noAppointments: 'No hay citas',
+        noItemsForDate: 'No hay citas o recordatorios para esta fecha',
+        noReminders: 'No hay recordatorios',
+        seeMore: 'Ver más...',
+        showLess: 'Mostrar menos',
+        seeAll: 'Ver todo',
+        schedule: 'Programa',
+        dailyTasks: 'Tareas diarias',
+        noTasks: 'No hay tareas para hoy',
+        loadingTasks: 'Cargando tareas...',
+        done: 'Hecho',
+        days: 'días',
+        appointmentDetails: 'Detalles de la cita',
+        reminderDetails: 'Detalles del recordatorio',
+        editAppointment: 'Editar cita',
+        editReminder: 'Editar recordatorio',
+        notifications: 'Notificaciones',
+        recurringOn: 'Recurrente el:',
+        menu: {
+          activitySummary: 'Resumen de actividad',
+          tasks: 'Tareas',
+          appointments: 'Citas',
+          reminders: 'Recordatorios',
+          accountInfo: 'Información de la cuenta',
+          lastActivity: 'Última actividad',
+          language: 'Idioma',
+          motivations: 'Motivaciones',
+          appInfo: 'Información de la aplicación',
+          version: 'Versión',
+          contactSupport: 'Contactar soporte',
+          supportEmail: 'Para cualquier asistencia, contactar: prontoapp.info@gmail.com',
+          editMotivations: 'Editar mis motivaciones',
+          logOut: 'Cerrar sesión'
+        }
+      },
+      motivations: {
+        sport: 'Deporte',
+        business: 'Negocio',
+        studies: 'Estudios',
+        wellbeing: 'Bienestar',
+        parenting: 'Crianza',
+        personalDevelopment: 'Desarrollo Personal',
+        financialManagement: 'Gestión Financiera'
+      },
+      onboarding: {
+        notifications: {
+          title: 'Manténgase informado',
+          description: 'Habilitar notificaciones para no perder nada',
+          features: {
+            appointments: 'Recordatorios de citas',
+            reminders: 'Notificaciones personalizadas',
+            tasks: 'Seguimiento de tareas',
+            motivation: 'Mensajes motivadores',
+            support: 'Soporte personalizado'
+          },
+          allow: 'Habilitar notificaciones',
+          note: 'Puede cambiar estas configuraciones más adelante'
+        },
+        features: {
+          title: 'Descubra sus características',
+          subtitle: 'Aquí es lo que le espera en su asistente personal',
+          motivation: {
+            title: 'Motivación',
+            description: 'Reciba mensajes motivadores personalizados basados en sus objetivos'
+          },
+          appointments: {
+            title: 'Citas',
+            description: 'Administre fácilmente todas sus citas importantes'
+          },
+          reminders: {
+            title: 'Recordatorios',
+            description: 'Cree recordatorios personalizados para no olvidar nada'
+          },
+          tasks: {
+            title: 'Tareas',
+            description: 'Siga sus tareas diarias y semanales'
+          },
+          reports: {
+            title: 'Informes',
+            description: 'Vea su progreso en detalle'
+          },
+          examples: {
+            title: 'Comience creando sus tareas diarias\n\nEjemplo:',
+            water: 'Beber más de 1L de agua por día',
+            sport: 'Ejercitarse regularmente',
+            meditation: 'Leer un libro',
+            reading: 'Cuidarse',
+            healthy: 'Comer saludable'
+          },
+          continue: 'Continuar'
+        }
+      },
+      legal: {
+        lastUpdated: 'Actualizado por última vez: 1 de febrero de 2024',
+        privacyContent: 'Política de privacidad de Pronto\n\nActualizado por última vez: [05/01/2025]\n\nEn Pronto, nos comprometemos a proteger su privacidad. Esta política de privacidad explica cómo se recopilan, utilizan y comparten sus datos cuando utiliza nuestra aplicación móvil Pronto.\n\n1. Datos recopilados\n\nLa aplicación no recopila datos personales sensibles como su nombre, dirección, número de teléfono o dirección de correo electrónico.\n\nSin embargo, la aplicación utiliza Google AdMob para mostrar anuncios. Por lo tanto, Google puede recoger ciertos identificadores de dispositivo, registros de uso y datos de anuncios para fines de segmentación o estadísticas de anuncios.\n\n2. Uso de datos\n\nLos datos recopilados automáticamente mediante Google AdMob se utilizan para:\n\nMostrar anuncios relevantes y personalizados.\nMedir el rendimiento de los anuncios.\n\nPronto no almacena ni vende datos de usuario.\n\n3. Compartir datos\n\nPronto no comparte datos con terceros, excepto con el servicio de anuncios Google AdMob, que opera de acuerdo con su propia política de privacidad.\n\nVer la política de privacidad de Google aquí:\nhttps://policies.google.com/privacy\n\n4. Consentimiento RGPD (Usuarios de la UE)\n\nDe conformidad con la legislación europea (RGPD), durante su primera utilización de la aplicación, se le presentará una pantalla de consentimiento para:\n\nAceptar o rechazar anuncios personalizados.\nAcceder a la política de privacidad.\n\nPuede cambiar su elección en cualquier momento en la configuración de la aplicación.\n\n5. Seguridad\n\nImplementamos medidas técnicas razonables para proteger los datos, aunque la aplicación no almacene datos personales en sus servidores.\n\n6. Derechos del usuario\n\nDe conformidad con el RGPD, tiene derecho a:\n\nAcceder a los datos recopilados.\nSolicitar su eliminación o modificación.\nRetirar su consentimiento.\n\nPara cualquier solicitud: prontoapp.info@gmail.com\n\n7. Modificaciones\n\nEsta política puede actualizarse. En caso de cambios importantes, se le notificará a través de la aplicación.',
+        termsContent: 'Términos de uso de Pronto\n\n1. Aceptación de términos\n\nAl usar la aplicación Pronto, acepta estos términos de uso.\n\n2. Descripción del servicio\n\nPronto es una aplicación de productividad que le permite:\n\nAdministrar recordatorios, tareas y proyectos personales\nOrganizar notas, listas y carpetas\nBeneficiar de un calendario y listas de control semanales\n\n3. Publicidad\n\nLa aplicación es gratuita y financiada por la publicidad. Se pueden mostrar anuncios a través de Google AdMob.\n\n4. Comportamiento prohibido\n\nUsted se compromete a no:\n\nUsar la aplicación para fines ilegales.\nInterrumpir el funcionamiento o la seguridad de la aplicación.\n\n5. Propiedad intelectual\n\nTodos los contenidos de la aplicación, incluyendo diseño, marca y textos, son propiedad exclusiva de Pronto.\n\n6. Terminación\n\nPuede desinstalar la aplicación en cualquier momento. Nos reservamos el derecho de suspender el acceso en caso de incumplimiento de los términos.\n\n7. Contacto\n\nFor any questions: prontoapp.info@gmail.com'
+      },
+      appointments: {
+        title: 'Citas',
+        subtitle: 'Administre sus citas',
+        selectDate: 'Seleccionar fecha',
+        noAppointments: 'No hay citas',
+        noAppointmentsForDate: 'No hay citas para esta fecha',
+        createAppointment: 'Crear cita',
+        editAppointment: 'Editar cita',
+        appointmentName: 'Título de la cita',
+        date: 'Fecha',
+        startTime: 'Hora de inicio',
+        endTime: 'Hora de finalización',
+        description: 'Descripción',
+        address: 'Dirección',
+        save: 'Guardar',
+        cancel: 'Cancelar',
+        delete: 'Eliminar',
+        loading: 'Cargando citas...',
+        deleteConfirmation: '¿Está seguro de que desea eliminar esta cita?',
+        deleteConfirmationTitle: 'Eliminar cita',
+        appointmentsFor: 'Citas para {{date}}',
+        upcomingAppointments: 'Citas próximas',
+        edit: 'Editar',
+        appointmentDetails: 'Detalles de la cita',
+        notifications: 'Notificaciones',
+        noNotifications: 'No hay notificaciones',
+        selectNotifications: 'Seleccionar notificaciones',
+        selectUpToThree: 'Seleccionar hasta 3 recordatorios',
+        minDurationMessage: 'Los eventos deben durar al menos 15 minutos',
+        notificationOptions: {
+          fifteenMinutes: '15 minutos antes',
+          oneHour: '1 hora antes',
+          threeHours: '3 horas antes',
+          oneDay: '1 día antes',
+          twoDays: '2 días antes'
+        }
       },
       notes: {
-        markdownHint: 'Los símbolos especiales como "- [ ]" se mostrarán como casillas de verificación'
+        title: 'Notas',
+        subtitle: 'Organice sus pensamientos',
+        noNotes: 'No hay notas',
+        noNotesInFolder: 'No hay notas en esta carpeta',
+        createNote: 'Crear nota',
+        editNote: 'Editar nota',
+        noteName: 'Título de la nota',
+        content: 'Contenido',
+        save: 'Guardar',
+        cancel: 'Cancelar',
+        delete: 'Eliminar',
+        createFolder: 'Crear carpeta',
+        folderName: 'Nombre de la carpeta',
+        backToRoot: 'Regresar',
+        loading: 'Cargando notas...',
+        deleteConfirmation: '¿Está seguro de que desea eliminar esta nota?',
+        deleteFolderConfirmation: '¿Está seguro de que desea eliminar esta carpeta?',
+        deleteConfirmationTitle: 'Eliminar',
+        root: 'Ninguna',
+        selectFolder: 'Seleccionar carpeta',
+        update: 'Actualizar',
+        create: 'Crear',
+        newNote: 'Nueva nota',
+        newFolder: 'Nueva carpeta',
+        notesTitle: 'Notas',
+        foldersTitle: 'Carpetas',
+        notesInFolder: 'Notas en esta carpeta',
+        edit: 'Editar',
+        noteDetails: 'Detalles de la nota',
+        lastUpdated: 'Actualizado por última vez',
+        addCheckbox: 'Agregar casilla de verificación',
+        markdownHint: 'Símbolos especiales como "- [ ]" se mostrarán como casillas de verificación',
+        notificationHandlers: {
+          appointmentReminder: 'Recordatorio de cita',
+          reminderAlert: 'Recordatorio',
+        },
       },
+      reminders: {
+        title: 'Recordatorios',
+        subtitle: 'No se pierda lo importante',
+        openCalendar: 'Abrir calendario',
+        noReminders: 'No hay recordatorios',
+        noRemindersForDay: 'No hay recordatorios para {{date}}',
+        createReminder: 'Crear recordatorio',
+        editReminder: 'Editar recordatorio',
+        newReminder: 'Nuevo recordatorio',
+        reminderTitle: 'Título del recordatorio',
+        date: 'Fecha',
+        time: 'Hora',
+        recurringReminder: 'Recordatorio recurrente?',
+        selectDays: 'Seleccionar días',
+        notificationTimes: 'Tiempos de notificación',
+        addNotificationTime: 'Agregar tiempo de notificación',
+        active: 'Activo',
+        inactive: 'Inactivo',
+        save: 'Guardar',
+        cancel: 'Cancelar',
+        delete: 'Eliminar',
+        edit: 'Editar',
+        notifications: "Notificaciones",
+        loading: 'Cargando recordatorios...',
+        deleteConfirmation: '¿Está seguro de que desea eliminar este recordatorio?',
+        deleteConfirmationTitle: 'Eliminar recordatorio',
+        daysOfWeek: {
+          sunday: 'Dom',
+          monday: 'Lun',
+          tuesday: 'Mar',
+          wednesday: 'Mié',
+          thursday: 'Jue',
+          friday: 'Vie',
+          saturday: 'Sáb'
+        },
+        remindersFor: 'Recordatorios para {{date}}',
+        filterAll: 'Todos',
+        filterRecurring: 'Recurrentes',
+        filterNonRecurring: 'Una vez',
+        createReminderTip: 'Presione el botón + para crear un recordatorio',
+        notificationHandlers: {
+          appointmentReminder: 'Recordatorio de cita',
+          reminderAlert: 'Recordatorio',
+        }
+      },
+      tasks: {
+        title: 'Tareas diarias',
+        subtitle: 'Crear y seguir sus tareas',
+        noTasks: 'No hay tareas',
+        createTask: 'Crear tarea',
+        editTask: 'Editar tarea',
+        taskName: 'Nombre de la tarea',
+        description: 'Descripción',
+        howManyDays: '¿Cuántos días?',
+        progress: 'Progreso',
+        days: 'días',
+        save: 'Guardar',
+        create: 'Crear',
+        creating: 'Creando...',
+        cancel: 'Cancelar',
+        delete: 'Eliminar',
+        reset: 'Restablecer',
+        loading: 'Cargando tareas...',
+        deleteConfirmation: '¿Está seguro de que desea eliminar esta tarea?',
+        deleteConfirmationTitle: 'Eliminar tarea',
+        resetConfirmation: '¿Está seguro de que desea restablecer el progreso de "{taskName}"? Esto restablecerá su progreso a 0/{daysSelected} días.',
+        resetConfirmationTitle: 'Restablecer tarea',
+        noTasksYet: 'Aún no hay tareas',
+        createFirstTask: 'Cree su primera tarea para comenzar a desarrollar buenos hábitos',
       weeklyReport: {
-        title: 'Informe Semanal',
-        subtitle: 'Tu progreso esta semana',
+          title: 'Informe semanal',
+          subtitle: 'Su progreso esta semana',
         period: 'Período: {{startDate}} - {{endDate}}',
         completionRate: 'Tasa de finalización',
         tasksCompleted: 'Tareas completadas',
         taskCompletionDetail: '{{taskName}}: {{completed}}/{{total}} días',
         close: 'Cerrar',
         generateReport: 'Generar informe (DEV)',
-        notificationTitle: '¡Tu informe semanal está listo!',
+          notificationTitle: '¡Su informe semanal está listo!',
         notificationBody: 'Has logrado {{completionRate}}% de tus tareas esta semana. Revisa tu informe completo.',
         excellent: '¡Excelente trabajo! Has logrado {{completionRate}}% de tus tareas esta semana. ¡Sigue así!',
         great: '¡Buen trabajo! Has logrado {{completionRate}}% de tus tareas. ¡Estás en el camino correcto!',
         good: '¡Bien hecho! Has completado {{completionRate}}% de tus tareas. ¡Cada esfuerzo cuenta!',
-        okay: 'Has completado {{completionRate}}% de tus tareas. Es un buen comienzo, ¡sigue progresando!',
+          okay: 'Has completado {{completionRate}}% de tus tareas. Es un buen comienzo, ¡sigue progrediendo!',
         needsImprovement: 'Has logrado {{completionRate}}% de tus tareas. La próxima semana será mejor, ¡sigue intentándolo!'
-      }
-    },
+        },
+        notifications: {
+          appointmentReminder: 'Recordatorio de cita',
+          reminderAlert: 'Recordatorio',
+        },
+      },
+      notifications: {
+        appointmentReminder: 'Recordatorio de cita',
+        reminderAlert: 'Recordatorio',
+      },
+    }
   },
   pt: {
     translation: {
       common: {
+        at: 'a',
+        on: 'em',
+        yes: 'Sim',
+        no: 'Não',
+        ok: 'OK',
+        cancel: 'Cancelar',
+        save: 'Guardar',
+        delete: 'Eliminar',
+        edit: 'Editar',
+        create: 'Criar',
+        loading: 'Carregando...',
+        today: 'Hoje',
+        done: 'Feito',
         day: 'Dia',
         month: 'Mês',
         year: 'Ano',
         hour: 'Hora',
-        minute: 'Minuto'
+        minute: 'Minuto',
+        processing: 'Processando...',
+        error: 'Ocorreu um erro, por favor tente novamente'
+      },
+      navigation: {
+        home: 'Início',
+        tasks: 'Tarefas',
+        appointments: 'Consultas',
+        reminders: 'Lembretes',
+        notes: 'Notas'
+      },
+      login: {
+        title: 'PRONTO',
+        subtitle: 'Votre Assistant Personnel',
+        email: 'Adresse email',
+        password: 'Mot de passe',
+        login: 'Se connecter',
+        register: 'Créer un compte',
+        loginButton: 'Se connecter',
+        createAccount: 'Créer un compte',
+        forgotPassword: 'Mot de passe oublié ?',
+        privacyPolicy: 'Politique de confidentialité',
+        termsOfUse: 'Conditions d\'utilisation',
+        selectMotivations: 'Sélectionner vos motivations (max. 2)',
+        invalidCredentials: 'Email ou mot de passe incorrect',
+        selectLanguage: 'Sélectionner la langue',
+        fieldsRequired: 'Tous les champs sont requis',
+        acceptTerms: 'Veuillez accepter les conditions d\'utilisation',
+        selectMotivationsRequired: 'Veuillez sélectionner au moins une motivation',
+        registrationError: 'Une erreur est survenue lors de l\'inscription',
+        emailInUse: 'Cette adresse email est déjà utilisée',
+        invalidEmail: 'Adresse email invalide',
+        weakPassword: 'Le mot de passe est trop faible',
+        termsAgreement: 'J\'accepte la',
+        and: 'et les'
+      },
+      motivations: {
+        sport: 'Sport',
+        business: 'Business',
+        studies: 'Études',
+        wellbeing: 'Bien-être',
+        parenting: 'Parentalité',
+        personalDevelopment: 'Développement Personnel',
+        financialManagement: 'Gestion Financière'
+      },
+      onboarding: {
+        notifications: {
+          title: 'Restez informé',
+          description: 'Activez les notifications pour ne rien manquer',
+          features: {
+            appointments: 'Rappels de rendez-vous',
+            reminders: 'Notifications personnalisées',
+            tasks: 'Suivi des tâches',
+            motivation: 'Messages motivants',
+            support: 'Support personnalisé'
+          },
+          allow: 'Activer les notifications',
+          note: 'Vous pourrez modifier ces paramètres plus tard'
+        },
+        features: {
+          title: 'Découvrez vos fonctionnalités',
+          subtitle: 'Voici ce qui vous attend dans votre assistant personnel',
+          motivation: {
+            title: 'Motivation',
+            description: 'Recevez des messages motivants personnalisés selon vos objectifs'
+          },
+          appointments: {
+            title: 'Rendez-vous',
+            description: 'Gérez facilement tous vos rendez-vous importants'
+          },
+          reminders: {
+            title: 'Rappels',
+            description: 'Créez des rappels personnalisés pour ne rien oublier'
+          },
+          tasks: {
+            title: 'Tâches',
+            description: 'Suivez vos tâches quotidiennes et hebdomadaires'
+          },
+          reports: {
+            title: 'Rapports',
+            description: 'Visualisez vos progrès avec des rapports détaillés'
+          },
+          examples: {
+            title: 'Commencez par créer vos tâches quotidiennes\n\nExemple:',
+            water: 'Boire plus d\'1L d\'eau par jour',
+            sport: 'Faire de l\'exercice régulièrement',
+            meditation: 'Lire un livre',
+            reading: 'Prendre soin de soi',
+            healthy: 'Manger sainement'
+          },
+          continue: 'Continuer'
+        }
+      },
+      legal: {
+        lastUpdated: 'Dernière mise à jour : 1 février 2024',
+        privacyContent: 'Politique de Confidentialité de Pronto\n\nDernière mise à jour : [01/05/2025]\n\nChez Pronto, nous nous engageons à protéger votre vie privée. Cette politique de confidentialité explique comment vos informations sont collectées, utilisées et partagées lorsque vous utilisez notre application mobile Pronto.\n\n1. Données collectées\n\nL\'application ne collecte pas de données personnelles sensibles telles que votre nom, adresse, numéro de téléphone ou adresse e-mail.\n\nCependant, l\'application utilise Google AdMob pour afficher des publicités. Par conséquent, Google peut collecter certains identifiants d\'appareil, journaux d\'utilisation et données publicitaires à des fins de ciblage ou de statistiques publicitaires.\n\n2. Utilisation des données\n\nLes données collectées automatiquement via Google AdMob sont utilisées pour :\n\nAfficher des annonces pertinentes et personnalisées.\nMesurer les performances publicitaires.\n\nPronto ne stocke ni ne revend aucune donnée utilisateur.\n\n3. Partage des données\n\nPronto ne partage aucune donnée avec des tiers, en dehors du service publicitaire Google AdMob, qui agit conformément à sa propre politique de confidentialité.\n\nVoir la politique de confidentialité de Google ici :\nhttps://policies.google.com/privacy\n\n4. Consentement RGPD (Utilisateurs UE)\n\nConformément à la législation européenne (RGPD), lors de votre première utilisation de l\'application, un écran de consentement vous sera présenté pour :\n\nAccepter ou refuser les publicités personnalisées.\nAccéder à la politique de confidentialité.\n\nVous pouvez modifier votre choix à tout moment dans les paramètres de l\'application.\n\n5. Sécurité\n\nNous mettons en œuvre les mesures techniques raisonnables pour protéger les données, bien que l\'application ne stocke aucune donnée personnelle sur ses serveurs.\n\n6. Droits des utilisateurs\n\nConformément au RGPD, vous avez le droit de :\n\nAccéder aux données recopiladas.\nSolicitar su eliminación o modificación.\nRetirar su consentimiento.\n\nPara cualquier solicitud: prontoapp.info@gmail.com\n\n7. Modificaciones\n\nEsta política puede actualizarse. En caso de cambios importantes, se le notificará a través de la aplicación.',
+        termsContent: 'Términos de uso de Pronto\n\n1. Aceptación de términos\n\nAl usar la aplicación Pronto, acepta estos términos de uso.\n\n2. Descripción del servicio\n\nPronto es una aplicación de productividad que le permite:\n\nAdministrar recordatorios, tareas y proyectos personales\nOrganizar notas, listas y carpetas\nBeneficiar de un calendario y listas de control semanales\n\n3. Publicidad\n\nLa aplicación es gratuita y financiada por la publicidad. Se pueden mostrar anuncios a través de Google AdMob.\n\n4. Comportamiento prohibido\n\nUsted se compromete a no:\n\nUsar la aplicación para fines ilegales.\nInterrumpir el funcionamiento o la seguridad de la aplicación.\n\n5. Propiedad intelectual\n\nTodos los contenidos de la aplicación, incluyendo diseño, marca y textos, son propiedad exclusiva de Pronto.\n\n6. Terminación\n\nPuede desinstalar la aplicación en cualquier momento. Nos reservamos el derecho de suspender el acceso en caso de incumplimiento de los términos.\n\n7. Contacto\n\nFor any questions: prontoapp.info@gmail.com'
+      },
+      appointments: {
+        title: 'Rendez-vous',
+        subtitle: 'Gérez vos rendez-vous',
+        selectDate: 'Sélectionner une date',
+        noAppointments: 'Aucun rendez-vous',
+        noAppointmentsForDate: 'Aucun rendez-vous pour cette date',
+        createAppointment: 'Créer un rendez-vous',
+        editAppointment: 'Modifier le rendez-vous',
+        appointmentName: 'Titre du rendez-vous',
+        date: 'Date',
+        startTime: 'Heure de début',
+        endTime: 'Heure de fin',
+        description: 'Description',
+        address: 'Adresse',
+        save: 'Enregistrer',
+        cancel: 'Annuler',
+        delete: 'Supprimer',
+        loading: 'Chargement des rendez-vous...',
+        deleteConfirmation: 'Êtes-vous sûr de vouloir supprimer ce rendez-vous?',
+        deleteConfirmationTitle: 'Supprimer le rendez-vous',
+        appointmentsFor: 'Rendez-vous pour {{date}}',
+        upcomingAppointments: 'Rendez-vous à venir',
+        edit: 'Modifier',
+        appointmentDetails: 'Détails du rendez-vous',
+        notifications: 'Notifications',
+        noNotifications: 'Aucune notification',
+        selectNotifications: 'Sélectionner les notifications',
+        selectUpToThree: 'Sélectionnez jusqu\'à 3 rappels',
+        minDurationMessage: 'Les événements doivent durer au moins 15 minutes',
+        notificationOptions: {
+          fifteenMinutes: '15 minutes avant',
+          oneHour: '1 heure avant',
+          threeHours: '3 heures avant',
+          oneDay: '1 jour avant',
+          twoDays: '2 jours avant'
+        }
       },
       notes: {
-        markdownHint: 'Símbolos especiais como "- [ ]" serão exibidos como caixas de seleção'
+        title: 'Notes',
+        subtitle: 'Organisez vos pensées',
+        noNotes: 'Aucune note',
+        noNotesInFolder: 'Aucune note dans ce dossier',
+        createNote: 'Créer une note',
+        editNote: 'Modifier la note',
+        noteName: 'Titre de la note',
+        content: 'Contenu',
+        save: 'Enregistrer',
+        cancel: 'Annuler',
+        delete: 'Supprimer',
+        createFolder: 'Créer un dossier',
+        folderName: 'Nom du dossier',
+        backToRoot: 'Retour',
+        loading: 'Chargement des notes...',
+        deleteConfirmation: 'Êtes-vous sûr de vouloir supprimer cette note?',
+        deleteFolderConfirmation: 'Êtes-vous sûr de vouloir supprimer ce dossier?',
+        deleteConfirmationTitle: 'Supprimer',
+        root: 'Aucun',
+        selectFolder: 'Sélectionner un dossier',
+        update: 'Mettre à jour',
+        create: 'Créer',
+        newNote: 'Nouvelle note',
+        newFolder: 'Nouveau dossier',
+        notesTitle: 'Notes',
+        foldersTitle: 'Dossiers',
+        notesInFolder: 'Notes dans ce dossier',
+        edit: 'Modifier',
+        noteDetails: 'Détails de la note',
+        lastUpdated: 'Dernière mise à jour',
+        addCheckbox: 'Ajouter une case à cocher',
+        markdownHint: 'Les symboles spéciaux comme "- [ ]" s\'afficheront comme des cases à cocher',
+        notificationHandlers: {
+          appointmentReminder: 'Rappel de rendez-vous',
+          reminderAlert: 'Rappel',
+        },
       },
+      reminders: {
+        title: 'Rappels',
+        subtitle: 'Gérez vos rappels',
+        selectDate: 'Sélectionner une date',
+        noReminders: 'Aucun rappel',
+        noRemindersForDate: 'Aucun rappel pour cette date',
+        createReminder: 'Créer un rappel',
+        newReminder: 'Nouveau rappel',
+        editReminder: 'Modifier le rappel',
+        reminderTitle: 'Titre du rappel',
+        date: 'Date',
+        time: 'Heure',
+        description: 'Description',
+        save: 'Enregistrer',
+        notifications: 'Notifications',
+        cancel: 'Annuler',
+        delete: 'Supprimer',
+        loading: 'Chargement des rappels...',
+        deleteConfirmation: 'Êtes-vous sûr de vouloir supprimer ce rappel?',
+        deleteConfirmationTitle: 'Supprimer le rappel',
+        remindersFor: 'Rappels pour {{date}}',
+        upcomingReminders: 'Rappels à venir',
+        edit: 'Modifier',
+        reminderDetails: 'Détails du rappel',
+        recurringReminder: 'Rappel récurrent',
+        selectDays: 'Sélectionner les jours',
+        notificationTimes: 'Heures de notification',
+        addNotificationTime: 'Ajouter une heure de notification',
+        active: 'Actif',
+        inactive: 'Inactif',
+        openCalendar: 'Ouvrir le calendrier',
+        filterAll: 'Tous',
+        filterRecurring: 'Récurrents',
+        filterNonRecurring: 'Ponctuels',
+        createReminderTip: 'Appuyez sur le bouton + pour créer un rappel',
+        notifications: {
+          appointmentReminder: 'Rappel de rendez-vous',
+          reminderAlert: 'Rappel',
+        },
+      },
+      tasks: {
+        title: 'Tâches quotidiennes',
+        subtitle: 'Créez et suivez vos tâches',
+        noTasks: 'Aucune tâche',
+        createTask: 'Créer une tâche',
+        editTask: 'Modifier la tâche',
+        taskName: 'Nom de la tâche',
+        description: 'Description',
+        howManyDays: 'Combien de jours?',
+        progress: 'Progression',
+        days: 'jours',
+        save: 'Enregistrer',
+        create: 'Créer',
+        creating: 'Création en cours...',
+        cancel: 'Annuler',
+        delete: 'Supprimer',
+        reset: 'Réinitialiser',
+        loading: 'Chargement des tâches...',
+        deleteConfirmation: 'Êtes-vous sûr de vouloir supprimer cette tâche?',
+        deleteConfirmationTitle: 'Supprimer la tâche',
+        resetConfirmation: 'Êtes-vous sûr de vouloir réinitialiser la progression de "{taskName}"? Cela remettra votre progression à 0/{daysSelected} jours.',
+        resetConfirmationTitle: 'Réinitialiser la tâche',
+        noTasksYet: 'Aucune tâche pour le moment',
+        createFirstTask: 'Créez votre première tâche pour commencer à prendre de bonnes habitudes',
       weeklyReport: {
-        title: 'Relatório Semanal',
-        subtitle: 'Seu progresso esta semana',
-        period: 'Período: {{startDate}} - {{endDate}}',
-        completionRate: 'Taxa de conclusão',
-        tasksCompleted: 'Tarefas concluídas',
-        taskCompletionDetail: '{{taskName}}: {{completed}}/{{total}} dias',
-        close: 'Fechar',
-        generateReport: 'Gerar relatório (DEV)',
-        notificationTitle: 'Seu relatório semanal está pronto!',
-        notificationBody: 'Você concluiu {{completionRate}}% de suas tarefas esta semana. Confira seu relatório completo.',
-        excellent: 'Excelente trabalho! Você atingiu {{completionRate}}% de suas tarefas esta semana. Continue assim!',
-        great: 'Ótimo trabalho! Você realizou {{completionRate}}% de suas tarefas. Você está no caminho certo!',
-        good: 'Bem feito! Você completou {{completionRate}}% de suas tarefas. Cada esforço conta!',
-        okay: 'Você completou {{completionRate}}% de suas tarefas. Esse é um bom começo, continue progredindo!',
-        needsImprovement: 'Você realizou {{completionRate}}% de suas tarefas. A próxima semana será melhor, continue tentando!'
-      }
-    },
+          title: 'Rapport Hebdomadaire',
+          subtitle: 'Votre progression cette semaine',
+          period: 'Période: {{startDate}} - {{endDate}}',
+          completionRate: 'Taux de réalisation',
+          tasksCompleted: 'Tâches réalisées',
+          taskCompletionDetail: '{{taskName}}: {{completed}}/{{total}} jours',
+          close: 'Fermer',
+          generateReport: 'Générer un rapport (DEV)',
+          notificationTitle: 'Votre rapport hebdomadaire est prêt !',
+          notificationBody: 'Vous avez accompli {{completionRate}}% de vos tâches cette semaine. Consultez votre rapport complet.',
+          excellent: 'Excellent travail ! Vous avez atteint {{completionRate}}% de vos tâches cette semaine. Continuez comme ça !',
+          great: 'Très bien ! Vous avez accompli {{completionRate}}% de vos tâches. Vous êtes sur la bonne voie !',
+          good: 'Bien joué ! Vous avez complété {{completionRate}}% de vos tâches. Chaque effort compte !',
+          okay: 'Vous avez complété {{completionRate}}% de vos tâches. C\'est un bon début, continuez à progresser !',
+          needsImprovement: 'Vous avez accompli {{completionRate}}% de vos tâches. La semaine prochaine sera meilleure, continuez d\'essayer !',
+          notifications: {
+            appointmentReminder: 'Rappel de rendez-vous',
+            reminderAlert: 'Rappel',
+          },
+        }
+      },
+      notifications: {
+        appointmentReminder: 'Rappel de rendez-vous',
+        reminderAlert: 'Rappel',
+      },
+    }
   },
   it: {
     translation: {
@@ -973,7 +1620,9 @@ const resources = {
         month: 'Mese',
         year: 'Anno',
         hour: 'Ora',
-        minute: 'Minuto'
+        minute: 'Minuto',
+        processing: 'Elaborazione in corso...',
+        error: 'Si è verificato un errore, per favore riprova'
       },
       notes: {
         markdownHint: 'Simboli speciali come "- [ ]" verranno visualizzati come caselle di controllo'
@@ -994,7 +1643,11 @@ const resources = {
         good: 'Ben fatto! Hai completato {{completionRate}}% delle tue attività. Ogni sforzo conta!',
         okay: 'Hai completato {{completionRate}}% delle tue attività. È un buon inizio, continua a progredire!',
         needsImprovement: 'Hai completato {{completionRate}}% delle tue attività. La prossima settimana andrà meglio, continua a provare!'
-      }
+      },
+      notifications: {
+        appointmentReminder: 'Promemoria appuntamento',
+        reminderAlert: 'Promemoria',
+      },
     },
   }
 };

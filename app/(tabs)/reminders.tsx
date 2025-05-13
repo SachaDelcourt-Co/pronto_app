@@ -481,7 +481,24 @@ export default function RemindersScreen() {
       
       // Cancel any existing notifications for this reminder
       if (selectedReminder?.reminderID) {
-        await Notifications.cancelScheduledNotificationAsync(selectedReminder.reminderID);
+        try {
+          // Get all scheduled notifications
+          const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+          
+          // Filter notifications for this reminder
+          const reminderNotifications = scheduledNotifications.filter(
+            notification => notification.identifier.startsWith(selectedReminder.reminderID!)
+          );
+          
+          // Cancel each notification
+          for (const notification of reminderNotifications) {
+            await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+          }
+          
+          console.log(`Cancelled ${reminderNotifications.length} existing notifications for reminder`);
+        } catch (error) {
+          console.error('Error cancelling existing notifications:', error);
+        }
       }
       
       const notificationContent = {
@@ -491,29 +508,36 @@ export default function RemindersScreen() {
         priority: Notifications.AndroidNotificationPriority.HIGH,
       };
       
+      const today = new Date();
+      const reminderIdentifierPrefix = selectedReminder?.reminderID || `new-${Date.now()}`;
+      
       if (reminder.isRecurring) {
         // For recurring reminders
         for (const dayOfWeek of reminder.daysOfWeek || []) {
           for (const time of reminder.notificationTimes) {
             const [hours, minutes] = time.split(':').map(Number);
             
-            // Calculate next occurrence of this day
-            const today = new Date();
-            const daysToAdd = (dayOfWeek - today.getDay() + 7) % 7;
-            const nextDate = new Date(today);
-            nextDate.setDate(today.getDate() + daysToAdd);
+            // Find the next occurrence of this day of week
+            const daysUntilNext = (dayOfWeek - today.getDay() + 7) % 7;
+            const nextDate = new Date();
+            nextDate.setDate(today.getDate() + daysUntilNext);
             nextDate.setHours(hours, minutes, 0, 0);
             
-            // Only schedule if it's in the future
+            // Only schedule notifications if they're in the future
             if (nextDate > today) {
+              const identifier = `${reminderIdentifierPrefix}-${dayOfWeek}-${time}`;
+              console.log(`Scheduling recurring notification for ${nextDate.toISOString()} with ID: ${identifier}`);
+              
               await Notifications.scheduleNotificationAsync({
                 content: notificationContent,
-                trigger: {
-                  channelId: 'default',
+                trigger: { 
                   date: nextDate,
+                  channelId: 'default'
                 },
-                identifier: `${selectedReminder?.reminderID || 'new'}-${dayOfWeek}-${time}`,
+                identifier: identifier,
               });
+            } else {
+              console.log(`Skipping past notification for day ${dayOfWeek} at ${time}`);
             }
           }
         }
@@ -526,15 +550,20 @@ export default function RemindersScreen() {
           scheduledDate.setHours(hours, minutes, 0, 0);
           
           // Only schedule if it's in the future
-          if (scheduledDate > new Date()) {
+          if (scheduledDate > today) {
+            const identifier = `${reminderIdentifierPrefix}-${time}`;
+            console.log(`Scheduling one-time notification for ${scheduledDate.toISOString()} with ID: ${identifier}`);
+            
             await Notifications.scheduleNotificationAsync({
               content: notificationContent,
-              trigger: {
-                channelId: 'default',
+              trigger: { 
                 date: scheduledDate,
+                channelId: 'default'
               },
-              identifier: `${selectedReminder?.reminderID || 'new'}-${time}`,
+              identifier: identifier,
             });
+          } else {
+            console.log(`Skipping past notification at ${time} for date ${reminder.date}`);
           }
         }
       }
@@ -550,7 +579,20 @@ export default function RemindersScreen() {
     try {
       // Cancel any scheduled notifications
       try {
-        await Notifications.cancelScheduledNotificationAsync(selectedReminder.reminderID);
+        // Get all scheduled notifications
+        const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+        
+        // Filter notifications for this reminder
+        const reminderNotifications = scheduledNotifications.filter(
+          notification => notification.identifier.startsWith(selectedReminder.reminderID!)
+        );
+        
+        // Cancel each notification
+        for (const notification of reminderNotifications) {
+          await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+        }
+        
+        console.log(`Cancelled ${reminderNotifications.length} notifications for deleted reminder`);
       } catch (error) {
         console.log('Error canceling notifications:', error);
       }
@@ -614,8 +656,8 @@ export default function RemindersScreen() {
     setActiveFilter(filter);
   };
 
-  // Add a function to toggle reminder active status
-  const toggleReminderActive = async (reminder: Reminder, e: any) => {
+  // Handle toggling a reminder's active state
+  const handleToggleActive = async (reminder: Reminder, e: any) => {
     // Stop event propagation to prevent opening the reminder edit modal
     e.stopPropagation();
     
@@ -646,9 +688,20 @@ export default function RemindersScreen() {
       } else {
         // If deactivating, cancel notifications
         try {
-          if (reminder.reminderID) {
-            await Notifications.cancelScheduledNotificationAsync(reminder.reminderID);
+          // Get all scheduled notifications
+          const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+          
+          // Filter notifications for this reminder
+          const reminderNotifications = scheduledNotifications.filter(
+            notification => notification.identifier.startsWith(reminder.reminderID!)
+          );
+          
+          // Cancel each notification
+          for (const notification of reminderNotifications) {
+            await Notifications.cancelScheduledNotificationAsync(notification.identifier);
           }
+          
+          console.log(`Cancelled ${reminderNotifications.length} notifications for deactivated reminder`);
         } catch (error) {
           console.log('Error canceling notifications:', error);
         }
@@ -943,7 +996,7 @@ export default function RemindersScreen() {
                       styles.activeIndicatorContainer,
                       reminder.active ? styles.activeContainerOn : styles.activeContainerOff
                     ]}
-                    onPress={(e) => toggleReminderActive(reminder, e)}
+                    onPress={(e) => handleToggleActive(reminder, e)}
                     activeOpacity={0.7}
                   >
                     <View style={[

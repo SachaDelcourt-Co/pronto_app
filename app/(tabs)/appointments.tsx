@@ -9,6 +9,16 @@ import type { Appointment } from '@/types/database';
 import { useFocusEffect, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
+import * as Notifications from 'expo-notifications';
+
+// Setup notification handler
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
 
 export default function AppointmentsScreen() {
   const { t, i18n } = useTranslation();
@@ -113,14 +123,44 @@ export default function AppointmentsScreen() {
     // Set dropdown values for start time
     const startTime = appointment?.startTime || '09:00';
     setAppointmentStartTime(startTime);
-    const [startHour, startMinute] = startTime.split(':').map(Number);
+    
+    // Safely parse hour and minute values
+    let startHour = 9;
+    let startMinute = 0;
+    try {
+      const [hourStr, minuteStr] = startTime.split(':');
+      startHour = parseInt(hourStr, 10);
+      startMinute = parseInt(minuteStr, 10);
+      
+      // Validate parsed values
+      if (isNaN(startHour)) startHour = 9;
+      if (isNaN(startMinute)) startMinute = 0;
+    } catch (error) {
+      console.log('Error parsing start time:', error);
+    }
+    
     setSelectedStartHour(startHour.toString().padStart(2, '0'));
     setSelectedStartMinute(startMinute.toString().padStart(2, '0'));
     
     // Set dropdown values for end time
     const endTime = appointment?.endTime || '10:00';
     setAppointmentEndTime(endTime);
-    const [endHour, endMinute] = endTime.split(':').map(Number);
+    
+    // Safely parse hour and minute values for end time
+    let endHour = 10;
+    let endMinute = 0;
+    try {
+      const [hourStr, minuteStr] = endTime.split(':');
+      endHour = parseInt(hourStr, 10);
+      endMinute = parseInt(minuteStr, 10);
+      
+      // Validate parsed values
+      if (isNaN(endHour)) endHour = 10;
+      if (isNaN(endMinute)) endMinute = 0;
+    } catch (error) {
+      console.log('Error parsing end time:', error);
+    }
+    
     setSelectedEndHour(endHour.toString().padStart(2, '0'));
     setSelectedEndMinute(endMinute.toString().padStart(2, '0'));
     
@@ -660,6 +700,12 @@ export default function AppointmentsScreen() {
     const [hours, minutes] = appointmentStartTime.split(':').map(Number);
     appointmentDateTime.setHours(hours, minutes, 0, 0);
     
+    // Don't generate notifications if the appointment is in the past
+    if (appointmentDateTime < new Date()) {
+      console.log('Appointment is in the past, not scheduling notifications');
+      return [];
+    }
+    
     return options.map(option => {
       const notifTime = new Date(appointmentDateTime);
       
@@ -682,8 +728,14 @@ export default function AppointmentsScreen() {
           break;
       }
       
+      // Don't schedule notifications in the past
+      if (notifTime <= new Date()) {
+        console.log(`Notification time ${option} would be in the past, skipping.`);
+        return null;
+      }
+      
       return notifTime;
-    });
+    }).filter(Boolean) as Date[]; // Filter out null values
   };
 
   // Toggle a notification option
@@ -874,6 +926,280 @@ export default function AppointmentsScreen() {
     return endMinutes - startMinutes >= 15;
   };
 
+  // Function to schedule notifications for an appointment
+  const scheduleAppointmentNotifications = async (appointment: Appointment) => {
+    try {
+      // Request permissions first
+      const { status } = await Notifications.getPermissionsAsync();
+      
+      if (status !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        if (status !== 'granted') {
+          console.log('Notification permission not granted');
+          return;
+        }
+      }
+      
+      // Cancel any existing notifications for this appointment
+      if (appointment?.appointmentID) {
+        try {
+          // Get all scheduled notifications
+          const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+          
+          // Filter notifications for this appointment
+          const appointmentNotifications = scheduledNotifications.filter(
+            notification => notification.identifier.startsWith(appointment.appointmentID!)
+          );
+          
+          // Cancel each notification
+          for (const notification of appointmentNotifications) {
+            await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+          }
+          
+          console.log(`Cancelled ${appointmentNotifications.length} existing notifications for appointment`);
+        } catch (error) {
+          console.error('Error cancelling existing notifications:', error);
+        }
+      }
+      
+      if (!appointment?.notificationTimes || appointment.notificationTimes.length === 0) {
+        console.log('No notification times configured for this appointment');
+        return;
+      }
+      
+      // Get the appointment date and time
+      const appointmentDate = new Date(appointment.date);
+      const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
+      appointmentDate.setHours(startHour, startMinute, 0, 0);
+      
+      // Create the notification content
+      const notificationContent = {
+        title: t('notifications.appointmentReminder', 'Appointment Reminder'),
+        body: appointment.appointmentName,
+        sound: true,
+        priority: Notifications.AndroidNotificationPriority.HIGH,
+        data: { appointmentID: appointment.appointmentID },
+      };
+      
+      console.log(`Scheduling notifications for appointment: ${appointment.appointmentName} at ${appointmentDate.toISOString()}`);
+      
+      // Schedule notifications based on the configured notification times
+      for (const notificationTime of appointment.notificationTimes) {
+        // The notification times in the appointment are already Date objects (calculated by convertOptionsToNotificationTimes)
+        const scheduledTime = new Date(notificationTime);
+        
+        // Only schedule if it's in the future
+        if (scheduledTime > new Date()) {
+          const identifier = `${appointment.appointmentID}-${scheduledTime.getTime()}`;
+          
+          console.log(`Scheduling notification for ${scheduledTime.toISOString()} with ID: ${identifier}`);
+          
+          await Notifications.scheduleNotificationAsync({
+            content: notificationContent,
+            trigger: {
+              date: scheduledTime,
+              channelId: 'default'
+            },
+            identifier: identifier,
+          });
+        } else {
+          console.log(`Skipping past notification at ${scheduledTime.toISOString()}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error scheduling appointment notifications:', error);
+    }
+  };
+
+  // Fix the notifications scheduling when saving appointments
+  const handleSubmitAppointment = async () => {
+    if (!appointmentName.trim() || isSubmitting || !user || !isEventDurationValid()) return;
+    
+    // Validate date format
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(appointmentDateInput)) {
+      // If you want to show an error message, you could add state for that
+      console.error('Invalid date format');
+      return;
+    }
+    
+    try {
+      setIsSubmitting(true);
+      
+      // Parse the date from the input text to ensure it's correct
+      const date = parseLocalDate(appointmentDateInput);
+      
+      // Convert notification options to actual Date objects
+      const notificationTimes = convertOptionsToNotificationTimes(
+        selectedNotifications,
+        date
+      );
+      
+      const appointmentData = {
+        userID: user.uid,
+        appointmentName: appointmentName.trim(),
+        description: appointmentDescription.trim(),
+        date: date, // Use the parsed date
+        startTime: appointmentStartTime,
+        endTime: appointmentEndTime,
+        // Only include address if it's not empty
+        ...(appointmentAddress.trim() ? { address: appointmentAddress.trim() } : {}),
+        notificationTimes: notificationTimes,
+        allDay: false,
+      };
+      
+      let newOrUpdatedAppointment: Appointment | null = null;
+      
+      if (isEditMode && selectedAppointment?.appointmentID) {
+        try {
+          // Clear cache first to ensure fresh data
+          DatabaseService.clearAppointmentCache();
+          
+          // Call update and capture the result
+          await DatabaseService.updateAppointment(
+            selectedAppointment.appointmentID, 
+            appointmentData
+          );
+          
+          // If no error, assume success and update local state
+          newOrUpdatedAppointment = {
+            ...appointmentData,
+            appointmentID: selectedAppointment.appointmentID,
+            date: date,
+          } as Appointment;
+          
+          // Update appointments list
+          setAppointments(prevAppointments => 
+            prevAppointments.map(app => 
+              app.appointmentID === selectedAppointment.appointmentID ? newOrUpdatedAppointment! : app
+            )
+          );
+          
+          // Update daily appointments
+          setDailyAppointments(prevAppointments => 
+            prevAppointments.map(app => 
+              app.appointmentID === selectedAppointment.appointmentID ? newOrUpdatedAppointment! : app
+            )
+          );
+          
+          // Update upcoming appointments
+          setUpcomingAppointments(prevAppointments => {
+            const filtered = prevAppointments.filter(app => 
+              app.appointmentID !== selectedAppointment.appointmentID
+            );
+            
+            // Check if the updated appointment should be in upcoming
+            const now = new Date();
+            const appointmentDate = new Date(newOrUpdatedAppointment!.date);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            let shouldInclude = false;
+            
+            if (appointmentDate.getTime() > today.getTime()) {
+              shouldInclude = true;
+            } else if (appointmentDate.getTime() === today.getTime()) {
+              const [endHour, endMinute] = newOrUpdatedAppointment!.endTime.split(':').map(Number);
+              const appointmentEndDateTime = new Date(appointmentDate);
+              appointmentEndDateTime.setHours(endHour, endMinute, 0, 0);
+              shouldInclude = appointmentEndDateTime > now;
+            }
+            
+            // Increment refresh trigger to ensure UI update
+            setRefreshTrigger(prev => prev + 1);
+            
+            return shouldInclude 
+              ? [...filtered, newOrUpdatedAppointment!].sort((a, b) => {
+                  const dateComparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+                  if (dateComparison !== 0) return dateComparison;
+                  return a.startTime.localeCompare(b.startTime);
+                })
+              : filtered;
+          });
+          
+          // Schedule notifications for the updated appointment
+          await scheduleAppointmentNotifications(newOrUpdatedAppointment);
+        } catch (error) {
+          console.error('Error updating appointment:', error);
+        }
+      } else {
+        try {
+          // Clear cache first to ensure fresh data
+          DatabaseService.clearAppointmentCache();
+          
+          // Create new appointment
+          const created = await DatabaseService.createAppointment(appointmentData);
+          
+          // Check if we have a valid result
+          if (created && typeof created === 'object' && 'appointmentID' in created) {
+            newOrUpdatedAppointment = created as Appointment;
+            
+            // Update appointments list
+            setAppointments(prevAppointments => [...prevAppointments, newOrUpdatedAppointment!]);
+            
+            // Update daily appointments if the appointment is for the selected date
+            const newAppointmentDate = new Date(newOrUpdatedAppointment.date);
+            const selectedDateStr = formatLocalDate(selectedDate);
+            const newAppointmentDateStr = formatLocalDate(newAppointmentDate);
+            
+            if (selectedDateStr === newAppointmentDateStr) {
+              setDailyAppointments(prevAppointments => [...prevAppointments, newOrUpdatedAppointment!]);
+            }
+            
+            // Update upcoming appointments if applicable
+            const now = new Date();
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            let shouldInclude = false;
+            
+            if (newAppointmentDate.getTime() > today.getTime()) {
+              shouldInclude = true;
+            } else if (newAppointmentDate.getTime() === today.getTime()) {
+              const [endHour, endMinute] = newOrUpdatedAppointment.endTime.split(':').map(Number);
+              const appointmentEndDateTime = new Date(newAppointmentDate);
+              appointmentEndDateTime.setHours(endHour, endMinute, 0, 0);
+              shouldInclude = appointmentEndDateTime > now;
+            }
+            
+            // Increment refresh trigger to ensure UI update
+            setRefreshTrigger(prev => prev + 1);
+            
+            if (shouldInclude) {
+              setUpcomingAppointments(prevAppointments => 
+                [...prevAppointments, newOrUpdatedAppointment!].sort((a, b) => {
+                  const dateComparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+                  if (dateComparison !== 0) return dateComparison;
+                  return a.startTime.localeCompare(b.startTime);
+                })
+              );
+            }
+            
+            // Schedule notifications for the new appointment
+            await scheduleAppointmentNotifications(newOrUpdatedAppointment);
+          }
+        } catch (error) {
+          console.error('Error creating appointment:', error);
+        }
+      }
+      
+      // Still reload all data to ensure consistency
+      await loadAppointments();
+      await loadDailyAppointments(selectedDate);
+      await loadMarkedDates();
+      await loadUpcomingAppointments();
+      
+      // Force a final refresh of the upcoming section
+      setRefreshTrigger(prev => prev + 1);
+      
+      // Close modal
+      setShowAppointmentModal(false);
+    } catch (error) {
+      console.error('Error saving appointment:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -942,7 +1268,7 @@ export default function AppointmentsScreen() {
           
           {/* Render all appointments as absolute positioned elements over the time grid */}
           <View style={styles.appointmentsContainer}>
-            {(() => {
+                {(() => {
               if (dailyAppointments.length === 0) return null;
               
               // First convert all appointments to a more convenient format for calculation
@@ -1031,28 +1357,28 @@ export default function AppointmentsScreen() {
                 
                 // Appoint height based on duration
                 const heightInPixels = Math.max(10, appointment.duration);
-                
-                return (
-                  <TouchableOpacity 
+
+                    return (
+                      <TouchableOpacity 
                     key={`appointment-${index}`}
-                    style={[
-                      styles.appointmentBlock,
-                      {
-                        height: heightInPixels,
+                        style={[
+                          styles.appointmentBlock,
+                          {
+                            height: heightInPixels,
                         width: `${columnWidth}%`,
                         left: `${colPosition}%`,
                         top: topPosition
-                      }
-                    ]}
-                    onPress={() => {
+                          }
+                        ]}
+                        onPress={() => {
                       setSelectedAppointment({
                         ...appointment,
                         startTime: `${Math.floor(appointment.startTime / 60).toString().padStart(2, '0')}:${(appointment.startTime % 60).toString().padStart(2, '0')}`,
                         endTime: `${Math.floor(appointment.endTime / 60).toString().padStart(2, '0')}:${(appointment.endTime % 60).toString().padStart(2, '0')}`
                       });
-                      setShowAppointmentDetails(true);
-                    }}
-                  >
+                          setShowAppointmentDetails(true);
+                        }}
+                      >
                     <Text 
                       style={[
                         styles.appointmentBlockTitle,
@@ -1061,13 +1387,13 @@ export default function AppointmentsScreen() {
                       numberOfLines={Math.max(1, Math.floor(appointment.duration / 15))}
                       ellipsizeMode="tail"
                     >
-                      {appointment.appointmentName}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              });
-            })()}
-          </View>
+                          {appointment.appointmentName}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  });
+                })()}
+              </View>
           
           {/* Current time indicator - only show for current day */}
           {isToday(displayDate) && (
@@ -1086,11 +1412,11 @@ export default function AppointmentsScreen() {
 
       {/* Upcoming Appointments List */}
       {upcomingAppointments.length > 0 && (
-        <View style={styles.upcomingAppointmentsContainer}>
-          <View style={styles.upcomingHeader}>
-            <Text style={styles.upcomingTitle}>{t('appointments.upcomingAppointments')}</Text>
-          </View>
-          
+      <View style={styles.upcomingAppointmentsContainer}>
+        <View style={styles.upcomingHeader}>
+          <Text style={styles.upcomingTitle}>{t('appointments.upcomingAppointments')}</Text>
+        </View>
+        
           <ScrollView 
             style={styles.upcomingList}
             contentContainerStyle={{ paddingBottom: 120 }} // Increased from 70 to 120 for better visibility of the last event
@@ -1099,65 +1425,65 @@ export default function AppointmentsScreen() {
             {/* Use the refreshTrigger in a way that doesn't affect rendering but ensures re-render */}
             {refreshTrigger ? null : null}
             
-            {upcomingAppointments.length > 0 ? (
-              upcomingAppointments.map((appointment, index) => (
-                <TouchableOpacity 
+          {upcomingAppointments.length > 0 ? (
+            upcomingAppointments.map((appointment, index) => (
+              <TouchableOpacity 
                   key={`${appointment.appointmentID}-${refreshTrigger}`} 
-                  style={styles.upcomingAppointmentItem}
-                  onPress={() => {
-                    setSelectedAppointment(appointment);
-                    setShowAppointmentDetails(true);
-                  }}
+                style={styles.upcomingAppointmentItem}
+                onPress={() => {
+                  setSelectedAppointment(appointment);
+                  setShowAppointmentDetails(true);
+                }}
+              >
+                <LinearGradient
+                  colors={['rgba(147, 51, 234, 0.1)', 'rgba(147, 51, 234, 0.05)']}
+                  style={styles.upcomingAppointmentGradient}
                 >
-                  <LinearGradient
-                    colors={['rgba(147, 51, 234, 0.1)', 'rgba(147, 51, 234, 0.05)']}
-                    style={styles.upcomingAppointmentGradient}
-                  >
-                    <View style={styles.upcomingAppointmentDetails}>
-                      <Text style={styles.upcomingAppointmentName}>
-                        {appointment.appointmentName}
-                      </Text>
-                      <Text style={styles.upcomingAppointmentDate}>
-                        {formatShortDate(new Date(appointment.date))}
-                      </Text>
-                      <Text style={styles.upcomingAppointmentTime}>
-                        {appointment.startTime} - {appointment.endTime}
-                      </Text>
-                    </View>
-                    <View style={styles.upcomingAppointmentActions}>
-                      <TouchableOpacity 
-                        style={styles.upcomingActionButton}
-                        onPress={(e) => {
-                          e.stopPropagation(); // Prevent the parent touchable from triggering
-                          setSelectedAppointment(appointment);
-                          resetForm(appointment);
-                          setShowAppointmentModal(true);
-                        }}
-                      >
-                        <Edit size={16} color="#9333ea" />
-                      </TouchableOpacity>
-                      
-                      <TouchableOpacity 
-                        style={[styles.upcomingActionButton, styles.upcomingDeleteButton]}
-                        onPress={(e) => {
-                          e.stopPropagation(); // Prevent the parent touchable from triggering
-                          setSelectedAppointment(appointment);
-                          setShowDeleteConfirmation(true);
-                        }}
-                      >
-                        <Trash2 size={16} color="#ef4444" />
-                      </TouchableOpacity>
-                    </View>
-                  </LinearGradient>
-                </TouchableOpacity>
-              ))
-            ) : (
-              <View style={styles.noUpcomingAppointments}>
-                <Text style={styles.noUpcomingText}>{t('appointments.noAppointments')}</Text>
-              </View>
-            )}
-          </ScrollView>
-        </View>
+                  <View style={styles.upcomingAppointmentDetails}>
+                    <Text style={styles.upcomingAppointmentName}>
+                      {appointment.appointmentName}
+                    </Text>
+                    <Text style={styles.upcomingAppointmentDate}>
+                      {formatShortDate(new Date(appointment.date))}
+                    </Text>
+                    <Text style={styles.upcomingAppointmentTime}>
+                      {appointment.startTime} - {appointment.endTime}
+                    </Text>
+                  </View>
+                  <View style={styles.upcomingAppointmentActions}>
+                    <TouchableOpacity 
+                      style={styles.upcomingActionButton}
+                      onPress={(e) => {
+                        e.stopPropagation(); // Prevent the parent touchable from triggering
+                        setSelectedAppointment(appointment);
+                        resetForm(appointment);
+                        setShowAppointmentModal(true);
+                      }}
+                    >
+                      <Edit size={16} color="#9333ea" />
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={[styles.upcomingActionButton, styles.upcomingDeleteButton]}
+                      onPress={(e) => {
+                        e.stopPropagation(); // Prevent the parent touchable from triggering
+                        setSelectedAppointment(appointment);
+                        setShowDeleteConfirmation(true);
+                      }}
+                    >
+                      <Trash2 size={16} color="#ef4444" />
+                    </TouchableOpacity>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <View style={styles.noUpcomingAppointments}>
+              <Text style={styles.noUpcomingText}>{t('appointments.noAppointments')}</Text>
+            </View>
+          )}
+        </ScrollView>
+      </View>
       )}
 
       {/* Calendar Modal */}
@@ -1945,187 +2271,7 @@ export default function AppointmentsScreen() {
                   styles.saveButton, 
                   (!appointmentName.trim() || isSubmitting || !isEventDurationValid()) && styles.saveButtonDisabled
                 ]}
-                onPress={async () => {
-                  if (!appointmentName.trim() || isSubmitting || !user || !isEventDurationValid()) return;
-                  
-                  // Validate date format
-                  if (!/^\d{4}-\d{2}-\d{2}$/.test(appointmentDateInput)) {
-                    // If you want to show an error message, you could add state for that
-                    console.error('Invalid date format');
-                    return;
-                  }
-                  
-                  try {
-                    setIsSubmitting(true);
-                    
-                    // Parse the date from the input text to ensure it's correct
-                    const date = parseLocalDate(appointmentDateInput);
-                    
-                    // Convert notification options to actual Date objects
-                    const notificationTimes = convertOptionsToNotificationTimes(
-                      selectedNotifications,
-                      date
-                    );
-                    
-                    const appointmentData = {
-                      userID: user.uid,
-                      appointmentName: appointmentName.trim(),
-                      description: appointmentDescription.trim(),
-                      date: date, // Use the parsed date
-                      startTime: appointmentStartTime,
-                      endTime: appointmentEndTime,
-                      // Only include address if it's not empty
-                      ...(appointmentAddress.trim() ? { address: appointmentAddress.trim() } : {}),
-                      notificationTimes: notificationTimes,
-                      allDay: false,
-                    };
-                    
-                    let newOrUpdatedAppointment: Appointment | null = null;
-                    
-                    if (isEditMode && selectedAppointment?.appointmentID) {
-                      try {
-                        // Clear cache first to ensure fresh data
-                        DatabaseService.clearAppointmentCache();
-                        
-                        // Call update and capture the result
-                        await DatabaseService.updateAppointment(
-                          selectedAppointment.appointmentID, 
-                          appointmentData
-                        );
-                        
-                        // If no error, assume success and update local state
-                        newOrUpdatedAppointment = {
-                          ...appointmentData,
-                          appointmentID: selectedAppointment.appointmentID,
-                          date: date,
-                        } as Appointment;
-                        
-                        // Update appointments list
-                        setAppointments(prevAppointments => 
-                          prevAppointments.map(app => 
-                            app.appointmentID === selectedAppointment.appointmentID ? newOrUpdatedAppointment! : app
-                          )
-                        );
-                        
-                        // Update daily appointments
-                        setDailyAppointments(prevAppointments => 
-                          prevAppointments.map(app => 
-                            app.appointmentID === selectedAppointment.appointmentID ? newOrUpdatedAppointment! : app
-                          )
-                        );
-                        
-                        // Update upcoming appointments
-                        setUpcomingAppointments(prevAppointments => {
-                          const filtered = prevAppointments.filter(app => 
-                            app.appointmentID !== selectedAppointment.appointmentID
-                          );
-                          
-                          // Check if the updated appointment should be in upcoming
-                          const now = new Date();
-                          const appointmentDate = new Date(newOrUpdatedAppointment!.date);
-                          const today = new Date();
-                          today.setHours(0, 0, 0, 0);
-                          
-                          let shouldInclude = false;
-                          
-                          if (appointmentDate.getTime() > today.getTime()) {
-                            shouldInclude = true;
-                          } else if (appointmentDate.getTime() === today.getTime()) {
-                            const [endHour, endMinute] = newOrUpdatedAppointment!.endTime.split(':').map(Number);
-                            const appointmentEndDateTime = new Date(appointmentDate);
-                            appointmentEndDateTime.setHours(endHour, endMinute, 0, 0);
-                            shouldInclude = appointmentEndDateTime > now;
-                          }
-                          
-                          // Increment refresh trigger to ensure UI update
-                          setRefreshTrigger(prev => prev + 1);
-                          
-                          return shouldInclude 
-                            ? [...filtered, newOrUpdatedAppointment!].sort((a, b) => {
-                                const dateComparison = new Date(a.date).getTime() - new Date(b.date).getTime();
-                                if (dateComparison !== 0) return dateComparison;
-                                return a.startTime.localeCompare(b.startTime);
-                              })
-                            : filtered;
-                        });
-                      } catch (error) {
-                        console.error('Error updating appointment:', error);
-                      }
-                    } else {
-                      try {
-                        // Clear cache first to ensure fresh data
-                        DatabaseService.clearAppointmentCache();
-                        
-                        // Create new appointment
-                        const created = await DatabaseService.createAppointment(appointmentData);
-                        
-                        // Check if we have a valid result
-                        if (created && typeof created === 'object' && 'appointmentID' in created) {
-                          newOrUpdatedAppointment = created as Appointment;
-                          
-                          // Update appointments list
-                          setAppointments(prevAppointments => [...prevAppointments, newOrUpdatedAppointment!]);
-                          
-                          // Update daily appointments if the appointment is for the selected date
-                          const newAppointmentDate = new Date(newOrUpdatedAppointment.date);
-                          const selectedDateStr = formatLocalDate(selectedDate);
-                          const newAppointmentDateStr = formatLocalDate(newAppointmentDate);
-                          
-                          if (selectedDateStr === newAppointmentDateStr) {
-                            setDailyAppointments(prevAppointments => [...prevAppointments, newOrUpdatedAppointment!]);
-                          }
-                          
-                          // Update upcoming appointments if applicable
-                          const now = new Date();
-                          const today = new Date();
-                          today.setHours(0, 0, 0, 0);
-                          
-                          let shouldInclude = false;
-                          
-                          if (newAppointmentDate.getTime() > today.getTime()) {
-                            shouldInclude = true;
-                          } else if (newAppointmentDate.getTime() === today.getTime()) {
-                            const [endHour, endMinute] = newOrUpdatedAppointment.endTime.split(':').map(Number);
-                            const appointmentEndDateTime = new Date(newAppointmentDate);
-                            appointmentEndDateTime.setHours(endHour, endMinute, 0, 0);
-                            shouldInclude = appointmentEndDateTime > now;
-                          }
-                          
-                          // Increment refresh trigger to ensure UI update
-                          setRefreshTrigger(prev => prev + 1);
-                          
-                          if (shouldInclude) {
-                            setUpcomingAppointments(prevAppointments => 
-                              [...prevAppointments, newOrUpdatedAppointment!].sort((a, b) => {
-                                const dateComparison = new Date(a.date).getTime() - new Date(b.date).getTime();
-                                if (dateComparison !== 0) return dateComparison;
-                                return a.startTime.localeCompare(b.startTime);
-                              })
-                            );
-                          }
-                        }
-                      } catch (error) {
-                        console.error('Error creating appointment:', error);
-                      }
-                    }
-                    
-                    // Still reload all data to ensure consistency
-                    await loadAppointments();
-                    await loadDailyAppointments(selectedDate);
-                    await loadMarkedDates();
-                    await loadUpcomingAppointments();
-                    
-                    // Force a final refresh of the upcoming section
-                    setRefreshTrigger(prev => prev + 1);
-                    
-                    // Close modal
-                    setShowAppointmentModal(false);
-                  } catch (error) {
-                    console.error('Error saving appointment:', error);
-                  } finally {
-                    setIsSubmitting(false);
-                  }
-                }}
+                onPress={handleSubmitAppointment}
                 disabled={!appointmentName.trim() || isSubmitting || !isEventDurationValid()}
               >
                 {isSubmitting ? (
@@ -2259,6 +2405,26 @@ export default function AppointmentsScreen() {
                   if (!selectedAppointment?.appointmentID) return;
                   
                   try {
+                    // First, cancel any scheduled notifications for this appointment
+                    try {
+                      // Get all scheduled notifications
+                      const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+                      
+                      // Filter notifications for this appointment
+                      const appointmentNotifications = scheduledNotifications.filter(
+                        notification => notification.identifier.startsWith(selectedAppointment.appointmentID!)
+                      );
+                      
+                      // Cancel each notification
+                      for (const notification of appointmentNotifications) {
+                        await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+                      }
+                      
+                      console.log(`Cancelled ${appointmentNotifications.length} notifications for deleted appointment`);
+                    } catch (error) {
+                      console.log('Error canceling notifications:', error);
+                    }
+                    
                     // Immediately update state to remove the deleted appointment
                     // This gives a more responsive user experience even before the backend confirms
                     

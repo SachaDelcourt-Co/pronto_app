@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "PRONTO",
-    "slug": "pronto-assistant",
+    "name": "Pronto",
+    "slug": "pronto-clean",
     "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "pronto",
+    "scheme": "prontoclean",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/images/icon.png",
@@ -17,8 +17,8 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.pronto.assistant",
-      "buildNumber": "2",
+      "bundleIdentifier": "com.pronto.clean",
+      "buildNumber": "1",
       "config": {
         "googleMobileAdsAppId": "ca-app-pub-3940256099942544~1458002511"
       },
@@ -42,7 +42,7 @@
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#4c1d95"
       },
-      "package": "com.pronto.assistant",
+      "package": "com.pronto.clean",
       "versionCode": 1,
       "config": {
         "googleMobileAdsAppId": "ca-app-pub-3940256099942544~3347511713"
