@@ -1,7 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Platform, Modal, ActivityIndicator, Dimensions, useWindowDimensions } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Platform, Modal, ActivityIndicator, Dimensions, useWindowDimensions, Alert, TextInput, FlatList, RefreshControl, KeyboardAvoidingView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
+import { router, useRouter, useFocusEffect } from 'expo-router';
+import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { 
   Menu, 
   Calendar, 
@@ -22,17 +25,12 @@ import {
   Circle,
   LogOut,
   User as UserIcon,
-  RefreshCw
+  RefreshCw,
+  Lock
 } from 'lucide-react-native';
-import { BlurView } from 'expo-blur';
-import { getAuth } from 'firebase/auth';
-import { DatabaseService } from '@/services/database';
-import type { User as UserType, Appointment, Reminder, Task } from '@/types/database';
-import { useAuth } from '@/utils/AuthContext';
-import { useFocusEffect, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { saveLanguagePreference } from '@/utils/i18n';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, deleteDoc, collection, query, getDocs, where, getDoc } from 'firebase/firestore';
 import { db } from '@/utils/firebase';
 import { formatLocalDate, parseLocalDate } from '@/utils/dateUtils';
 import { Calendar as RNCalendar } from 'react-native-calendars';
@@ -48,6 +46,10 @@ import {
   type WeeklyReportData 
 } from '@/utils/weeklyReportService';
 import WeeklyReportModal from '@/components/WeeklyReportModal';
+import { getAuth, signInWithEmailAndPassword, EmailAuthProvider, reauthenticateWithCredential, signOut, deleteUser } from 'firebase/auth';
+import { DatabaseService } from '@/services/database';
+import { useAuth } from '@/utils/AuthContext';
+import type { User as UserType, Appointment, Reminder, Task } from '@/types/database';
 
 // Add Badge component at the top after imports
 const Badge = ({ children }: { children: React.ReactNode }) => (
@@ -93,6 +95,21 @@ export default function HomePage() {
   const [showWeeklyReport, setShowWeeklyReport] = useState(false);
   const [weeklyReportData, setWeeklyReportData] = useState<WeeklyReportData | null>(null);
   const [loadingWeeklyReport, setLoadingWeeklyReport] = useState(false);
+  
+  // Password modal states
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [passwordModalCallback, setPasswordModalCallback] = useState<(password: string) => Promise<void>>(async () => {});
+  
+  // Custom delete confirmation modal states
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [showDeletePasswordInput, setShowDeletePasswordInput] = useState(false);
+  const [deletePasswordInput, setDeletePasswordInput] = useState('');
+  const [deleteAccountLoading, setDeleteAccountLoading] = useState(false);
+  const [deleteAccountError, setDeleteAccountError] = useState('');
+  
+  // Firebase auth instance
+  const auth = getAuth();
 
   // Add a more aggressive refresh when tab is focused
   useFocusEffect(
@@ -641,6 +658,255 @@ export default function HomePage() {
     });
   };
 
+  // Direct delete account function for delete confirmation modal
+  const performAccountDeletion = async () => {
+    console.log('Starting direct account deletion process');
+    if (!authUser || !authInitialized) {
+      console.log('User not logged in');
+      setDeleteAccountError(t('common.error'));
+      return;
+    }
+
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      console.log('Current user not found');
+      setDeleteAccountError(t('common.error'));
+      return;
+    }
+
+    try {
+      setDeleteAccountLoading(true);
+      
+      // Use the password to reauthenticate
+      if (showDeletePasswordInput && deletePasswordInput) {
+        console.log('Attempting to reauthenticate with provided password');
+        
+        try {
+          // Create credential with user's email and password
+          const credential = EmailAuthProvider.credential(
+            currentUser.email || '',
+            deletePasswordInput
+          );
+          
+          // Re-authenticate user
+          await reauthenticateWithCredential(currentUser, credential);
+          console.log('Re-authentication successful');
+        } catch (error) {
+          console.error('Re-authentication failed:', error);
+          setDeleteAccountError(t('home.menu.deletionFailed'));
+          setDeleteAccountLoading(false);
+          return;
+        }
+      }
+      
+      // Close menu and start deletion process
+      setShowMenu(false);
+      setIsLoading(true);
+
+      // Delete user's data from Firestore
+      console.log('Deleting user data from Firestore');
+      const userDocRef = doc(db, 'users', currentUser.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      if (userDoc.exists()) {
+        console.log('Deleting user documents from collections');
+        // Delete tasks
+        console.log('Deleting tasks');
+        const tasksQuery = query(
+          collection(db, 'tasks'),
+          where('userID', '==', currentUser.uid)
+        );
+        const tasksSnapshot = await getDocs(tasksQuery);
+        console.log(`Found ${tasksSnapshot.size} tasks to delete`);
+        const taskDeletions = tasksSnapshot.docs.map((doc) =>
+          deleteDoc(doc.ref)
+        );
+        await Promise.all(taskDeletions);
+
+        // Delete appointments
+        console.log('Deleting appointments');
+        const appointmentsQuery = query(
+          collection(db, 'appointments'),
+          where('userID', '==', currentUser.uid)
+        );
+        const appointmentsSnapshot = await getDocs(appointmentsQuery);
+        console.log(`Found ${appointmentsSnapshot.size} appointments to delete`);
+        const appointmentDeletions = appointmentsSnapshot.docs.map((doc) =>
+          deleteDoc(doc.ref)
+        );
+        await Promise.all(appointmentDeletions);
+
+        // Delete reminders
+        console.log('Deleting reminders');
+        const remindersQuery = query(
+          collection(db, 'reminders'),
+          where('userID', '==', currentUser.uid)
+        );
+        const remindersSnapshot = await getDocs(remindersQuery);
+        console.log(`Found ${remindersSnapshot.size} reminders to delete`);
+        const reminderDeletions = remindersSnapshot.docs.map((doc) =>
+          deleteDoc(doc.ref)
+        );
+        await Promise.all(reminderDeletions);
+
+        // Delete notes
+        console.log('Deleting notes');
+        const notesQuery = query(
+          collection(db, 'notes'),
+          where('userID', '==', currentUser.uid)
+        );
+        const notesSnapshot = await getDocs(notesQuery);
+        console.log(`Found ${notesSnapshot.size} notes to delete`);
+        const noteDeletions = notesSnapshot.docs.map((doc) =>
+          deleteDoc(doc.ref)
+        );
+        await Promise.all(noteDeletions);
+
+        // Delete folders
+        console.log('Deleting folders');
+        const foldersQuery = query(
+          collection(db, 'folders'),
+          where('userID', '==', currentUser.uid)
+        );
+        const foldersSnapshot = await getDocs(foldersQuery);
+        console.log(`Found ${foldersSnapshot.size} folders to delete`);
+        const folderDeletions = foldersSnapshot.docs.map((doc) =>
+          deleteDoc(doc.ref)
+        );
+        await Promise.all(folderDeletions);
+
+        // Delete user document
+        console.log('Deleting user document');
+        await deleteDoc(userDocRef);
+      }
+
+      // Delete the Firebase Auth user
+      console.log('Deleting Firebase Auth user');
+      await currentUser.delete();
+      console.log('Account deletion complete');
+      
+      // Cleanup and redirect
+      setShowDeleteConfirmation(false);
+      setShowDeletePasswordInput(false);
+      setDeletePasswordInput('');
+      router.replace('/(auth)/login');
+    } catch (error) {
+      console.error('Error in account deletion:', error);
+      setDeleteAccountError(t('home.menu.deletionFailed'));
+    } finally {
+      setDeleteAccountLoading(false);
+      setIsLoading(false);
+    }
+  };
+
+  // Custom delete confirmation modal
+  const renderDeleteConfirmationModal = () => (
+    <Modal
+      visible={showDeleteConfirmation}
+      transparent
+      animationType="fade"
+      onRequestClose={() => {
+        setShowDeleteConfirmation(false);
+        setShowDeletePasswordInput(false);
+        setDeletePasswordInput('');
+        setDeleteAccountError('');
+      }}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={[
+          styles.modalContent,
+          dimensions.width > 768 ? { maxWidth: 400 } : { width: '85%' }
+        ]}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>{t('home.menu.deleteAccountTitle')}</Text>
+          </View>
+          
+          {!showDeletePasswordInput ? (
+            // First confirmation screen
+            <>
+              <Text style={styles.deleteConfirmText}>
+                {t('home.menu.deleteAccountConfirmation')}
+              </Text>
+              
+              <View style={styles.modalButtonsRow}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => {
+                    console.log('Deletion canceled');
+                    setShowDeleteConfirmation(false);
+                  }}
+                >
+                  <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => {
+                    console.log('Proceeding to password input');
+                    setShowDeletePasswordInput(true);
+                  }}
+                >
+                  <Text style={styles.deleteButtonText}>{t('common.confirm')}</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            // Password input screen
+            <>
+              <Text style={styles.deleteConfirmText}>
+                {t('home.menu.enterPasswordToDeleteAccount')}
+              </Text>
+              
+              <TextInput
+                style={styles.passwordInput}
+                secureTextEntry
+                placeholder={t('common.password')}
+                placeholderTextColor="#666"
+                value={deletePasswordInput}
+                onChangeText={setDeletePasswordInput}
+                autoCapitalize="none"
+              />
+              
+              {deleteAccountError ? (
+                <Text style={styles.errorText}>{deleteAccountError}</Text>
+              ) : null}
+              
+              <View style={styles.modalButtonsRow}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => {
+                    console.log('Password input canceled');
+                    setShowDeletePasswordInput(false);
+                    setDeletePasswordInput('');
+                    setDeleteAccountError('');
+                  }}
+                >
+                  <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[
+                    styles.deleteButton,
+                    deleteAccountLoading && styles.disabledButton,
+                  ]}
+                  disabled={deleteAccountLoading}
+                  onPress={performAccountDeletion}
+                >
+                  {deleteAccountLoading ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.deleteButtonText}>{t('common.confirm')}</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+
+  // Use this renderMenu function that has the updated delete account button
   const renderMenu = () => {
     if (!showMenu) return null;
 
@@ -651,7 +917,7 @@ export default function HomePage() {
         
         // Sign out the user
         const auth = getAuth();
-        await auth.signOut();
+        await signOut(auth);
         
         // Any additional cleanup can go here
         console.log('User logged out successfully');
@@ -661,6 +927,12 @@ export default function HomePage() {
       } catch (error) {
         console.error('Error signing out:', error);
       }
+    };
+
+    // Update the delete account handler
+    const handleDeleteAccount = () => {
+      console.log('Delete account button pressed - using direct modal');
+      setShowDeleteConfirmation(true);
     };
 
     // Format date for last activity
@@ -822,6 +1094,14 @@ export default function HomePage() {
                 onPress={handleLogout}
               >
                 <Text style={styles.logoutButtonText}>{t('home.menu.logOut')}</Text>
+              </TouchableOpacity>
+              
+              {/* Delete account button */}
+              <TouchableOpacity
+                style={[styles.logoutButton, styles.deleteAccountButton]}
+                onPress={handleDeleteAccount}
+              >
+                <Text style={styles.logoutButtonText}>{t('home.menu.deleteAccount')}</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -1815,6 +2095,70 @@ export default function HomePage() {
     }
   };
 
+  // Password modal for cross-platform password input
+  const renderPasswordModal = () => (
+    <Modal
+      visible={passwordModalVisible}
+      transparent
+      animationType="fade"
+      onRequestClose={() => {
+        setPasswordModalVisible(false);
+        passwordModalCallback('');
+      }}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={[
+          styles.modalContent,
+          dimensions.width > 768 ? { maxWidth: 400 } : { width: '85%' }
+        ]}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>{t('home.menu.deleteAccountTitle')}</Text>
+          </View>
+          
+          <Text style={styles.passwordModalText}>
+            {t('home.menu.enterPasswordToDeleteAccount')}
+          </Text>
+          
+          <TextInput
+            style={styles.passwordInput}
+            secureTextEntry
+            placeholder={t('common.password')}
+            placeholderTextColor="#666"
+            value={passwordInput}
+            onChangeText={setPasswordInput}
+            autoCapitalize="none"
+          />
+          
+          <View style={styles.passwordModalButtons}>
+            <TouchableOpacity
+              style={styles.passwordModalCancelButton}
+              onPress={() => {
+                setPasswordModalVisible(false);
+                passwordModalCallback('');
+              }}
+            >
+              <Text style={styles.passwordModalButtonText}>
+                {t('common.cancel')}
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.passwordModalConfirmButton}
+              onPress={() => {
+                setPasswordModalVisible(false);
+                passwordModalCallback(passwordInput);
+              }}
+            >
+              <Text style={styles.passwordModalButtonText}>
+                {t('common.confirm')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -1878,6 +2222,8 @@ export default function HomePage() {
         {showEditMotivations && renderEditMotivationsModal()}
         {showCalendar && renderCalendarModal()}
         {showWeeklyReport && renderWeeklyReportModal()}
+        {passwordModalVisible && renderPasswordModal()}
+        {showDeleteConfirmation && renderDeleteConfirmationModal()}
       </LinearGradient>
     </View>
   );
@@ -2578,17 +2924,21 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   logoutButton: {
-    backgroundColor: '#9333ea',
+    backgroundColor: '#ff4757',
     borderRadius: 8,
     padding: 12,
-    marginTop: 16,
-    marginBottom: 32,
+    alignItems: 'center',
+    marginTop: 24,
+    marginHorizontal: 16,
   },
   logoutButtonText: {
     color: '#ffffff',
-    fontWeight: '600',
     fontSize: 16,
-    textAlign: 'center',
+    fontWeight: '600',
+  },
+  deleteAccountButton: {
+    backgroundColor: '#ff0000',
+    marginTop: 12,
   },
   languageSwitcher: {
     flexDirection: 'row',
@@ -2785,5 +3135,88 @@ const styles = StyleSheet.create({
   refreshIconContainer: {
     marginTop: 4,
     opacity: 0.7,
+  },
+  passwordModalText: {
+    fontSize: 16,
+    color: '#ffffff',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  passwordInput: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 8,
+    padding: 12,
+    color: '#ffffff',
+    marginBottom: 20,
+    fontSize: 16,
+  },
+  passwordModalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  passwordModalCancelButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 8,
+    padding: 12,
+    flex: 1,
+    marginRight: 8,
+    alignItems: 'center',
+  },
+  passwordModalConfirmButton: {
+    backgroundColor: '#ff4757',
+    borderRadius: 8,
+    padding: 12,
+    flex: 1,
+    marginLeft: 8,
+    alignItems: 'center',
+  },
+  passwordModalButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  deleteConfirmText: {
+    fontSize: 16,
+    color: '#ffffff',
+    marginBottom: 20,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  modalButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  cancelButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 8,
+    padding: 12,
+    flex: 1,
+    marginRight: 8,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  deleteButton: {
+    backgroundColor: '#ff4757',
+    borderRadius: 8,
+    padding: 12,
+    flex: 1,
+    marginLeft: 8,
+    alignItems: 'center',
+  },
+  deleteButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  errorText: {
+    color: '#ff4757',
+    fontSize: 14,
+    marginBottom: 15,
+    textAlign: 'center',
   },
 });
