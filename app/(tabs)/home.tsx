@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { router, useRouter, useFocusEffect } from 'expo-router';
 import { BlurView } from 'expo-blur';
+import AdBanner from '@/components/AdBanner';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { 
   Menu, 
