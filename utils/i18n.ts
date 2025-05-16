@@ -38,7 +38,12 @@ const resources = {
         hour: 'Heure',
         minute: 'Minute',
         processing: 'Traitement en cours...',
-        error: 'Une erreur est survenue, veuillez réessayer'
+        error: 'Une erreur est survenue, veuillez réessayer',
+        success: 'Succès',
+        confirmation: 'Confirmation',
+        confirm: 'Confirmer',
+        passwordRequired: 'Le mot de passe est requis',
+        password: 'Mot de passe'
       },
       navigation: {
         home: 'Accueil',
@@ -123,7 +128,14 @@ const resources = {
           contactSupport: 'Contacter le support',
           supportEmail: 'Pour toute assistance, contactez: prontoapp.info@gmail.com',
           editMotivations: 'Modifier mes motivations',
-          logOut: 'Se déconnecter'
+          logOut: 'Se déconnecter',
+          deleteAccount: 'Supprimer mon compte',
+          deleteAccountConfirmation: 'Êtes-vous sûr de vouloir supprimer votre compte? Cette action est irréversible.',
+          deleteAccountTitle: 'Supprimer le compte',
+          enterPasswordToDeleteAccount: 'Entrez votre mot de passe pour confirmer la suppression du compte',
+          deletingAccount: 'Suppression de votre compte...',
+          accountDeleted: 'Votre compte a été supprimé avec succès.',
+          deletionFailed: 'La suppression du compte a échoué. Veuillez réessayer.',
         }
       },
       motivations: {
@@ -377,7 +389,12 @@ const resources = {
         hour: 'Hour',
         minute: 'Minute',
         processing: 'Processing...',
-        error: 'An error occurred, please try again'
+        error: 'An error occurred, please try again',
+        success: 'Success',
+        confirmation: 'Confirmation',
+        confirm: 'Confirm',
+        passwordRequired: 'Password is required',
+        password: 'Password'
       },
       navigation: {
         home: 'Home',
@@ -410,9 +427,7 @@ const resources = {
         invalidEmail: 'Invalid email address',
         weakPassword: 'The password is too weak',
         termsAgreement: 'I accept the',
-        and: 'and the',
-        processing: 'Processing...',
-        error: 'An error occurred, please try again'
+        and: 'and the'
       },
       forgotPassword: {
         title: 'Forgot Password',
@@ -463,7 +478,14 @@ const resources = {
           contactSupport: 'Contact Support',
           supportEmail: 'For any assistance, contact: prontoapp.info@gmail.com',
           editMotivations: 'Edit my motivations',
-          logOut: 'Log Out'
+          logOut: 'Log Out',
+          deleteAccount: 'Delete my account',
+          deleteAccountConfirmation: 'Are you sure you want to delete your account? This action cannot be undone.',
+          deleteAccountTitle: 'Delete Account',
+          enterPasswordToDeleteAccount: 'Enter your password to confirm account deletion',
+          deletingAccount: 'Deleting your account...',
+          accountDeleted: 'Your account has been deleted successfully.',
+          deletionFailed: 'Account deletion failed. Please try again.',
         }
       },
       motivations: {
@@ -526,7 +548,7 @@ const resources = {
       legal: {
         lastUpdated: 'Last updated: February 1, 2024',
         privacyContent: 'Pronto Privacy Policy\n\nLast updated: [05/01/2025]\n\nAt Pronto, we are committed to protecting your privacy. This privacy policy explains how your information is collected, used, and shared when you use our Pronto mobile application.\n\n1. Data Collected\n\nThe application does not collect sensitive personal data such as your name, address, phone number, or email address.\n\nHowever, the application uses Google AdMob to display advertisements. Therefore, Google may collect certain device identifiers, usage logs, and advertising data for targeting or advertising statistics purposes.\n\n2. Use of Data\n\nData automatically collected via Google AdMob is used to:\n\nDisplay relevant and personalized advertisements.\nMeasure advertising performance.\n\nPronto does not store or resell any user data.\n\n3. Sharing of Data\n\nPronto does not share any data with third parties, except for the Google AdMob advertising service, which operates in accordance with its own privacy policy.\n\nSee Google\'s privacy policy here:\nhttps://policies.google.com/privacy\n\n4. GDPR Consent (EU Users)\n\nIn accordance with European legislation (GDPR), during your first use of the application, a consent screen will be presented to you to:\n\nAccept or decline personalized advertisements.\nAccess the privacy policy.\n\nYou can change your choice at any time in the application settings.\n\n5. Security\n\nWe implement reasonable technical measures to protect data, although the application does not store any personal data on its servers.\n\n6. User Rights\n\nIn accordance with GDPR, you have the right to:\n\nAccess the collected data.\nRequest its deletion or modification.\nWithdraw your consent.\n\nFor any requests: prontoapp.info@gmail.com\n\n7. Modifications\n\nThis policy may be updated. In case of significant changes, a notice will be communicated to you via the application.',
-        termsContent: 'Pronto Terms of Use\n\n1. Acceptance of Terms\n\nBy using the Pronto application, you accept these terms of use.\n\n2. Service Description\n\nPronto is a productivity application that allows you to:\n\nManage reminders, tasks, and personal projects\nOrganize notes, lists, and folders\nBenefit from a calendar and weekly checklists\n\n3. Advertising\n\nThe application is free and funded by advertising. Advertisements may be displayed via Google AdMob.\n\n4. Prohibited Behavior\n\nYou agree not to:\n\nUse the application for illegal purposes.\nDisrupt the operation or security of the application.\n\n5. Intellectual Property\n\nAll content of the application, including design, brand and text, is the exclusive property of Pronto.\n\n6. Termination\n\nYou can uninstall the application at any time. We reserve the right to suspend access in case of non-compliance with the terms.\n\n7. Contact\n\nFor any questions: prontoapp.info@gmail.com'
+        termsContent: 'Pronto Terms of Use\n\n1. Acceptance of Terms\n\nBy using the Pronto application, you accept these terms of use.\n\n2. Service Description\n\nPronto is a productivity application that allows you to:\n\nManage reminders, tasks, and personal projects\nOrganize notes, lists, and folders\nBeneficiar de un calendario y listas de control semanales\n\n3. Advertising\n\nThe application is free and funded by advertising. Advertisements may be displayed via Google AdMob.\n\n4. Prohibited Behavior\n\nYou agree not to:\n\nUse the application for illegal purposes.\nDisrupt the operation or security of the application.\n\n5. Intellectual Property\n\nAll content of the application, including design, brand and text, is the exclusive property of Pronto.\n\n6. Termination\n\nYou can uninstall the application at any time. We reserve the right to suspend access in case of non-compliance with the terms.\n\n7. Contact\n\nFor any questions: prontoapp.info@gmail.com'
       },
       appointments: {
         title: 'Appointments',
@@ -722,7 +744,11 @@ const resources = {
         hour: 'Uur',
         minute: 'Minuut',
         processing: 'Bezig met laden...',
-        error: 'Er is een fout opgetreden, probeer het opnieuw'
+        error: 'Er is een fout opgetreden, probeer het opnieuw',
+        success: 'Succes',
+        confirmation: 'Bevestiging',
+        confirm: 'Bevestigen',
+        passwordRequired: 'Wachtwoord is vereist'
       },
       navigation: {
         home: 'Home',
@@ -1011,7 +1037,11 @@ const resources = {
         hour: 'Hora',
         minute: 'Minuto',
         processing: 'Procesando...',
-        error: 'Se produjo un error, por favor intente de nuevo'
+        error: 'Se produjo un error, por favor intente de nuevo',
+        success: 'Éxito',
+        confirmation: 'Confirmación',
+        confirm: 'Confirmar',
+        passwordRequired: 'La contraseña es requerida'
       },
       navigation: {
         home: 'Inicio',
@@ -1094,7 +1124,14 @@ const resources = {
           contactSupport: 'Contactar soporte',
           supportEmail: 'Para cualquier asistencia, contactar: prontoapp.info@gmail.com',
           editMotivations: 'Editar mis motivaciones',
-          logOut: 'Cerrar sesión'
+          logOut: 'Cerrar sesión',
+          deleteAccount: 'Eliminar mi cuenta',
+          deleteAccountConfirmation: '¿Está seguro de que desea eliminar su cuenta? Esta acción no se puede deshacer.',
+          deleteAccountTitle: 'Eliminar cuenta',
+          enterPasswordToDeleteAccount: 'Ingrese su contraseña para confirmar la eliminación de la cuenta',
+          deletingAccount: 'Eliminando su cuenta...',
+          accountDeleted: 'Su cuenta ha sido eliminada con éxito.',
+          deletionFailed: 'La eliminación de la cuenta falló. Por favor, inténtelo de nuevo.',
         }
       },
       motivations: {
@@ -1353,7 +1390,11 @@ const resources = {
         hour: 'Hora',
         minute: 'Minuto',
         processing: 'Processando...',
-        error: 'Ocorreu um erro, por favor tente novamente'
+        error: 'Ocorreu um erro, por favor tente novamente',
+        success: 'Sucesso',
+        confirmation: 'Confirmação',
+        confirm: 'Confirmar',
+        passwordRequired: 'A senha é necessária'
       },
       navigation: {
         home: 'Início',
@@ -1625,7 +1666,11 @@ const resources = {
         hour: 'Ora',
         minute: 'Minuto',
         processing: 'Elaborazione in corso...',
-        error: 'Si è verificato un errore, per favore riprova'
+        error: 'Si è verificato un errore, per favore riprova',
+        success: 'Successo',
+        confirmation: 'Conferma',
+        confirm: 'Conferma',
+        passwordRequired: 'La password è richiesta'
       },
       notes: {
         markdownHint: 'Simboli speciali come "- [ ]" verranno visualizzati come caselle di controllo'
