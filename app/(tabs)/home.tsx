@@ -48,6 +48,7 @@ import {
   type WeeklyReportData 
 } from '@/utils/weeklyReportService';
 import WeeklyReportModal from '@/components/WeeklyReportModal';
+import AdBanner from '@/components/AdBanner';
 
 // Add Badge component at the top after imports
 const Badge = ({ children }: { children: React.ReactNode }) => (
@@ -297,7 +298,9 @@ export default function HomePage() {
 
   const renderSchedule = () => (
     <View style={styles.scheduleSection}>
+       
       <View style={styles.sectionHeader}>
+
         <Text style={styles.sectionTitle}>{t('home.schedule')}</Text>
         <TouchableOpacity
           style={styles.weekViewButton}
@@ -1817,6 +1820,7 @@ export default function HomePage() {
 
   return (
     <View style={styles.container}>
+      <AdBanner/>
       <LinearGradient
         colors={['#1a1a1a', '#2a1a2a']}
         style={styles.background}

@@ -9,6 +9,7 @@ import { useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { getDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/utils/firebase';
+import AdBanner from '@/components/AdBanner';
 
 export default function TasksScreen() {
   const { t } = useTranslation();
@@ -405,6 +406,7 @@ export default function TasksScreen() {
 
   return (
     <View style={styles.container}>
+      <AdBanner/>
       <LinearGradient
         colors={['#1a1a1a', '#2a1a2a']}
         style={styles.header}

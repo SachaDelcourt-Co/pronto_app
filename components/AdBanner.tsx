@@ -1,21 +1,26 @@
+// AdBanner.tsx
 import React from 'react';
-import { StyleSheet, View, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
 
-/**
- * A placeholder banner component that can be safely used without causing errors.
- * When you're ready to implement real ads, replace this with the actual AdMob implementation.
- */
 const AdBanner: React.FC = () => {
-  // For web or during development, just render a placeholder
-  return <View style={styles.placeholder} />;
+  const adUnitId = Platform.select({
+    ios: 'ca-app-pub-7230381744219330/3300187380',
+    android: 'ca-app-pub-7230381744219330/1959185553',
+  });
+
+  return (
+    <BannerAd
+      unitId={__DEV__ ? TestIds.BANNER : adUnitId!}
+      size={BannerAdSize.FULL_BANNER}
+      requestOptions={{
+        requestNonPersonalizedAdsOnly: false, // set to true if needed for GDPR
+      }}
+      onAdFailedToLoad={(error) => {
+        console.log('Ad load error:', error);
+      }}
+    />
+  );
 };
 
-const styles = StyleSheet.create({
-  placeholder: {
-    width: '100%',
-    height: 50, // Standard banner height
-    backgroundColor: 'transparent',
-  },
-});
-
-export default AdBanner; 
+export default AdBanner;

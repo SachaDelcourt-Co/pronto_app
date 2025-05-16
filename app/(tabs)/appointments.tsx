@@ -10,6 +10,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
 import * as Notifications from 'expo-notifications';
+import AdBanner from '@/components/AdBanner';
 
 // Setup notification handler
 Notifications.setNotificationHandler({
@@ -1202,6 +1203,7 @@ export default function AppointmentsScreen() {
 
   return (
     <View style={styles.container}>
+      <AdBanner/>
       <LinearGradient
         colors={['#1a1a1a', '#2a1a2a']}
         style={styles.header}

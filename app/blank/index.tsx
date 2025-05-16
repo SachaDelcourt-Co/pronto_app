@@ -7,6 +7,7 @@ import { BlurView } from 'expo-blur';
 import { getAuth } from 'firebase/auth';
 import { DatabaseService } from '@/services/database';
 import type { User, Appointment, Reminder } from '@/types/database';
+import AdBanner from '@/components/AdBanner';
 
 export default function HomePage() {
   const { t } = useTranslation();
@@ -38,6 +39,7 @@ export default function HomePage() {
 
   const renderHeader = () => (
     <View style={styles.header}>
+      <AdBanner/>
       <View>
         <Text style={styles.headerTitle}>PRONTO</Text>
         <Text style={styles.headerSubtitle}>Your Personal Assistant</Text>
@@ -84,7 +86,7 @@ export default function HomePage() {
               <Text style={styles.badgeText}>{appointments.length}</Text>
             </View>
           </View>
-          
+        
           <ScrollView 
             style={styles.eventList} 
             showsVerticalScrollIndicator={false}

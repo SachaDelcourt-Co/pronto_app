@@ -10,6 +10,7 @@ import { useFocusEffect } from 'expo-router';
 import { parseLocalDate, formatLocalDate } from '@/utils/dateUtils';
 import * as Notifications from 'expo-notifications';
 import { useTranslation } from 'react-i18next';
+import AdBanner from '@/components/AdBanner';
 
 // Register for push notifications
 Notifications.setNotificationHandler({
@@ -896,6 +897,7 @@ export default function RemindersScreen() {
 
   return (
     <View style={styles.container}>
+      <AdBanner/>
       <LinearGradient
         colors={['#1a1a1a', '#2a1a2a']}
         style={styles.header}

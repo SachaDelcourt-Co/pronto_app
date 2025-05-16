@@ -7,6 +7,7 @@ import { DatabaseService } from '@/services/database';
 import type { Note, Folder } from '@/types/database';
 import { useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import AdBanner from '@/components/AdBanner';
 
 // Regex pattern to match checkbox syntax: "- [ ]" for unchecked, "- [x]" for checked
 const CHECKBOX_REGEX = /^(\s*)- \[([ x])\] (.*)$/gm;
@@ -390,6 +391,7 @@ export default function NotesScreen() {
         animationType="slide"
         onRequestClose={() => setShowCreateNoteModal(false)}
       >
+        
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
@@ -401,7 +403,6 @@ export default function NotesScreen() {
                 <X size={20} color="#666666" />
               </TouchableOpacity>
             </View>
-
             <Text style={styles.contentInputLabel}>{t('notes.noteName')}</Text>
             <TextInput
               style={styles.titleInput}
@@ -766,6 +767,7 @@ export default function NotesScreen() {
 
   return (
     <View style={styles.container}>
+      <AdBanner/>
       <LinearGradient
         colors={['#1a1a1a', '#2a1a2a']}
         style={styles.header}
