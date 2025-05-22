@@ -1,4 +1,4 @@
-package com.pronto.clean
+package com.pronto.organizer
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

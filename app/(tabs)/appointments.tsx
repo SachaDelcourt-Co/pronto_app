@@ -1260,6 +1260,7 @@ export default function AppointmentsScreen() {
           style={styles.timelineContainer}
           showsVerticalScrollIndicator={false}
           ref={timelineScrollRef}
+           pinchGestureEnabled={false} 
         >
           {Array.from({ length: 24 }).map((_, hour) => (
             <View key={hour} style={styles.timeSlot}>
@@ -1421,6 +1422,7 @@ export default function AppointmentsScreen() {
         
           <ScrollView 
             style={styles.upcomingList}
+             pinchGestureEnabled={false} 
             contentContainerStyle={{ paddingBottom: 120 }} // Increased from 70 to 120 for better visibility of the last event
             showsVerticalScrollIndicator={true} // Make scrollbar visible
           >
@@ -1516,6 +1518,7 @@ export default function AppointmentsScreen() {
             <ScrollView 
               style={styles.calendarScrollContent}
               showsVerticalScrollIndicator={true}
+               pinchGestureEnabled={false} 
             >
               <Calendar
                 onDayPress={handleDayPress}
@@ -1566,6 +1569,7 @@ export default function AppointmentsScreen() {
                 <ScrollView 
                   style={styles.calendarDayAppointmentsList}
                   showsVerticalScrollIndicator={true}
+                   pinchGestureEnabled={false} 
                 >
                   {dailyAppointments.length > 0 ? (
                     dailyAppointments.map((appointment, index) => (
@@ -1631,7 +1635,7 @@ export default function AppointmentsScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalScrollContent}>
+            <ScrollView style={styles.modalScrollContent}  pinchGestureEnabled={false} >
               <Text style={styles.inputLabel}>{t('appointments.appointmentName')}</Text>
               <TextInput
                 style={styles.textInput}
@@ -1696,7 +1700,7 @@ export default function AppointmentsScreen() {
                           ]}
                         >
                           <Pressable onPress={(e) => e.stopPropagation()}>
-                            <ScrollView style={styles.pickerScrollView}>
+                            <ScrollView style={styles.pickerScrollView}  pinchGestureEnabled={false} >
                               {getDaysArray().map(day => (
                                 <Pressable
                                   key={day}
@@ -1767,7 +1771,7 @@ export default function AppointmentsScreen() {
                           ]}
                         >
                           <Pressable onPress={(e) => e.stopPropagation()}>
-                            <ScrollView style={styles.pickerScrollView}>
+                            <ScrollView style={styles.pickerScrollView}  pinchGestureEnabled={false} >
                               {getMonthsArray().map(month => (
                                 <Pressable
                                   key={month}
@@ -1838,7 +1842,7 @@ export default function AppointmentsScreen() {
                           ]}
                         >
                           <Pressable onPress={(e) => e.stopPropagation()}>
-                            <ScrollView style={styles.pickerScrollView}>
+                            <ScrollView style={styles.pickerScrollView}  pinchGestureEnabled={false} >
                               {getYearsArray().map(year => (
                                 <Pressable
                                   key={year}
@@ -1918,7 +1922,7 @@ export default function AppointmentsScreen() {
                               ]}
                             >
                               <Pressable onPress={(e) => e.stopPropagation()}>
-                                <ScrollView style={styles.pickerScrollView}>
+                                <ScrollView style={styles.pickerScrollView}  pinchGestureEnabled={false} >
                                   {getHoursArray().map(hour => (
                                     <Pressable
                                       key={hour}
@@ -1995,7 +1999,7 @@ export default function AppointmentsScreen() {
                               ]}
                             >
                               <Pressable onPress={(e) => e.stopPropagation()}>
-                                <ScrollView style={styles.pickerScrollView}>
+                                <ScrollView style={styles.pickerScrollView}  pinchGestureEnabled={false} >
                                   {getMinutesArray().map(minute => (
                                     <Pressable
                                       key={minute}
@@ -2075,7 +2079,7 @@ export default function AppointmentsScreen() {
                               ]}
                             >
                               <Pressable onPress={(e) => e.stopPropagation()}>
-                                <ScrollView style={styles.pickerScrollView}>
+                                <ScrollView style={styles.pickerScrollView}  pinchGestureEnabled={false} >
                                   {getHoursArray().map(hour => (
                                     <Pressable
                                       key={hour}
@@ -2152,7 +2156,7 @@ export default function AppointmentsScreen() {
                               ]}
                             >
                               <Pressable onPress={(e) => e.stopPropagation()}>
-                                <ScrollView style={styles.pickerScrollView}>
+                                <ScrollView style={styles.pickerScrollView}  pinchGestureEnabled={false} >
                                   {getMinutesArray().map(minute => (
                                     <Pressable
                                       key={minute}

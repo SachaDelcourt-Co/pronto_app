@@ -302,7 +302,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.pronto.clean";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.pronto.organizer";
 				PRODUCT_NAME = "Pronto";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -329,7 +329,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.pronto.clean";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.pronto.organizer";
 				PRODUCT_NAME = "Pronto";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";

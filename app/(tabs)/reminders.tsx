@@ -975,7 +975,7 @@ export default function RemindersScreen() {
           <Text style={styles.loadingText}>{t('reminders.loading')}</Text>
         </View>
       ) : (
-      <ScrollView style={styles.content}>
+      <ScrollView style={styles.content}  pinchGestureEnabled={false} >
           {filteredReminders.length > 0 ? (
             filteredReminders.map(reminder => (
               <TouchableOpacity 
@@ -1112,6 +1112,7 @@ export default function RemindersScreen() {
             <ScrollView
               style={styles.calendarScrollContent}
               showsVerticalScrollIndicator={true}
+               pinchGestureEnabled={false} 
             >
               <Calendar
                 onDayPress={handleDayPress}
@@ -1154,6 +1155,7 @@ export default function RemindersScreen() {
                 <ScrollView 
                   style={styles.calendarDayRemindersList}
                   showsVerticalScrollIndicator={true}
+                   pinchGestureEnabled={false} 
                 >
                   {dailyReminders.length > 0 ? (
                     dailyReminders.map((reminder, index) => (
@@ -1204,7 +1206,7 @@ export default function RemindersScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalScrollContent}>
+            <ScrollView style={styles.modalScrollContent}  pinchGestureEnabled={false} >
               <Text style={styles.inputLabel}>{t('reminders.reminderTitle')}</Text>
               <TextInput
                 style={styles.textInput}
@@ -1271,7 +1273,7 @@ export default function RemindersScreen() {
                           ]}
                         >
                           <Pressable onPress={(e) => e.stopPropagation()}>
-                            <ScrollView style={styles.pickerScrollView}>
+                            <ScrollView style={styles.pickerScrollView}  pinchGestureEnabled={false} >
                               {getDaysArray().map(day => (
                                 <Pressable
                                   key={day}
@@ -1342,7 +1344,7 @@ export default function RemindersScreen() {
                           ]}
                         >
                           <Pressable onPress={(e) => e.stopPropagation()}>
-                            <ScrollView style={styles.pickerScrollView}>
+                            <ScrollView style={styles.pickerScrollView}  pinchGestureEnabled={false} >
                               {getMonthsArray().map(month => (
                                 <Pressable
                                   key={month}
@@ -1413,7 +1415,7 @@ export default function RemindersScreen() {
                           ]}
                         >
                           <Pressable onPress={(e) => e.stopPropagation()}>
-                            <ScrollView style={styles.pickerScrollView}>
+                            <ScrollView style={styles.pickerScrollView}  pinchGestureEnabled={false} >
                               {getYearsArray().map(year => (
                                 <Pressable
                                   key={year}
@@ -1514,7 +1516,7 @@ export default function RemindersScreen() {
                           ]}
                         >
                           <Pressable onPress={(e) => e.stopPropagation()}>
-                            <ScrollView style={styles.pickerScrollView}>
+                            <ScrollView style={styles.pickerScrollView}  pinchGestureEnabled={false} >
                               {getHoursArray().map(hour => (
                                 <Pressable
                                   key={hour}
@@ -1589,7 +1591,7 @@ export default function RemindersScreen() {
                           ]}
                         >
                           <Pressable onPress={(e) => e.stopPropagation()}>
-                            <ScrollView style={styles.pickerScrollView}>
+                            <ScrollView style={styles.pickerScrollView}  pinchGestureEnabled={false} >
                               {getMinutesArray().map(minute => (
                                 <Pressable
                                   key={minute}
@@ -1673,7 +1675,7 @@ export default function RemindersScreen() {
                                 ]}
                               >
                                 <Pressable onPress={(e) => e.stopPropagation()}>
-                                  <ScrollView style={styles.pickerScrollView}>
+                                  <ScrollView style={styles.pickerScrollView}  pinchGestureEnabled={false} >
                                     {getHoursArray().map(hour => (
                                       <Pressable
                                         key={hour}
@@ -1748,7 +1750,7 @@ export default function RemindersScreen() {
                                 ]}
                               >
                                 <Pressable onPress={(e) => e.stopPropagation()}>
-                                  <ScrollView style={styles.pickerScrollView}>
+                                  <ScrollView style={styles.pickerScrollView}  pinchGestureEnabled={false} >
                                     {getMinutesArray().map(minute => (
                                       <Pressable
                                         key={minute}

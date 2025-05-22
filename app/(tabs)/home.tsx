@@ -527,6 +527,7 @@ export default function HomePage() {
           <ScrollView 
             style={styles.modalList}
             showsVerticalScrollIndicator={false}
+             pinchGestureEnabled={false} 
           >
             {items.map((item, index) => (
               <View key={index} style={styles.modalItem}>
@@ -974,7 +975,7 @@ export default function HomePage() {
     return (
       <View style={StyleSheet.absoluteFill}>
         <BlurView intensity={95} style={[StyleSheet.absoluteFill, styles.menuOverlay]} tint="dark">
-          <ScrollView style={styles.menuScrollContent} contentContainerStyle={{paddingTop: Platform.OS === 'ios' ? 50 : 20}}>
+          <ScrollView style={styles.menuScrollContent}  pinchGestureEnabled={false}  contentContainerStyle={{paddingTop: Platform.OS === 'ios' ? 50 : 20}}>
             <View style={styles.menuContent}>
               <TouchableOpacity
                 style={[styles.closeButton, {marginTop: Platform.OS === 'ios' ? 20 : 0}]}
@@ -1920,6 +1921,7 @@ export default function HomePage() {
           <ScrollView
             style={styles.calendarScrollContent}
             showsVerticalScrollIndicator={true}
+             pinchGestureEnabled={false} 
           >
             <RNCalendar
               onDayPress={handleDayPress}
@@ -2176,6 +2178,7 @@ export default function HomePage() {
         <ScrollView 
           style={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+           pinchGestureEnabled={false} 
           contentContainerStyle={[
             styles.scrollContentContainer,
             dimensions.width > 1024 ? { alignItems: 'center' } : null

@@ -1,4 +1,4 @@
-package com.pronto.clean
+package com.pronto.organizer
 
 import android.app.Application
 import android.content.res.Configuration

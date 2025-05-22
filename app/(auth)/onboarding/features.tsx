@@ -40,7 +40,7 @@ export default function Features() {
       colors={['#1a1a1a', '#2a1a2a']}
       style={styles.container}
     >
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}  pinchGestureEnabled={false} >
         <Text style={styles.title}>{t('onboarding.features.title')}</Text>
         <Text style={styles.subtitle}>{t('onboarding.features.subtitle')}</Text>
 

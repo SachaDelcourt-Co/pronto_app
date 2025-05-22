@@ -448,11 +448,12 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   input: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    // backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 12,
     padding: 12,
     color: '#ffffff',
     fontFamily: 'Inter-Regular',
+    fontSize:16,
     borderWidth: 1,
     borderColor: 'transparent',
   },

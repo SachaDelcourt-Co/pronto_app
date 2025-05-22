@@ -415,7 +415,7 @@ export default function TasksScreen() {
         <Text style={styles.headerSubtitle}>{t('tasks.subtitle')}</Text>
       </LinearGradient>
 
-      <ScrollView style={styles.content}>
+      <ScrollView style={styles.content}  pinchGestureEnabled={false} >
         {loadingTasks ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#9333ea" />

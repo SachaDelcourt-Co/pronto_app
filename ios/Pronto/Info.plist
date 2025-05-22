@@ -28,7 +28,7 @@
         <key>CFBundleURLSchemes</key>
         <array>
           <string>prontoclean</string>
-          <string>com.pronto.clean</string>
+          <string>com.pronto.organizer</string>
         </array>
       </dict>
     </array>

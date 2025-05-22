@@ -33,8 +33,15 @@ export default function HomePage() {
         setReminders(userReminders);
       }
     };
+      loadUserData(); // initial load
 
+  // ⏱️ set interval to refresh every 60 seconds (or any value you prefer)
+  const intervalId = setInterval(() => {
     loadUserData();
+  }, 60000); // 60000 ms = 1 minute
+
+  // 🧹 clear interval on unmount
+  return () => clearInterval(intervalId);
   }, []);
 
   const renderHeader = () => (
@@ -91,6 +98,7 @@ export default function HomePage() {
             style={styles.eventList} 
             showsVerticalScrollIndicator={false}
             pointerEvents="none"
+             pinchGestureEnabled={false} 
           >
             {appointments.map((appointment, index) => (
               <View key={index} style={styles.eventItem}>
@@ -119,6 +127,7 @@ export default function HomePage() {
           <ScrollView 
             style={styles.eventList} 
             showsVerticalScrollIndicator={false}
+             pinchGestureEnabled={false} 
             pointerEvents="none"
           >
             {reminders.map((reminder, index) => (
@@ -169,6 +178,7 @@ export default function HomePage() {
           <ScrollView 
             style={styles.modalList}
             showsVerticalScrollIndicator={false}
+             pinchGestureEnabled={false} 
           >
             {items.map((item, index) => (
               <View key={index} style={styles.modalItem}>

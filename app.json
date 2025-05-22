@@ -17,7 +17,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.pronto.clean",
+      "bundleIdentifier": "com.pronto.organizer",
       "buildNumber": "1",
       "config": {
         "googleMobileAdsAppId": "ca-app-pub-7230381744219330~1982928791"
@@ -60,7 +60,7 @@
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#4c1d95"
       },
-      "package": "com.pronto.clean",
+      "package": "com.pronto.organizer",
       "versionCode": 1,
       "config": {
         "googleMobileAdsAppId": "ca-app-pub-7230381744219330~2261312155"

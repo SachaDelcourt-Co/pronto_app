@@ -162,6 +162,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 12,
     padding: 16,
+    fontSize:16,
     color: '#ffffff',
     fontFamily: 'Inter-Regular',
     borderWidth: 1,

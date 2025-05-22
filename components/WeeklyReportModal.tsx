@@ -114,7 +114,7 @@ const WeeklyReportModal: React.FC<WeeklyReportModalProps> = ({
                 </TouchableOpacity>
               </View>
 
-              <ScrollView style={styles.content}>
+              <ScrollView style={styles.content}  pinchGestureEnabled={false} >
                 {/* Period */}
                 <Text style={styles.periodText}>
                   {t('tasks.weeklyReport.period', {

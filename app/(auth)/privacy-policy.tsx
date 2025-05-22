@@ -23,7 +23,7 @@ export default function PrivacyPolicy() {
         </TouchableOpacity>
       </View>
       
-      <ScrollView style={styles.content}>
+      <ScrollView style={styles.content}  pinchGestureEnabled={false}>
         <Text style={styles.lastUpdated}>{t('legal.lastUpdated')}</Text>
         <Text style={styles.text}>
           {t('legal.privacyContent').split('\n').map((paragraph, index) => {

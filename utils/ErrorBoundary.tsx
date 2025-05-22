@@ -46,7 +46,7 @@ class ErrorBoundary extends Component<Props, State> {
         <View style={styles.container}>
           <Text style={styles.title}>Something went wrong</Text>
           <Text style={styles.subtitle}>The app encountered an unexpected error</Text>
-          <ScrollView style={styles.errorContainer}>
+          <ScrollView style={styles.errorContainer}  pinchGestureEnabled={false} >
             <Text style={styles.errorText}>
               {this.state.error?.toString()}
             </Text>
