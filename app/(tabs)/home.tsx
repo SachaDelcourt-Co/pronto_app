@@ -2166,7 +2166,10 @@ export default function HomePage() {
 
   return (
     <View style={styles.container}>
-      <AdBanner/>
+      <View style={[styles.adWrapper]}>
+  <AdBanner />
+</View>
+
       <LinearGradient
         colors={['#1a1a1a', '#2a1a2a']}
         style={styles.background}
@@ -2240,12 +2243,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  adWrapper: {
+  backgroundColor: '#1a1a1a',
+  paddingTop: 40,
+},
+
   background: {
     flex: 1,
   },
   upperContent: {
-    paddingTop: Platform.OS === 'web' ? 16 : 40,
-    paddingBottom: 8,
+    paddingTop: Platform.OS === 'web' ? 20 : 16,
+    // paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.05)',
   },

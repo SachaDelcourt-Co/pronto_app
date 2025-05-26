@@ -60,6 +60,8 @@
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#4c1d95"
       },
+            "googleServicesFile": "./android/app/google-services.json",
+
       "package": "com.pronto.organizer",
       "versionCode": 1,
       "config": {

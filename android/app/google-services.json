@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "75187203169",
+    "project_id": "pronto-e2f19",
+    "storage_bucket": "pronto-e2f19.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:75187203169:android:f72ad19c872e965b1fce20",
+        "android_client_info": {
+          "package_name": "com.flutterflow.finwallet"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAI4HDkYZLTzD--5I-lrzIuEfS-j6ym0a0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:75187203169:android:3763aaf2658de69c1fce20",
+        "android_client_info": {
+          "package_name": "com.mycompany.prontoassistantpersonnel"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAI4HDkYZLTzD--5I-lrzIuEfS-j6ym0a0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

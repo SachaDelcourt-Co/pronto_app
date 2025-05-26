@@ -1047,7 +1047,7 @@ export default function AppointmentsScreen() {
         notificationTimes: notificationTimes,
         allDay: false,
       };
-      
+      console.log('Notification times:', notificationTimes.map(t => t.toISOString()));
       let newOrUpdatedAppointment: Appointment | null = null;
       
       if (isEditMode && selectedAppointment?.appointmentID) {
@@ -1199,11 +1199,22 @@ export default function AppointmentsScreen() {
     } finally {
       setIsSubmitting(false);
     }
+
   };
+useEffect(() => {
+  Notifications.setNotificationChannelAsync('default', {
+    name: 'Default',
+    importance: Notifications.AndroidImportance.HIGH,
+    sound: true,
+  });
+}, []);
 
   return (
     <View style={styles.container}>
-      <AdBanner/>
+     <View style={[styles.adWrapper]}>
+       <AdBanner />
+     </View>
+     
       <LinearGradient
         colors={['#1a1a1a', '#2a1a2a']}
         style={styles.header}
@@ -2500,9 +2511,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  adWrapper: {
+  backgroundColor: '#1a1a1a', // match gradient start
+  paddingTop: 40,
+  alignItems: 'center',
+},
   header: {
     padding: 20,
-    paddingTop: Platform.OS === 'web' ? 20 : 40,
+    paddingTop: Platform.OS === 'web' ? 20 : 20,
   },
   headerTitle: {
     fontSize: 28,

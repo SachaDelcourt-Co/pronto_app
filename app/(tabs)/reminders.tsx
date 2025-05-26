@@ -503,7 +503,7 @@ export default function RemindersScreen() {
       }
       
       const notificationContent = {
-        title: 'Reminder',
+        title: t('reminders.title'),
         body: reminder.reminderName,
         sound: true,
         priority: Notifications.AndroidNotificationPriority.HIGH,
@@ -897,7 +897,10 @@ export default function RemindersScreen() {
 
   return (
     <View style={styles.container}>
-      <AdBanner/>
+     <View style={[styles.adWrapper]}>
+       <AdBanner />
+     </View>
+     
       <LinearGradient
         colors={['#1a1a1a', '#2a1a2a']}
         style={styles.header}
@@ -1878,9 +1881,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  adWrapper: {
+  backgroundColor: '#1a1a1a', // match gradient start
+  paddingTop: 40,
+},
   header: {
     padding: 20,
-    paddingTop: Platform.OS === 'web' ? 20 : 40,
+    paddingTop: Platform.OS === 'web' ? 20 : 16,
   },
   headerTitle: {
     fontSize: 28,

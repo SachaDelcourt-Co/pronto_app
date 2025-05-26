@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Platform, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Platform, Modal,AppState } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { Menu, Calendar, Bell, FileText, SquareCheck as CheckSquare, X } from 'lucide-react-native';
@@ -7,7 +7,9 @@ import { BlurView } from 'expo-blur';
 import { getAuth } from 'firebase/auth';
 import { DatabaseService } from '@/services/database';
 import type { User, Appointment, Reminder } from '@/types/database';
-import AdBanner from '@/components/AdBanner';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
+
 
 export default function HomePage() {
   const { t } = useTranslation();
@@ -19,34 +21,36 @@ export default function HomePage() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [motivationalPhrase, setMotivationalPhrase] = useState<string>('');
 
-  useEffect(() => {
+ useFocusEffect(
+  React.useCallback(() => {
+    let isActive = true;
+
     const loadUserData = async () => {
       const auth = getAuth();
       if (!auth.currentUser) return;
 
       const userData = await DatabaseService.getUser(auth.currentUser.uid);
-      if (userData) {
+      const userAppointments = await DatabaseService.getUserAppointments(auth.currentUser.uid);
+      const userReminders = await DatabaseService.getUserReminders(auth.currentUser.uid);
+
+      if (isActive) {
         setUser(userData);
-        const userAppointments = await DatabaseService.getUserAppointments(auth.currentUser.uid);
-        const userReminders = await DatabaseService.getUserReminders(auth.currentUser.uid);
         setAppointments(userAppointments);
         setReminders(userReminders);
       }
     };
-      loadUserData(); // initial load
 
-  // ⏱️ set interval to refresh every 60 seconds (or any value you prefer)
-  const intervalId = setInterval(() => {
     loadUserData();
-  }, 60000); // 60000 ms = 1 minute
 
-  // 🧹 clear interval on unmount
-  return () => clearInterval(intervalId);
-  }, []);
+    return () => {
+      isActive = false;
+    };
+  }, []) // still valid here – because Firebase Auth and DatabaseService are stable
+);
+
 
   const renderHeader = () => (
     <View style={styles.header}>
-      <AdBanner/>
       <View>
         <Text style={styles.headerTitle}>PRONTO</Text>
         <Text style={styles.headerSubtitle}>Your Personal Assistant</Text>
@@ -88,7 +92,7 @@ export default function HomePage() {
         >
           <View style={styles.bannerHeader}>
             <Calendar size={18} color="#9333ea" />
-            <Text style={styles.bannerTitle}>Appointments</Text>
+            <Text style={styles.bannerTitle}>{t('home.appointments')}</Text>
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{appointments.length}</Text>
             </View>
@@ -118,7 +122,7 @@ export default function HomePage() {
         >
           <View style={styles.bannerHeader}>
             <Bell size={18} color="#9333ea" />
-            <Text style={styles.bannerTitle}>Reminders</Text>
+            <Text style={styles.bannerTitle}>{t('menu.reminders')}</Text>
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{reminders.length}</Text>
             </View>
