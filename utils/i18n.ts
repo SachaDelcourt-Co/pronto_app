@@ -627,6 +627,7 @@ const resources = {
       },
       reminders: {
         title: 'Reminders',
+        selectDate:'Select Date',
         subtitle: 'Never miss what\'s important',
         openCalendar: 'Open Calendar',
         noReminders: 'No reminders',

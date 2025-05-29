@@ -547,20 +547,29 @@ export default function RemindersScreen() {
         for (const time of reminder.notificationTimes) {
           const [hours, minutes] = time.split(':').map(Number);
           
-          const scheduledDate = new Date(reminder.date);
-          scheduledDate.setHours(hours, minutes, 0, 0);
+        const scheduledDate = new Date(
+  typeof reminder.date === 'string'
+    ? reminder.date
+    : reminder.date.toISOString().split('T')[0]
+);
+
+scheduledDate.setHours(hours, minutes, 0, 0);
+console.log('Scheduled for:', scheduledDate.toString());
+console.log('Current time:', new Date().toString());
+
           
           // Only schedule if it's in the future
           if (scheduledDate > today) {
             const identifier = `${reminderIdentifierPrefix}-${time}`;
             console.log(`Scheduling one-time notification for ${scheduledDate.toISOString()} with ID: ${identifier}`);
-            
+            if (scheduledDate <= new Date()) {
+  console.warn('⛔ Attempted to schedule notification in the past:', scheduledDate);
+  return;
+}
+
             await Notifications.scheduleNotificationAsync({
               content: notificationContent,
-              trigger: { 
-                date: scheduledDate,
-                channelId: 'default'
-              },
+              trigger: scheduledDate,
               identifier: identifier,
             });
           } else {
