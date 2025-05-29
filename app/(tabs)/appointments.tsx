@@ -1013,193 +1013,83 @@ export default function AppointmentsScreen() {
   };
 
   // Fix the notifications scheduling when saving appointments
-  const handleSubmitAppointment = async () => {
-    if (!appointmentName.trim() || isSubmitting || !user || !isEventDurationValid()) return;
-    
-    // Validate date format
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(appointmentDateInput)) {
-      // If you want to show an error message, you could add state for that
-      console.error('Invalid date format');
+const handleSubmitAppointment = async () => {
+    if (!appointmentName.trim() || isSubmitting || !user || !isEventDurationValid()) {
+      console.warn('Submission blocked due to invalid form state or user.');
       return;
     }
-    
+  
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(appointmentDateInput)) {
+      console.error('Invalid date format:', appointmentDateInput);
+      return;
+    }
+  
     try {
       setIsSubmitting(true);
-      
-      // Parse the date from the input text to ensure it's correct
+  
       const date = parseLocalDate(appointmentDateInput);
-      
-      // Convert notification options to actual Date objects
-      const notificationTimes = convertOptionsToNotificationTimes(
-        selectedNotifications,
-        date
-      );
-      
-      const appointmentData = {
-        userID: user.uid,
-        appointmentName: appointmentName.trim(),
-        description: appointmentDescription.trim(),
-        date: date, // Use the parsed date
-        startTime: appointmentStartTime,
-        endTime: appointmentEndTime,
-        // Only include address if it's not empty
-        ...(appointmentAddress.trim() ? { address: appointmentAddress.trim() } : {}),
-        notificationTimes: notificationTimes,
-        allDay: false,
-      };
-      console.log('Notification times:', notificationTimes.map(t => t.toISOString()));
-      let newOrUpdatedAppointment: Appointment | null = null;
-      
-      if (isEditMode && selectedAppointment?.appointmentID) {
-        try {
-          // Clear cache first to ensure fresh data
-          DatabaseService.clearAppointmentCache();
-          
-          // Call update and capture the result
-          await DatabaseService.updateAppointment(
-            selectedAppointment.appointmentID, 
-            appointmentData
-          );
-          
-          // If no error, assume success and update local state
-          newOrUpdatedAppointment = {
-            ...appointmentData,
-            appointmentID: selectedAppointment.appointmentID,
-            date: date,
-          } as Appointment;
-          
-          // Update appointments list
-          setAppointments(prevAppointments => 
-            prevAppointments.map(app => 
-              app.appointmentID === selectedAppointment.appointmentID ? newOrUpdatedAppointment! : app
-            )
-          );
-          
-          // Update daily appointments
-          setDailyAppointments(prevAppointments => 
-            prevAppointments.map(app => 
-              app.appointmentID === selectedAppointment.appointmentID ? newOrUpdatedAppointment! : app
-            )
-          );
-          
-          // Update upcoming appointments
-          setUpcomingAppointments(prevAppointments => {
-            const filtered = prevAppointments.filter(app => 
-              app.appointmentID !== selectedAppointment.appointmentID
-            );
-            
-            // Check if the updated appointment should be in upcoming
-            const now = new Date();
-            const appointmentDate = new Date(newOrUpdatedAppointment!.date);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            
-            let shouldInclude = false;
-            
-            if (appointmentDate.getTime() > today.getTime()) {
-              shouldInclude = true;
-            } else if (appointmentDate.getTime() === today.getTime()) {
-              const [endHour, endMinute] = newOrUpdatedAppointment!.endTime.split(':').map(Number);
-              const appointmentEndDateTime = new Date(appointmentDate);
-              appointmentEndDateTime.setHours(endHour, endMinute, 0, 0);
-              shouldInclude = appointmentEndDateTime > now;
-            }
-            
-            // Increment refresh trigger to ensure UI update
-            setRefreshTrigger(prev => prev + 1);
-            
-            return shouldInclude 
-              ? [...filtered, newOrUpdatedAppointment!].sort((a, b) => {
-                  const dateComparison = new Date(a.date).getTime() - new Date(b.date).getTime();
-                  if (dateComparison !== 0) return dateComparison;
-                  return a.startTime.localeCompare(b.startTime);
-                })
-              : filtered;
-          });
-          
-          // Schedule notifications for the updated appointment
-          await scheduleAppointmentNotifications(newOrUpdatedAppointment);
-        } catch (error) {
-          console.error('Error updating appointment:', error);
-        }
-      } else {
-        try {
-          // Clear cache first to ensure fresh data
-          DatabaseService.clearAppointmentCache();
-          
-          // Create new appointment
-          const created = await DatabaseService.createAppointment(appointmentData);
-          
-          // Check if we have a valid result
-          if (created && typeof created === 'object' && 'appointmentID' in created) {
-            newOrUpdatedAppointment = created as Appointment;
-            
-            // Update appointments list
-            setAppointments(prevAppointments => [...prevAppointments, newOrUpdatedAppointment!]);
-            
-            // Update daily appointments if the appointment is for the selected date
-            const newAppointmentDate = new Date(newOrUpdatedAppointment.date);
-            const selectedDateStr = formatLocalDate(selectedDate);
-            const newAppointmentDateStr = formatLocalDate(newAppointmentDate);
-            
-            if (selectedDateStr === newAppointmentDateStr) {
-              setDailyAppointments(prevAppointments => [...prevAppointments, newOrUpdatedAppointment!]);
-            }
-            
-            // Update upcoming appointments if applicable
-            const now = new Date();
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            
-            let shouldInclude = false;
-            
-            if (newAppointmentDate.getTime() > today.getTime()) {
-              shouldInclude = true;
-            } else if (newAppointmentDate.getTime() === today.getTime()) {
-              const [endHour, endMinute] = newOrUpdatedAppointment.endTime.split(':').map(Number);
-              const appointmentEndDateTime = new Date(newAppointmentDate);
-              appointmentEndDateTime.setHours(endHour, endMinute, 0, 0);
-              shouldInclude = appointmentEndDateTime > now;
-            }
-            
-            // Increment refresh trigger to ensure UI update
-            setRefreshTrigger(prev => prev + 1);
-            
-            if (shouldInclude) {
-              setUpcomingAppointments(prevAppointments => 
-                [...prevAppointments, newOrUpdatedAppointment!].sort((a, b) => {
-                  const dateComparison = new Date(a.date).getTime() - new Date(b.date).getTime();
-                  if (dateComparison !== 0) return dateComparison;
-                  return a.startTime.localeCompare(b.startTime);
-                })
-              );
-            }
-            
-            // Schedule notifications for the new appointment
-            await scheduleAppointmentNotifications(newOrUpdatedAppointment);
-          }
-        } catch (error) {
-          console.error('Error creating appointment:', error);
-        }
-      }
-      
-      // Still reload all data to ensure consistency
+      const notificationTimes = convertOptionsToNotificationTimes(selectedNotifications, date);
+      console.log('notification time',selectedNotifications,'date',date,'notificationtime',notificationTimes)
+     const appointmentData: Partial<Appointment> & { userID: string } = {
+  userID: user.uid,
+  appointmentName: appointmentName.trim(),
+  description: appointmentDescription.trim(),
+  date,
+  startTime: appointmentStartTime,
+  endTime: appointmentEndTime,
+  notificationTimes,
+  allDay: false,
+  ...(appointmentAddress.trim() ? { address: appointmentAddress.trim() } : {})
+};
+
+      // console.error("appointment data.",appointmentData);
+  
+      let finalAppointmentID: string;
+      let appointmentForNotification: Appointment;
+  
+   let isUpdate = false;
+
+if (isEditMode && selectedAppointment?.appointmentID) {
+  await DatabaseService.updateAppointment(selectedAppointment.appointmentID, appointmentData);
+  finalAppointmentID = selectedAppointment.appointmentID;
+  appointmentForNotification = { ...selectedAppointment, ...appointmentData };
+  isUpdate = true;
+} else {
+  const newAppointmentResult = await DatabaseService.createAppointment(appointmentData);
+  if (typeof newAppointmentResult === 'string') {
+    finalAppointmentID = newAppointmentResult;
+    appointmentForNotification = {
+      ...appointmentData,
+      appointmentID: finalAppointmentID,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as Appointment;
+  } else {
+    return;
+  }
+}
+
+// Show different notifications based on action
+await Notifications.scheduleNotificationAsync({
+  content: {
+    title: isUpdate ? '✅ Appointment Updated' : '✅ Appointment Saved',
+    body: isUpdate
+      ? 'Your appointment has been updated successfully!'
+      : 'Your appointment has been created successfully!',
+    sound: true,
+  },
+  trigger: null,
+});
+
+  
+      // Optionally refresh data/UI
+      setShowAppointmentModal(false); // if using a modal
       await loadAppointments();
-      await loadDailyAppointments(selectedDate);
-      await loadMarkedDates();
-      await loadUpcomingAppointments();
-      
-      // Force a final refresh of the upcoming section
-      setRefreshTrigger(prev => prev + 1);
-      
-      // Close modal
-      setShowAppointmentModal(false);
     } catch (error) {
       console.error('Error saving appointment:', error);
     } finally {
       setIsSubmitting(false);
     }
-
   };
 useEffect(() => {
   Notifications.setNotificationChannelAsync('default', {
