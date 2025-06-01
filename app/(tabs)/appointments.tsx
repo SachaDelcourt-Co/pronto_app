@@ -1080,11 +1080,16 @@ await Notifications.scheduleNotificationAsync({
   },
   trigger: null,
 });
-
-  
-      // Optionally refresh data/UI
-      setShowAppointmentModal(false); // if using a modal
-      await loadAppointments();
+await loadAppointments();
+      await loadDailyAppointments(selectedDate);
+      await loadMarkedDates();
+      await loadUpcomingAppointments();
+      
+      // Force a final refresh of the upcoming section
+      setRefreshTrigger(prev => prev + 1);
+      
+      // Close modal
+      setShowAppointmentModal(false);
     } catch (error) {
       console.error('Error saving appointment:', error);
     } finally {

@@ -112,7 +112,7 @@ const resources = {
         reminderDetails: 'Détails du rappel',
         editAppointment: 'Modifier le rendez-vous',
         editReminder: 'Modifier le rappel',
-        notifications: 'Avis',
+        notifications: 'Notifications',
         recurringOn: 'Récurrent le:',
         menu: {
           activitySummary: 'Résumé d\'activité',
@@ -150,15 +150,15 @@ const resources = {
       onboarding: {
         notifications: {
           title: 'Restez informé',
-          description: 'Activez les avis pour ne rien manquer',
+          description: 'Activez les notification pour ne rien manquer',
           features: {
             appointments: 'Rappels de rendez-vous',
-            reminders: 'Avis personnalisées',
+            reminders: 'Notification personnalisées',
             tasks: 'Suivi des tâches',
             motivation: 'Messages motivants',
             support: 'Support personnalisé'
           },
-          allow: 'Activer les avis',
+          allow: 'Activer les notification',
           note: 'Vous pourrez modifier ces paramètres plus tard'
         },
         features: {
@@ -224,9 +224,9 @@ const resources = {
         upcomingAppointments: 'Rendez-vous à venir',
         edit: 'Modifier',
         appointmentDetails: 'Détails du rendez-vous',
-        notifications: 'Avis',
+        notifications: 'Notification',
         noNotifications: 'Aucune notification',
-        selectNotifications: 'Sélectionner les avis',
+        selectNotifications: 'Sélectionner les notification',
         selectUpToThree: 'Sélectionnez jusqu\'à 3 rappels',
         minDurationMessage: 'Les événements doivent durer au moins 15 minutes',
         notificationOptions: {
@@ -289,7 +289,7 @@ const resources = {
         time: 'Heure',
         description: 'Description',
         save: 'Enregistrer',
-        notifications: 'Avis',
+        notifications: 'Notifications',
         cancel: 'Annuler',
         delete: 'Supprimer',
         loading: 'Chargement des rappels...',
