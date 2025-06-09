@@ -529,14 +529,14 @@ export default function RemindersScreen() {
               const identifier = `${reminderIdentifierPrefix}-${dayOfWeek}-${time}`;
               console.log(`Scheduling recurring notification for ${nextDate.toISOString()} with ID: ${identifier}`);
               
-              await Notifications.scheduleNotificationAsync({
-                content: notificationContent,
-                trigger: { 
-                  date: nextDate,
-                  channelId: 'default'
-                },
-                identifier: identifier,
-              });
+              // await Notifications.scheduleNotificationAsync({
+              //   content: notificationContent,
+              //   trigger: { 
+              //     date: nextDate,
+              //     channelId: 'default'
+              //   },
+              //   identifier: identifier,
+              // });
             } else {
               console.log(`Skipping past notification for day ${dayOfWeek} at ${time}`);
             }

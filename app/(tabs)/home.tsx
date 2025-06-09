@@ -476,7 +476,7 @@ export default function HomePage() {
                     setShowReminders(true);
                   }}
                 >
-                  <Text style={styles.seeMoreText}>{t('home.seeAll')}</Text>
+                  {/* <Text style={styles.seeMoreText}>{t('home.seeAll')}</Text> */}
                 </TouchableOpacity>
               </>
             ) : (
@@ -2049,9 +2049,9 @@ export default function HomePage() {
       
       // First check if we should generate a new report (Sunday after 8pm)
       const shouldGenerate = await shouldGenerateWeeklyReport();
-      if (shouldGenerate) {
-        await generateWeeklyReport(authUser.uid);
-      }
+      // if (shouldGenerate) {
+      //   await generateWeeklyReport(authUser.uid);
+      // }
       
       // Then check if there's an unviewed report
       const hasUnviewed = await hasUnviewedWeeklyReport();

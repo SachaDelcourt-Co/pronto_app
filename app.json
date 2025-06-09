@@ -60,10 +60,10 @@
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#4c1d95"
       },
-            "googleServicesFile": "./android/app/google-services.json",
+      "googleServicesFile": "./android/app/google-services.json",
 
       "package": "com.pronto.organizer",
-      "versionCode": 1,
+      "versionCode": 2,
       "config": {
         "googleMobileAdsAppId": "ca-app-pub-7230381744219330~2261312155"
       }
@@ -86,7 +86,7 @@
       }
     },
     "owner": "sheeza123",
-    "runtimeVersion": "1.0.1",
+    "runtimeVersion": "1.0.3",
     "updates": {
       "url": "https://u.expo.dev/8c7d5c56-b523-4be3-8445-2bb53491705a"
     }

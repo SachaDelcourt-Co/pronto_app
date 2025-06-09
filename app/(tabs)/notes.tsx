@@ -957,7 +957,7 @@ const styles = StyleSheet.create({
 },
   header: {
     padding: 20,
-    paddingTop: Platform.OS === 'web' ? 20 : 16,
+    // paddingTop: Platform.OS === 'web' ? 20 : 16,
   },
   headerTitle: {
     fontSize: 28,

@@ -1096,13 +1096,13 @@ await loadAppointments();
       setIsSubmitting(false);
     }
   };
-useEffect(() => {
-  Notifications.setNotificationChannelAsync('default', {
-    name: 'Default',
-    importance: Notifications.AndroidImportance.HIGH,
-    sound: true,
-  });
-}, []);
+// useEffect(() => {
+//   Notifications.setNotificationChannelAsync('default', {
+//     name: 'Default',
+//     importance: Notifications.AndroidImportance.HIGH,
+//     sound: true,
+//   });
+// }, []);
 
   return (
     <View style={styles.container}>

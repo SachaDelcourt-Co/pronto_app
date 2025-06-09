@@ -28,15 +28,15 @@ const ProgressBar = ({ progress, color = '#8b5cf6', style }: { progress: number,
   // Clamp progress between 0 and 1
   const clampedProgress = Math.min(1, Math.max(0, progress));
   
-  if (Platform.OS === 'android') {
-    return <ProgressBarAndroid 
-      styleAttr="Horizontal"
-      indeterminate={false}
-      progress={clampedProgress}
-      color={color}
-      style={style}
-    />;
-  }
+  // if (Platform.OS === 'android') {
+  //   return <ProgressBarAndroid 
+  //     styleAttr="Horizontal"
+  //     indeterminate={false}
+  //     progress={clampedProgress}
+  //     color={color}
+  //     style={style}
+  //   />;
+  // }
   
   // For iOS and other platforms
   return (
@@ -149,8 +149,8 @@ const WeeklyReportModal: React.FC<WeeklyReportModalProps> = ({
                   {reportData.tasksCompleted.map((task, index) => (
                     <View key={`task-${index}`} style={styles.taskCompletionItem}>
                       <View style={styles.taskCompletionHeader}>
-                        <CheckCircle size={20} color="#8b5cf6" />
-                        <Text style={styles.taskName}>{task.taskName}</Text>
+                        {/* <CheckCircle size={20} color="#8b5cf6" />
+                        <Text style={styles.taskName}>{task.taskName}</Text> */}
                       </View>
                       <View style={styles.taskProgressContainer}>
                         <ProgressBar
