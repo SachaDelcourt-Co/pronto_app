@@ -11,6 +11,9 @@ import { parseLocalDate, formatLocalDate } from '@/utils/dateUtils';
 import * as Notifications from 'expo-notifications';
 import { useTranslation } from 'react-i18next';
 import AdBanner from '@/components/AdBanner';
+import { useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Register for push notifications
 Notifications.setNotificationHandler({
@@ -22,6 +25,7 @@ Notifications.setNotificationHandler({
 });
 
 export default function RemindersScreen() {
+  const router = useRouter();
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -47,6 +51,7 @@ export default function RemindersScreen() {
   const [notificationTimes, setNotificationTimes] = useState<string[]>(['09:00']);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isActive, setIsActive] = useState(true);
+  
   
   // Delete confirmation
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
@@ -81,6 +86,7 @@ export default function RemindersScreen() {
   
   const hourButtonRef = useRef<View>(null);
   const minuteButtonRef = useRef<View>(null);
+
   
   const measureButtonPosition = (ref: React.RefObject<View>, setPosition: (position: {pageY: number, pageX: number, height: number}) => void) => {
     if (ref.current) {
@@ -153,6 +159,19 @@ export default function RemindersScreen() {
       return () => clearTimeout(timer);
     }
   }, [currentVisibleMonth, user, showCalendar]);
+useEffect(() => {
+  const loadReminderToEdit = async () => {
+    const reminderId = await AsyncStorage.getItem('editReminderId');
+    if (reminderId) {
+      setIsEditMode(!!!reminderId);
+
+      // Optionally clear the stored ID
+      await AsyncStorage.removeItem('editReminderId');
+    }
+  };
+
+  loadReminderToEdit();
+}, []);
 
   // Add effect to filter reminders when active filter or reminders array changes
   useEffect(() => {
@@ -529,14 +548,14 @@ export default function RemindersScreen() {
               const identifier = `${reminderIdentifierPrefix}-${dayOfWeek}-${time}`;
               console.log(`Scheduling recurring notification for ${nextDate.toISOString()} with ID: ${identifier}`);
               
-              // await Notifications.scheduleNotificationAsync({
-              //   content: notificationContent,
-              //   trigger: { 
-              //     date: nextDate,
-              //     channelId: 'default'
-              //   },
-              //   identifier: identifier,
-              // });
+              await Notifications.scheduleNotificationAsync({
+                content: notificationContent,
+                trigger: { 
+                  date: nextDate,
+                  channelId: 'default'
+                },
+                identifier: identifier,
+              });
             } else {
               console.log(`Skipping past notification for day ${dayOfWeek} at ${time}`);
             }

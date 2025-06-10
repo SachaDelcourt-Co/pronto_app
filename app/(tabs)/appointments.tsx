@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal, TextInput, ActivityIndicator, FlatList, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal, TextInput, ActivityIndicator, FlatList, Pressable,SafeAreaView,KeyboardAvoidingView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Calendar as CalendarIcon, Clock, MapPin, Bell, Plus, ChevronRight, X, Edit, Trash2, ChevronLeft, Calendar as TodayIcon, ChevronDown, Check, ChevronUp } from 'lucide-react-native';
 import { Calendar } from 'react-native-calendars';
@@ -1096,13 +1096,13 @@ await loadAppointments();
       setIsSubmitting(false);
     }
   };
-// useEffect(() => {
-//   Notifications.setNotificationChannelAsync('default', {
-//     name: 'Default',
-//     importance: Notifications.AndroidImportance.HIGH,
-//     sound: true,
-//   });
-// }, []);
+useEffect(() => {
+  Notifications.setNotificationChannelAsync('default', {
+    name: 'Default',
+    importance: Notifications.AndroidImportance.HIGH,
+    sound: true,
+  });
+}, []);
 
   return (
     <View style={styles.container}>
@@ -1321,7 +1321,11 @@ await loadAppointments();
 
       {/* Upcoming Appointments List */}
       {upcomingAppointments.length > 0 && (
-      <View style={styles.upcomingAppointmentsContainer}>
+        <SafeAreaView style={styles.upcomingAppointmentsContainer}>
+  <KeyboardAvoidingView
+    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    style={{ flex: 1 }}
+  >
         <View style={styles.upcomingHeader}>
           <Text style={styles.upcomingTitle}>{t('appointments.upcomingAppointments')}</Text>
         </View>
@@ -1329,7 +1333,7 @@ await loadAppointments();
           <ScrollView 
             style={styles.upcomingList}
              pinchGestureEnabled={false} 
-            contentContainerStyle={{ paddingBottom: 120 }} // Increased from 70 to 120 for better visibility of the last event
+            contentContainerStyle={{ paddingBottom: 12 }} // Increased from 70 to 120 for better visibility of the last event
             showsVerticalScrollIndicator={true} // Make scrollbar visible
           >
             {/* Use the refreshTrigger in a way that doesn't affect rendering but ensures re-render */}
@@ -1393,7 +1397,8 @@ await loadAppointments();
             </View>
           )}
         </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
+      </SafeAreaView>
       )}
 
       {/* Calendar Modal */}
@@ -2955,7 +2960,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     borderTopWidth: 1,
     borderTopColor: '#2a1a2a',
-    minHeight: 280, // Increased from 240 to 280 for better visibility
+    flex:14
+    // minHeight: 280, // Increased from 240 to 280 for better visibility
   },
   upcomingHeader: {
     paddingVertical: 12,

@@ -34,7 +34,7 @@ function initializeFirebase() {
     const auth = getAuth(app);
     
     // Log success
-    // console.log("Firebase initialized successfully with config:", Object.keys(firebaseConfig).join(", "));
+    console.log("Firebase initialized successfully with config:", Object.keys(firebaseConfig).join(", "));
     
     return { app, db, auth };
   } catch (error) {
@@ -46,7 +46,7 @@ function initializeFirebase() {
       const app = initializeApp(firebaseConfig, "secondary");
       const db = getFirestore(app);
       const auth = getAuth(app);
-      // console.log("Firebase reinitialized successfully");
+      console.log("Firebase reinitialized successfully");
       return { app, db, auth };
     } catch (retryError: any) {
       console.error("Fatal error reinitializing Firebase:", retryError);

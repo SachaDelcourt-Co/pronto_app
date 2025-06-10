@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, TextInput, Modal, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, TextInput, Modal, ActivityIndicator, Alert ,KeyboardAvoidingView} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FileText, Folder as FolderIcon, Plus, Clock, ChevronRight, X, ArrowLeft, Edit, Trash2, CheckSquare, Square } from 'lucide-react-native';
 import { useAuth } from '@/utils/AuthContext';
@@ -393,7 +393,11 @@ export default function NotesScreen() {
       >
         
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <KeyboardAvoidingView
+  style={styles.modalContent}
+  behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+  keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t('notes.createNote')}</Text>
               <TouchableOpacity
@@ -483,8 +487,8 @@ export default function NotesScreen() {
                 <Text style={styles.saveButtonText}>{t('notes.save')}</Text>
               )}
             </TouchableOpacity>
+            </KeyboardAvoidingView>
           </View>
-        </View>
       </Modal>
     );
   };
@@ -957,7 +961,7 @@ const styles = StyleSheet.create({
 },
   header: {
     padding: 20,
-    // paddingTop: Platform.OS === 'web' ? 20 : 16,
+    paddingTop: Platform.OS === 'web' ? 20 : 16,
   },
   headerTitle: {
     fontSize: 28,

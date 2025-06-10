@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, TextInput, Modal, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, TextInput, Modal, ActivityIndicator, Alert,KeyboardAvoidingView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CircleCheck as CheckCircle2, Plus, X, Calendar, Edit3, Trash2, RefreshCw } from 'lucide-react-native';
 import { DatabaseService } from '@/services/database';
@@ -337,7 +337,10 @@ export default function TasksScreen() {
         animationType="fade"
         onRequestClose={cancelDeleteTask}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+  behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+  style={styles.modalOverlay}
+>
           <View style={styles.confirmModalContent}>
             <Text style={styles.confirmModalTitle}>{t('tasks.deleteConfirmationTitle')}</Text>
             <Text style={styles.confirmModalText}>
@@ -360,7 +363,7 @@ export default function TasksScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     );
   };

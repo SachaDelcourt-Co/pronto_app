@@ -262,12 +262,20 @@ export default function HomePage() {
         <Text style={styles.headerTitle}>PRONTO</Text>
         <Text style={styles.headerSubtitle}>{t('home.subtitle')}</Text>
       </View>
-      <TouchableOpacity
+      <View style={{flexDirection:'row',justifyContent:'flex-end'}}>
+       <TouchableOpacity
         style={styles.menuButton}
         onPress={() => setShowMenu(true)}
       >
         <Menu color="#ffffff" size={24} />
       </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.menuButton}
+        onPress={() => setShowWeeklyReport(true)}
+      >
+        <Bell color="#ffffff" size={24} />
+      </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -340,7 +348,7 @@ export default function HomePage() {
           </View>
 
           <View style={styles.bannerContent}>
-            {isLoading ? (
+              {isLoading ? (
               <ActivityIndicator size="small" color="#9333ea" />
             ) : appointments.length > 0 ? (
               <>
@@ -394,7 +402,6 @@ export default function HomePage() {
                     setExpandedAppointments(true);
                     // First set the flag to true to trigger display of expanded list
                     setShowAppointments(true);
-                    // Then explicitly reload the appointments with the expanded flag
                     loadUpcomingAppointments(true);
                   }}
                 >
@@ -408,7 +415,6 @@ export default function HomePage() {
             )}
           </View>
         </View>
-
         {/* Reminders Banner */}
         <View style={[
           styles.scheduleBanner,
@@ -476,7 +482,7 @@ export default function HomePage() {
                     setShowReminders(true);
                   }}
                 >
-                  {/* <Text style={styles.seeMoreText}>{t('home.seeAll')}</Text> */}
+                  <Text style={styles.seeMoreText}>{t('home.seeAll')}</Text>
                 </TouchableOpacity>
               </>
             ) : (
@@ -495,6 +501,7 @@ export default function HomePage() {
     icon: typeof Calendar | typeof Bell,
     items: Appointment[] | Reminder[],
     onClose: () => void
+    
   ) => (
     <Modal
       visible={true}
@@ -525,59 +532,45 @@ export default function HomePage() {
           </View>
 
           <ScrollView 
-            style={styles.modalList}
+            // style={styles.modalList}
             showsVerticalScrollIndicator={false}
              pinchGestureEnabled={false} 
           >
-            {items.map((item, index) => (
-              <View key={index} style={styles.modalItem}>
-                <Text style={styles.modalItemTime}>
-                  {/* Display date if it's not today */}
-                  {item.date && (() => {
-                    const itemDate = new Date(item.date);
-                    const today = new Date();
-                    const isToday = 
-                      itemDate.getDate() === today.getDate() &&
-                      itemDate.getMonth() === today.getMonth() &&
-                      itemDate.getFullYear() === today.getFullYear();
-                    
-                    // Get locale from current language
-                    const locale = getLocaleFromLanguage(i18n.language);
-                    
-                    if (isToday) {
-                      // Just show time for today's items
-                      return (item as any).time || 
-                             (item as Appointment).startTime || 
-                             new Date(item.date).toLocaleTimeString(locale, {
-                               hour: '2-digit',
-                               minute: '2-digit',
-                             });
-                    } else {
-                      // Show date and time for future dates
-                      return `${itemDate.toLocaleDateString(locale, {
-                        month: 'short',
-                        day: 'numeric'
-                      })} ${(item as any).time || 
-                             (item as Appointment).startTime ||
-                             new Date(item.date).toLocaleTimeString(locale, {
-                               hour: '2-digit',
-                               minute: '2-digit',
-                             })}`;
-                    }
-                  })()}
-                </Text>
-                <View style={styles.modalItemContent}>
-                  <Text style={styles.modalItemTitle}>
-                    {(item as any).appointmentName || (item as any).reminderName}
-                  </Text>
-                  {'description' in item && (
-                    <Text style={styles.modalItemDescription}>
-                      {item.description}
-                    </Text>
-                  )}
-                </View>
-              </View>
-            ))}
+            
+            {items.map((item, index) => {
+  const itemDate = new Date(item.date);
+  const today = new Date();
+  const isToday = itemDate.getDate() === today.getDate() &&
+                  itemDate.getMonth() === today.getMonth() &&
+                  itemDate.getFullYear() === today.getFullYear();
+  const locale = getLocaleFromLanguage(i18n.language);
+  const formattedTime = isToday
+    ? (item as Appointment).startTime ||
+      itemDate.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
+    : `${itemDate.toLocaleDateString(locale, {
+        month: 'short',
+        day: 'numeric',
+      })} ${(item as Appointment).startTime ||
+           itemDate.toLocaleTimeString(locale, {
+             hour: '2-digit',
+             minute: '2-digit',
+           })}`;
+
+  return (
+    <View key={index} style={styles.modalItem}>
+      <Text style={styles.modalItemTime}>{formattedTime}</Text>
+      <View style={styles.modalItemContent}>
+        <Text style={styles.modalItemTitle}>
+          {'appointmentName' in item ? item.appointmentName : item.reminderName}
+        </Text>
+        {'description' in item && item.description && (
+          <Text style={styles.modalItemDescription}>{item.description}</Text>
+        )}
+      </View>
+    </View>
+  );
+})}
+
           </ScrollView>
         </View>
       </View>
@@ -2049,9 +2042,9 @@ export default function HomePage() {
       
       // First check if we should generate a new report (Sunday after 8pm)
       const shouldGenerate = await shouldGenerateWeeklyReport();
-      // if (shouldGenerate) {
-      //   await generateWeeklyReport(authUser.uid);
-      // }
+      if (shouldGenerate) {
+        await generateWeeklyReport(authUser.uid);
+      }
       
       // Then check if there's an unviewed report
       const hasUnviewed = await hasUnviewedWeeklyReport();
@@ -2298,6 +2291,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
+    marginLeft:4,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
