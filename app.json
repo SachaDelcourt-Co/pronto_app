@@ -2,7 +2,7 @@
   "expo": {
     "name": "Pronto",
     "slug": "pronto-clean",
-    "version": "1.0.1",
+    "version": "4.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "prontoclean",
@@ -18,7 +18,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.pronto.organizer",
-      "buildNumber": "1",
+      "buildNumber": "4",
       "config": {
         "googleMobileAdsAppId": "ca-app-pub-7230381744219330~1982928791"
       },
@@ -63,7 +63,7 @@
       "googleServicesFile": "./android/app/google-services.json",
 
       "package": "com.pronto.organizer",
-      "versionCode": 2,
+      "versionCode": 4,
       "config": {
         "googleMobileAdsAppId": "ca-app-pub-7230381744219330~2261312155"
       }
@@ -86,7 +86,7 @@
       }
     },
     "owner": "sheeza123",
-    "runtimeVersion": "1.0.3",
+    "runtimeVersion": "4.0.4",
     "updates": {
       "url": "https://u.expo.dev/8c7d5c56-b523-4be3-8445-2bb53491705a"
     }

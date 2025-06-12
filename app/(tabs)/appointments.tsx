@@ -1068,18 +1068,28 @@ if (isEditMode && selectedAppointment?.appointmentID) {
     return;
   }
 }
+for (const notifTime of notificationTimes) {
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: '📅 Upcoming Appointment',
+      body: `${appointmentData.appointmentName} starts soon at ${appointmentStartTime}`,
+      sound: true,
+    },
+    trigger: notifTime, // a Date object
+  });
+}
 
 // Show different notifications based on action
-await Notifications.scheduleNotificationAsync({
-  content: {
-    title: isUpdate ? '✅ Appointment Updated' : '✅ Appointment Saved',
-    body: isUpdate
-      ? 'Your appointment has been updated successfully!'
-      : 'Your appointment has been created successfully!',
-    sound: true,
-  },
-  trigger: null,
-});
+// await Notifications.scheduleNotificationAsync({
+//   content: {
+//     title: isUpdate ? '✅ Appointment Updated' : '✅ Appointment Saved',
+//     body: isUpdate
+//       ? 'Your appointment has been updated successfully!'
+//       : 'Your appointment has been created successfully!',
+//     sound: true,
+//   },
+//   trigger: null,
+// });
 await loadAppointments();
       await loadDailyAppointments(selectedDate);
       await loadMarkedDates();
@@ -1322,20 +1332,18 @@ useEffect(() => {
       {/* Upcoming Appointments List */}
       {upcomingAppointments.length > 0 && (
         <SafeAreaView style={styles.upcomingAppointmentsContainer}>
-  <KeyboardAvoidingView
-    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    style={{ flex: 1 }}
-  >
-        <View style={styles.upcomingHeader}>
-          <Text style={styles.upcomingTitle}>{t('appointments.upcomingAppointments')}</Text>
-        </View>
-        
-          <ScrollView 
+ 
+      <ScrollView 
             style={styles.upcomingList}
              pinchGestureEnabled={false} 
             contentContainerStyle={{ paddingBottom: 12 }} // Increased from 70 to 120 for better visibility of the last event
             showsVerticalScrollIndicator={true} // Make scrollbar visible
           >
+        <View style={styles.upcomingHeader}>
+          <Text style={styles.upcomingTitle}>{t('appointments.upcomingAppointments')}</Text>
+        </View>
+        
+        
             {/* Use the refreshTrigger in a way that doesn't affect rendering but ensures re-render */}
             {refreshTrigger ? null : null}
             
@@ -1397,7 +1405,6 @@ useEffect(() => {
             </View>
           )}
         </ScrollView>
-      </KeyboardAvoidingView>
       </SafeAreaView>
       )}
 
@@ -2960,7 +2967,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     borderTopWidth: 1,
     borderTopColor: '#2a1a2a',
-    flex:14
+    flex:26
     // minHeight: 280, // Increased from 240 to 280 for better visibility
   },
   upcomingHeader: {
