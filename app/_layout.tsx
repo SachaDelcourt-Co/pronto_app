@@ -12,6 +12,7 @@ import { User } from 'firebase/auth';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import ErrorBoundary from '@/utils/ErrorBoundary';
 import { auth } from '@/utils/firebase';
+import resetWeeklyTasks from './rootlayout';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync().catch(() => {
@@ -46,28 +47,30 @@ export default function RootLayout() {
     init();
   }, [fontsLoaded, fontError]);
 
-  useEffect(() => {
-    try {
-      // Use ensureAuth instead of getAuth to guarantee Firebase Auth is properly initialized
-      console.log("Setting up auth state listener");
-      
-      // Set up auth state listener
-      const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-        console.log("Auth state changed:", currentUser ? `User: ${currentUser.uid}` : "No user");
-        setUser(currentUser);
-        setAuthInitialized(true);
-      }, (error) => {
-        console.error("Auth state change error:", error);
-        setAuthInitialized(true);
-      });
+useEffect(() => {
+  try {
+    console.log("Setting up auth state listener");
 
-      // Clean up subscription on unmount
-      return () => unsubscribe();
-    } catch (error) {
-      console.error("Auth setup error:", error);
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      console.log("Auth state changed:", currentUser ? `User: ${currentUser.uid}` : "No user");
+      setUser(currentUser);
       setAuthInitialized(true);
-    }
-  }, []);
+
+      // ✅ Call weekly reset logic after auth is ready
+      if (currentUser) {
+        await resetWeeklyTasks(currentUser.uid);
+      }
+    }, (error) => {
+      console.error("Auth state change error:", error);
+      setAuthInitialized(true);
+    });
+
+    return () => unsubscribe();
+  } catch (error) {
+    console.error("Auth setup error:", error);
+    setAuthInitialized(true);
+  }
+}, []);
 
   if (!fontsLoaded && !fontError) {
     return null;
