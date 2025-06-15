@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, TextInput, Modal, ActivityIndicator, Alert ,KeyboardAvoidingView} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, TextInput, Modal, ActivityIndicator,TouchableWithoutFeedback,Keyboard, Alert ,KeyboardAvoidingView} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FileText, Folder as FolderIcon, Plus, Clock, ChevronRight, X, ArrowLeft, Edit, Trash2, CheckSquare, Square } from 'lucide-react-native';
 import { useAuth } from '@/utils/AuthContext';
@@ -501,6 +501,7 @@ export default function NotesScreen() {
         animationType="slide"
         onRequestClose={() => setShowEditNoteModal(false)}
       >
+         <TouchableWithoutFeedback onPress={Keyboard.dismiss} >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
@@ -595,6 +596,7 @@ export default function NotesScreen() {
             </TouchableOpacity>
           </View>
         </View>
+        </TouchableWithoutFeedback>
       </Modal>
     );
   };
@@ -607,6 +609,7 @@ export default function NotesScreen() {
         animationType="slide"
         onRequestClose={() => setShowCreateFolderModal(false)}
       >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
@@ -641,6 +644,7 @@ export default function NotesScreen() {
             </TouchableOpacity>
           </View>
         </View>
+        </TouchableWithoutFeedback>
       </Modal>
     );
   };

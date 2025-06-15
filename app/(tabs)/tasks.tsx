@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, TextInput, Modal, ActivityIndicator, Alert,KeyboardAvoidingView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform,Keyboard, TextInput, Modal, ActivityIndicator,TouchableWithoutFeedback, Alert,KeyboardAvoidingView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CircleCheck as CheckCircle2, Plus, X, Calendar, Edit3, Trash2, RefreshCw } from 'lucide-react-native';
 import { DatabaseService } from '@/services/database';
@@ -243,6 +243,7 @@ export default function TasksScreen() {
           setSelectedDays(3);
         }}
       >
+       <TouchableWithoutFeedback onPress={Keyboard.dismiss} >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
@@ -325,6 +326,7 @@ export default function TasksScreen() {
             </TouchableOpacity>
           </View>
         </View>
+        </TouchableWithoutFeedback>
       </Modal>
     );
   };
@@ -337,10 +339,7 @@ export default function TasksScreen() {
         animationType="fade"
         onRequestClose={cancelDeleteTask}
       >
-        <KeyboardAvoidingView
-  behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-  style={styles.modalOverlay}
->
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.confirmModalContent}>
             <Text style={styles.confirmModalTitle}>{t('tasks.deleteConfirmationTitle')}</Text>
             <Text style={styles.confirmModalText}>
@@ -363,7 +362,7 @@ export default function TasksScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </KeyboardAvoidingView>
+        </TouchableWithoutFeedback>
       </Modal>
     );
   };

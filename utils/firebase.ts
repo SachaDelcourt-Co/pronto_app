@@ -1,9 +1,9 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
-import { getAuth, connectAuthEmulator } from 'firebase/auth';
-import { Platform } from 'react-native';
+import { initializeAuth, getReactNativePersistence } from 'firebase/auth/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Firebase configuration
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyAKkIPGwO3vPfvUI2EbBCjscJezqb71Tco",
   authDomain: "pronto-e2f19.firebaseapp.com",
@@ -14,58 +14,36 @@ const firebaseConfig = {
   measurementId: "G-XTP7GGCPKH"
 };
 
-// Initialize Firebase app - safer implementation
+// Init function
 function initializeFirebase() {
   try {
-    // Check if Firebase app is already initialized
     if (getApps().length > 0) {
-      console.log("Firebase app already initialized, returning existing app");
-      return { 
-        app: getApp(), 
-        db: getFirestore(getApp()), 
-        auth: getAuth(getApp()) 
+      console.log("Firebase app already initialized");
+      const app = getApp();
+      return {
+        app,
+        db: getFirestore(app),
+        auth: initializeAuth(app, {
+          persistence: getReactNativePersistence(AsyncStorage),
+        }),
       };
     }
-    
-    // Initialize new Firebase app
-    console.log("Initializing new Firebase app");
+
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const auth = getAuth(app);
-    
-    // Log success
-    console.log("Firebase initialized successfully with config:", Object.keys(firebaseConfig).join(", "));
-    
+    const auth = initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
+
+    console.log("Firebase initialized successfully");
     return { app, db, auth };
   } catch (error) {
-    console.error("Error initializing Firebase:", error);
-    
-    // Attempt to reinitialize in case of error
-    try {
-      console.log("Attempting to reinitialize Firebase");
-      const app = initializeApp(firebaseConfig, "secondary");
-      const db = getFirestore(app);
-      const auth = getAuth(app);
-      console.log("Firebase reinitialized successfully");
-      return { app, db, auth };
-    } catch (retryError: any) {
-      console.error("Fatal error reinitializing Firebase:", retryError);
-      throw new Error("Could not initialize Firebase: " + retryError.message);
-    }
+    console.error("Fatal error initializing Firebase:", error);
+    throw new Error("Could not initialize Firebase: " + error.message);
   }
 }
 
-// Execute initialization
+// Execute
 const { app, db, auth } = initializeFirebase();
 
-// Ensure auth is always properly initialized
-const ensureAuth = () => {
-  if (!auth || !auth.app) {
-    console.warn("Auth not initialized, reinitializing");
-    const newAuth = getAuth(app);
-    return newAuth;
-  }
-  return auth;
-};
-
-export { app, db, auth, ensureAuth };
+export { app, db, auth };

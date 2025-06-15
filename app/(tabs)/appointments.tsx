@@ -928,89 +928,6 @@ export default function AppointmentsScreen() {
   };
 
   // Function to schedule notifications for an appointment
-  const scheduleAppointmentNotifications = async (appointment: Appointment) => {
-    try {
-      // Request permissions first
-      const { status } = await Notifications.getPermissionsAsync();
-      
-      if (status !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
-        if (status !== 'granted') {
-          console.log('Notification permission not granted');
-          return;
-        }
-      }
-      
-      // Cancel any existing notifications for this appointment
-      if (appointment?.appointmentID) {
-        try {
-          // Get all scheduled notifications
-          const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
-          
-          // Filter notifications for this appointment
-          const appointmentNotifications = scheduledNotifications.filter(
-            notification => notification.identifier.startsWith(appointment.appointmentID!)
-          );
-          
-          // Cancel each notification
-          for (const notification of appointmentNotifications) {
-            await Notifications.cancelScheduledNotificationAsync(notification.identifier);
-          }
-          
-          console.log(`Cancelled ${appointmentNotifications.length} existing notifications for appointment`);
-        } catch (error) {
-          console.error('Error cancelling existing notifications:', error);
-        }
-      }
-      
-      if (!appointment?.notificationTimes || appointment.notificationTimes.length === 0) {
-        console.log('No notification times configured for this appointment');
-        return;
-      }
-      
-      // Get the appointment date and time
-      const appointmentDate = new Date(appointment.date);
-      const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
-      appointmentDate.setHours(startHour, startMinute, 0, 0);
-      
-      // Create the notification content
-      const notificationContent = {
-        title: t('notifications.appointmentReminder', 'Appointment Reminder'),
-        body: appointment.appointmentName,
-        sound: true,
-        priority: Notifications.AndroidNotificationPriority.HIGH,
-        data: { appointmentID: appointment.appointmentID },
-      };
-      
-      console.log(`Scheduling notifications for appointment: ${appointment.appointmentName} at ${appointmentDate.toISOString()}`);
-      
-      // Schedule notifications based on the configured notification times
-      for (const notificationTime of appointment.notificationTimes) {
-        // The notification times in the appointment are already Date objects (calculated by convertOptionsToNotificationTimes)
-        const scheduledTime = new Date(notificationTime);
-        
-        // Only schedule if it's in the future
-        if (scheduledTime > new Date()) {
-          const identifier = `${appointment.appointmentID}-${scheduledTime.getTime()}`;
-          
-          console.log(`Scheduling notification for ${scheduledTime.toISOString()} with ID: ${identifier}`);
-          
-          await Notifications.scheduleNotificationAsync({
-            content: notificationContent,
-            trigger: {
-              date: scheduledTime,
-              channelId: 'default'
-            },
-            identifier: identifier,
-          });
-        } else {
-          console.log(`Skipping past notification at ${scheduledTime.toISOString()}`);
-        }
-      }
-    } catch (error) {
-      console.error('Error scheduling appointment notifications:', error);
-    }
-  };
 
   // Fix the notifications scheduling when saving appointments
 const handleSubmitAppointment = async () => {
@@ -1068,18 +985,28 @@ if (isEditMode && selectedAppointment?.appointmentID) {
     return;
   }
 }
+for (const notifTime of notificationTimes) {
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: '📅 Upcoming Appointment',
+      body: `${appointmentData.appointmentName} starts soon at ${appointmentStartTime}`,
+      sound: true,
+    },
+    trigger: notifTime, // a Date object
+  });
+}
 
 // Show different notifications based on action
-await Notifications.scheduleNotificationAsync({
-  content: {
-    title: isUpdate ? '✅ Appointment Updated' : '✅ Appointment Saved',
-    body: isUpdate
-      ? 'Your appointment has been updated successfully!'
-      : 'Your appointment has been created successfully!',
-    sound: true,
-  },
-  trigger: null,
-});
+// await Notifications.scheduleNotificationAsync({
+//   content: {
+//     title: isUpdate ? '✅ Appointment Updated' : '✅ Appointment Saved',
+//     body: isUpdate
+//       ? 'Your appointment has been updated successfully!'
+//       : 'Your appointment has been created successfully!',
+//     sound: true,
+//   },
+//   trigger: null,
+// });
 await loadAppointments();
       await loadDailyAppointments(selectedDate);
       await loadMarkedDates();
@@ -1326,16 +1253,17 @@ useEffect(() => {
     behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     style={{ flex: 1 }}
   >
-        <View style={styles.upcomingHeader}>
-          <Text style={styles.upcomingTitle}>{t('appointments.upcomingAppointments')}</Text>
-        </View>
-        
-          <ScrollView 
+     <ScrollView 
             style={styles.upcomingList}
              pinchGestureEnabled={false} 
             contentContainerStyle={{ paddingBottom: 12 }} // Increased from 70 to 120 for better visibility of the last event
             showsVerticalScrollIndicator={true} // Make scrollbar visible
           >
+        <View style={styles.upcomingHeader}>
+          <Text style={styles.upcomingTitle}>{t('appointments.upcomingAppointments')}</Text>
+        </View>
+        
+         
             {/* Use the refreshTrigger in a way that doesn't affect rendering but ensures re-render */}
             {refreshTrigger ? null : null}
             
@@ -2960,7 +2888,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     borderTopWidth: 1,
     borderTopColor: '#2a1a2a',
-    flex:14
+    flex:20
     // minHeight: 280, // Increased from 240 to 280 for better visibility
   },
   upcomingHeader: {

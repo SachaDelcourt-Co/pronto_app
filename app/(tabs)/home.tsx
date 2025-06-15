@@ -1527,9 +1527,19 @@ export default function HomePage() {
               
               <TouchableOpacity
                 style={styles.editReminderButton}
-                onPress={() => {
+                onPress={async () => {
                   setShowReminderDetails(false);
-                  router.navigate('/reminders');
+                   if (selectedReminder?.reminderID) {
+                    try {
+                      // Store the appointment ID in AsyncStorage
+                      await AsyncStorage.setItem('editReminderId', selectedReminder.reminderID);
+                      
+                      // Navigate to the appointments tab
+                       router.navigate('/reminders');
+                    } catch (error) {
+                      console.error('Error storing reminder Id:', error);
+                    }
+                  }
                 }}
               >
                 <Edit size={18} color="#ffffff" />
@@ -3085,8 +3095,8 @@ const styles = StyleSheet.create({
   calendarDaySection: {
     backgroundColor: '#f9fafb',
     borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
+    padding: 8,
+    // marginBottom: 15,
   },
   calendarDaySectionHeader: {
     flexDirection: 'row',
@@ -3103,7 +3113,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 6,
     padding: 10,
-    marginBottom: 6,
+    // marginBottom: 16,
   },
   itemTimeBlock: {
     flexDirection: 'row',

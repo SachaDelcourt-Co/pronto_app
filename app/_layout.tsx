@@ -11,7 +11,7 @@ import { AuthContext } from '../utils/AuthContext';
 import { User } from 'firebase/auth';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import ErrorBoundary from '@/utils/ErrorBoundary';
-import { ensureAuth } from '@/utils/firebase';
+import { auth } from '@/utils/firebase';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync().catch(() => {
@@ -49,7 +49,6 @@ export default function RootLayout() {
   useEffect(() => {
     try {
       // Use ensureAuth instead of getAuth to guarantee Firebase Auth is properly initialized
-      const auth = ensureAuth();
       console.log("Setting up auth state listener");
       
       // Set up auth state listener
