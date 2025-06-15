@@ -919,4 +919,4 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(147, 51, 234, 0.3)',
   },
-}); 
+});

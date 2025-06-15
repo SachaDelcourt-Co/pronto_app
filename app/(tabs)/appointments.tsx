@@ -1249,11 +1249,8 @@ useEffect(() => {
       {/* Upcoming Appointments List */}
       {upcomingAppointments.length > 0 && (
         <SafeAreaView style={styles.upcomingAppointmentsContainer}>
-  <KeyboardAvoidingView
-    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    style={{ flex: 1 }}
-  >
-     <ScrollView 
+ 
+      <ScrollView 
             style={styles.upcomingList}
              pinchGestureEnabled={false} 
             contentContainerStyle={{ paddingBottom: 12 }} // Increased from 70 to 120 for better visibility of the last event
@@ -1263,7 +1260,7 @@ useEffect(() => {
           <Text style={styles.upcomingTitle}>{t('appointments.upcomingAppointments')}</Text>
         </View>
         
-         
+        
             {/* Use the refreshTrigger in a way that doesn't affect rendering but ensures re-render */}
             {refreshTrigger ? null : null}
             
@@ -1325,7 +1322,6 @@ useEffect(() => {
             </View>
           )}
         </ScrollView>
-      </KeyboardAvoidingView>
       </SafeAreaView>
       )}
 
@@ -2888,7 +2884,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     borderTopWidth: 1,
     borderTopColor: '#2a1a2a',
-    flex:20
+    flex:26
     // minHeight: 280, // Increased from 240 to 280 for better visibility
   },
   upcomingHeader: {
