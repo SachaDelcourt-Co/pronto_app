@@ -988,11 +988,14 @@ if (isEditMode && selectedAppointment?.appointmentID) {
 for (const notifTime of notificationTimes) {
   await Notifications.scheduleNotificationAsync({
     content: {
-      title: '📅 Upcoming Appointment',
-      body: `${appointmentData.appointmentName} starts soon at ${appointmentStartTime}`,
+      title: i18n.t('notifications.appointmentUpcomingTitle'),
+      body: i18n.t('notifications.appointmentUpcomingBody', {
+        name: appointmentData.appointmentName,
+        time: appointmentStartTime,
+      }),
       sound: true,
     },
-    trigger: notifTime, // a Date object
+    trigger: notifTime,
   });
 }
 

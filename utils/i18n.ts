@@ -364,6 +364,9 @@ const resources = {
       notifications: {
         appointmentReminder: 'Rappel de rendez-vous',
         reminderAlert: 'Rappel',
+         appointmentUpcomingTitle: '📅 Rendez-vous à venir',
+    appointmentUpcomingBody: (name: string, time: string) =>
+      `${name} commence bientôt à ${time}`,
       },
     }
   },
@@ -715,6 +718,10 @@ const resources = {
         notifications: {
           appointmentReminder: 'Appointment Reminder',
           reminderAlert: 'Reminder',
+              appointmentUpcomingTitle: '📅 Upcoming Appointment',
+    appointmentUpcomingBody: (name: string, time: string) =>
+      `${name} starts soon at ${time}`,
+
         },
       },
       notifications: {

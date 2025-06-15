@@ -8,6 +8,9 @@ import type { Note, Folder } from '@/types/database';
 import { useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import AdBanner from '@/components/AdBanner';
+import { useRef } from 'react';
+import { InteractionManager } from 'react-native';
+
 
 // Regex pattern to match checkbox syntax: "- [ ]" for unchecked, "- [x]" for checked
 const CHECKBOX_REGEX = /^(\s*)- \[([ x])\] (.*)$/gm;
@@ -141,6 +144,17 @@ export default function NotesScreen() {
   const [deleteItemType, setDeleteItemType] = useState<'note' | 'folder' | null>(null);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [deleteItemName, setDeleteItemName] = useState('');
+  InteractionManager.runAfterInteractions(() => {
+  setShowEditNoteModal(false);
+});
+
+
+const isMounted = useRef(true);
+useEffect(() => {
+  return () => {
+    isMounted.current = false;
+  };
+}, []);
 
   // Load data when the screen is focused
   useFocusEffect(
@@ -227,7 +241,10 @@ export default function NotesScreen() {
       // Reset form and close modal
       setEditingNote(null);
       setNewNoteTitle('');
-      setNewNoteContent('');
+      if (isMounted.current) {
+  setShowEditNoteModal(false);
+}
+
       setShowEditNoteModal(false);
       
       // Reload notes

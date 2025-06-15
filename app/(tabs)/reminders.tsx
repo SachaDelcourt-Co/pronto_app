@@ -14,6 +14,12 @@ import AdBanner from '@/components/AdBanner';
 import { useRouter } from 'expo-router';
 import { useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { setJSExceptionHandler } from 'react-native-exception-handler';
+
+setJSExceptionHandler((error, isFatal) => {
+  console.log('Global error caught:', error);
+}, true);
+
 
 // Register for push notifications
 Notifications.setNotificationHandler({
