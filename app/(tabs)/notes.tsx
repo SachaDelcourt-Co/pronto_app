@@ -8,9 +8,6 @@ import type { Note, Folder } from '@/types/database';
 import { useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import AdBanner from '@/components/AdBanner';
-import { useRef } from 'react';
-import { InteractionManager } from 'react-native';
-
 
 // Regex pattern to match checkbox syntax: "- [ ]" for unchecked, "- [x]" for checked
 const CHECKBOX_REGEX = /^(\s*)- \[([ x])\] (.*)$/gm;
@@ -144,17 +141,6 @@ export default function NotesScreen() {
   const [deleteItemType, setDeleteItemType] = useState<'note' | 'folder' | null>(null);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [deleteItemName, setDeleteItemName] = useState('');
-  InteractionManager.runAfterInteractions(() => {
-  setShowEditNoteModal(false);
-});
-
-
-const isMounted = useRef(true);
-useEffect(() => {
-  return () => {
-    isMounted.current = false;
-  };
-}, []);
 
   // Load data when the screen is focused
   useFocusEffect(
@@ -241,10 +227,7 @@ useEffect(() => {
       // Reset form and close modal
       setEditingNote(null);
       setNewNoteTitle('');
-      if (isMounted.current) {
-  setShowEditNoteModal(false);
-}
-
+      setNewNoteContent('');
       setShowEditNoteModal(false);
       
       // Reload notes
@@ -408,12 +391,12 @@ useEffect(() => {
         animationType="slide"
         onRequestClose={() => setShowCreateNoteModal(false)}
       >
-        
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} >
         <View style={styles.modalOverlay}>
           <KeyboardAvoidingView
   style={styles.modalContent}
   behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-  keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+  keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
 >
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t('notes.createNote')}</Text>
@@ -506,6 +489,7 @@ useEffect(() => {
             </TouchableOpacity>
             </KeyboardAvoidingView>
           </View>
+          </TouchableWithoutFeedback>
       </Modal>
     );
   };
@@ -518,8 +502,13 @@ useEffect(() => {
         animationType="slide"
         onRequestClose={() => setShowEditNoteModal(false)}
       >
-         <TouchableWithoutFeedback onPress={Keyboard.dismiss} >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.modalOverlay}>
+          <KeyboardAvoidingView
+                    //  behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                      style={styles.keyboardView}
+                      keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+          >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t('notes.editNote')}</Text>
@@ -612,6 +601,7 @@ useEffect(() => {
               )}
             </TouchableOpacity>
           </View>
+          </KeyboardAvoidingView>
         </View>
         </TouchableWithoutFeedback>
       </Modal>
@@ -626,7 +616,6 @@ useEffect(() => {
         animationType="slide"
         onRequestClose={() => setShowCreateFolderModal(false)}
       >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
@@ -661,7 +650,6 @@ useEffect(() => {
             </TouchableOpacity>
           </View>
         </View>
-        </TouchableWithoutFeedback>
       </Modal>
     );
   };
@@ -1008,6 +996,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginRight: 8,
   },
+    keyboardView: {
+  flex: 1,
+  justifyContent: 'center',
+}
+,
   actionButtonText: {
     color: '#9333ea',
     fontWeight: '500',

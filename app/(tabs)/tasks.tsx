@@ -244,6 +244,11 @@ export default function TasksScreen() {
         }}
       >
        <TouchableWithoutFeedback onPress={Keyboard.dismiss} >
+         <KeyboardAvoidingView
+          //  behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.keyboardView}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+          >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
@@ -325,7 +330,9 @@ export default function TasksScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
+          </View>
+          </KeyboardAvoidingView>
+        
         </TouchableWithoutFeedback>
       </Modal>
     );
@@ -701,6 +708,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#9333ea',
     borderRadius: 4,
   },
+  keyboardView: {
+  flex: 1,
+  justifyContent: 'center',
+}
+,
   addButton: {
     position: 'absolute',
     right: 20,

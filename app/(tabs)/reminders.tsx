@@ -554,17 +554,17 @@ useEffect(() => {
               const identifier = `${reminderIdentifierPrefix}-${dayOfWeek}-${time}`;
               console.log(`Scheduling recurring notification for ${nextDate.toISOString()} with ID: ${identifier}`);
               
-      //          await Notifications.scheduleNotificationAsync({
-      //   content: notificationContent,
-      //   trigger: {
-      //     weekday: dayOfWeek === 0 ? 7 : dayOfWeek,
-      //     hour: hours,
-      //     minute: minutes,
-      //     repeats: true,
-      //     channelId: 'default'
-      //   },
-      //   identifier,
-      // });
+               await Notifications.scheduleNotificationAsync({
+        content: notificationContent,
+        trigger: {
+          weekday: dayOfWeek === 0 ? 7 : dayOfWeek,
+          hour: hours,
+          minute: minutes,
+          repeats: true,
+          channelId: 'default'
+        },
+        identifier,
+      });
             } else {
               console.log(`Skipping past notification for day ${dayOfWeek} at ${time}`);
             }
