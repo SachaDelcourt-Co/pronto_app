@@ -259,7 +259,7 @@ export default function HomePage() {
   useEffect(() => {
   const checkAndGenerateWeeklyReport = async () => {
     const shouldGenerate = await shouldGenerateWeeklyReport();
-                const userId = authUser?.uid;
+    const userId = authUser?.uid;
 
     if (shouldGenerate && userId) {
       await generateWeeklyReport(userId);
