@@ -256,6 +256,43 @@ export default function HomePage() {
     }
   };
 
+  useEffect(() => {
+  const checkAndGenerateWeeklyReport = async () => {
+    const shouldGenerate = await shouldGenerateWeeklyReport();
+                const userId = authUser?.uid;
+
+    if (shouldGenerate && userId) {
+      await generateWeeklyReport(userId);
+    }
+
+    // Check if there's an unviewed report
+    const unviewed = await hasUnviewedWeeklyReport();
+    if (unviewed) {
+      const report = await getLatestWeeklyReport();
+      if (report) {
+        setWeeklyReportData(report);
+        setShowWeeklyReport(true);
+        await markWeeklyReportAsViewed();
+      }
+    }
+  };
+
+  checkAndGenerateWeeklyReport();
+}, []);
+
+const handleOpenWeeklyReport = async () => {
+  try {
+    setLoadingWeeklyReport(true);
+    const report = await getLatestWeeklyReport();
+    setWeeklyReportData(report);
+    setShowWeeklyReport(true);
+  } catch (error) {
+    console.error('Failed to fetch weekly report:', error);
+  } finally {
+    setLoadingWeeklyReport(false);
+  }
+};
+
   const renderHeader = () => (
     <View style={styles.header}>
       <View>
@@ -271,7 +308,7 @@ export default function HomePage() {
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.menuButton}
-        onPress={() => setShowWeeklyReport(true)}
+         onPress={handleOpenWeeklyReport}
       >
         <Bell color="#ffffff" size={24} />
       </TouchableOpacity>
@@ -1922,7 +1959,7 @@ export default function HomePage() {
           </View>
           
           <ScrollView
-            style={styles.calendarScrollContent}
+             contentContainerStyle={{ paddingBottom:25 }}
             showsVerticalScrollIndicator={true}
              pinchGestureEnabled={false} 
           >
@@ -3072,16 +3109,17 @@ const styles = StyleSheet.create({
       width: 0,
       height: 2,
     },
+    flex:1,
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
   },
   calendarScrollContent: {
-    flexGrow: 0,
+    flexGrow: 1,
   },
   calendarDayItems: {
     marginTop: 16,
-    maxHeight: 300,
+    // maxHeight: 300,
   },
   calendarDayTitle: {
     fontSize: 16,
@@ -3090,7 +3128,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   calendarDayItemsList: {
-    maxHeight: 150,
+    // maxHeight: 150,
   },
   calendarDaySection: {
     backgroundColor: '#f9fafb',
